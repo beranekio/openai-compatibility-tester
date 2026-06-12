@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -13,6 +15,9 @@ import (
 
 func main() {
 	cfg, err := config.Load(os.Args[1:])
+	if errors.Is(err, flag.ErrHelp) {
+		os.Exit(0)
+	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
 		os.Exit(2)

@@ -62,9 +62,16 @@ func Load(args []string) (*Config, error) {
 	suiteList := fs.String("suites", envOrDefault(EnvTestSuites, "all"), "Comma-separated suite names to run, or 'all'")
 	timeout := fs.Duration("timeout", 2*time.Minute, "Per-request timeout")
 	listSuites := fs.Bool("list-suites", false, "List available test suites and exit")
+	fs.Usage = func() {
+		fmt.Fprintf(fs.Output(), "Usage of %s:\n", fs.Name())
+		fs.PrintDefaults()
+	}
 
 	if err := fs.Parse(args); err != nil {
 		return nil, err
+	}
+	if len(fs.Args()) > 0 {
+		return nil, fmt.Errorf("unexpected arguments: %s", strings.Join(fs.Args(), " "))
 	}
 
 	cfg := &Config{
@@ -75,14 +82,6 @@ func Load(args []string) (*Config, error) {
 		EmbeddingModel:  strings.TrimSpace(*embeddingModel),
 		RequestTimeout:  *timeout,
 		ListSuites:      *listSuites,
-	}
-
-	if !timeoutFlagExplicit(args) {
-		envTimeout, err := envDurationOrDefault(EnvRequestTimeout, cfg.RequestTimeout)
-		if err != nil {
-			return nil, err
-		}
-		cfg.RequestTimeout = envTimeout
 	}
 
 	if cfg.CompletionModel == "" {
@@ -108,6 +107,14 @@ func Load(args []string) (*Config, error) {
 
 	if cfg.ListSuites {
 		return cfg, nil
+	}
+
+	if !timeoutFlagExplicit(args) {
+		envTimeout, err := envDurationOrDefault(EnvRequestTimeout, cfg.RequestTimeout)
+		if err != nil {
+			return nil, err
+		}
+		cfg.RequestTimeout = envTimeout
 	}
 
 	if cfg.BaseURL == "" {
@@ -179,12 +186,18 @@ func validateBaseURL(raw string) error {
 	if u.Host == "" {
 		return fmt.Errorf("%s: URL must include a host", EnvBaseURL)
 	}
+	if u.RawQuery != "" {
+		return fmt.Errorf("%s: query parameters in the base URL are not supported by the OpenAI Go SDK", EnvBaseURL)
+	}
 	return nil
 }
 
 func timeoutFlagExplicit(args []string) bool {
 	for _, arg := range args {
-		if arg == "--timeout" || strings.HasPrefix(arg, "--timeout=") {
+		switch {
+		case arg == "--timeout", arg == "-timeout":
+			return true
+		case strings.HasPrefix(arg, "--timeout="), strings.HasPrefix(arg, "-timeout="):
 			return true
 		}
 	}

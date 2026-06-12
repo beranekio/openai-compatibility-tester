@@ -73,6 +73,52 @@ func TestLoadTimeoutFlagOverridesInvalidEnvironment(t *testing.T) {
 	}
 }
 
+func TestLoadSingleDashTimeoutOverridesInvalidEnvironment(t *testing.T) {
+	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvRequestTimeout, "typo")
+
+	cfg, err := Load([]string{"-timeout=30s"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.RequestTimeout.String() != "30s" {
+		t.Fatalf("RequestTimeout = %s, want 30s", cfg.RequestTimeout)
+	}
+}
+
+func TestLoadListSuitesIgnoresInvalidRequestTimeout(t *testing.T) {
+	t.Setenv(EnvRequestTimeout, "typo")
+
+	cfg, err := Load([]string{"--list-suites"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if !cfg.ListSuites {
+		t.Fatal("expected ListSuites to be true")
+	}
+}
+
+func TestLoadRejectsUnexpectedArguments(t *testing.T) {
+	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+
+	_, err := Load([]string{"--suites", "models", "typo"})
+	if err == nil || !strings.Contains(err.Error(), "unexpected arguments") {
+		t.Fatalf("expected unexpected arguments error, got %v", err)
+	}
+}
+
+func TestLoadRejectsBaseURLWithQuery(t *testing.T) {
+	t.Setenv(EnvBaseURL, "")
+	t.Setenv(EnvAPIKey, "test-key")
+
+	_, err := Load([]string{"--base-url", "https://host/v1?token=secret"})
+	if err == nil || !strings.Contains(err.Error(), "query parameters") {
+		t.Fatalf("expected query parameter error, got %v", err)
+	}
+}
+
 func TestLoadRejectsNonPositiveTimeout(t *testing.T) {
 	t.Setenv(EnvBaseURL, "http://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")

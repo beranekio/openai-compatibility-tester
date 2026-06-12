@@ -18,7 +18,7 @@ docker run --rm \
 
 | Variable | Flag | Required | Default | Description |
 |----------|------|----------|---------|-------------|
-| `OPENAI_BASE_URL` | `--base-url` | yes | — | API base URL including `/v1` (e.g. `https://api.openai.com/v1`) |
+| `OPENAI_BASE_URL` | `--base-url` | yes | — | API base URL including `/v1` (e.g. `https://api.openai.com/v1`). Query parameters are not supported. |
 | `OPENAI_API_KEY` | `--api-key` | yes | — | Bearer token sent to the endpoint |
 | `OPENAI_MODEL` | `--model` | no | `gpt-4o-mini` | Model used for chat and responses suites |
 | `OPENAI_COMPLETION_MODEL` | `--completion-model` | no | same as `OPENAI_MODEL` | Model used for the legacy completions suite |
