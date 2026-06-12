@@ -30,6 +30,9 @@ func (Responses) Run(ctx context.Context, client openai.Client, cfg *config.Conf
 	if resp.ID == "" {
 		return fail("responses", "response missing id")
 	}
+	if string(resp.Status) != "completed" {
+		return fail("responses", fmt.Sprintf("response status is %q, want completed", resp.Status))
+	}
 	if resp.OutputText() == "" {
 		return fail("responses", "response produced no output text")
 	}

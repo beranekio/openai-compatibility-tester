@@ -27,6 +27,16 @@ var DefaultSuites = []string{
 	"embeddings",
 }
 
+var knownSuites = map[string]struct{}{
+	"models":                   {},
+	"chat_completions":         {},
+	"chat_completions_stream":  {},
+	"completions":              {},
+	"embeddings":               {},
+	"responses":                {},
+	"responses_stream":         {},
+}
+
 // Config holds runtime settings for compatibility testing.
 type Config struct {
 	BaseURL         string
@@ -41,11 +51,6 @@ type Config struct {
 
 // Load parses configuration from environment variables and command-line flags.
 func Load(args []string) (*Config, error) {
-	defaultTimeout, err := envDurationOrDefault(EnvRequestTimeout, 2*time.Minute)
-	if err != nil {
-		return nil, err
-	}
-
 	fs := flag.NewFlagSet("openai-compatibility-tester", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 
@@ -54,8 +59,8 @@ func Load(args []string) (*Config, error) {
 	model := fs.String("model", envOrDefault(EnvModel, "gpt-4o-mini"), "Model for chat and responses suites")
 	completionModel := fs.String("completion-model", envOrDefault(EnvCompletionModel, ""), "Model for legacy completions suite (defaults to --model)")
 	embeddingModel := fs.String("embedding-model", envOrDefault(EnvEmbeddingModel, "text-embedding-3-small"), "Model for embedding tests")
-	suites := fs.String("suites", envOrDefault(EnvTestSuites, "all"), "Comma-separated suite names to run, or 'all'")
-	timeout := fs.Duration("timeout", defaultTimeout, "Per-request timeout")
+	suiteList := fs.String("suites", envOrDefault(EnvTestSuites, "all"), "Comma-separated suite names to run, or 'all'")
+	timeout := fs.Duration("timeout", 2*time.Minute, "Per-request timeout")
 	listSuites := fs.Bool("list-suites", false, "List available test suites and exit")
 
 	if err := fs.Parse(args); err != nil {
@@ -63,27 +68,41 @@ func Load(args []string) (*Config, error) {
 	}
 
 	cfg := &Config{
-		BaseURL:        strings.TrimRight(strings.TrimSpace(*baseURL), "/"),
-		APIKey:         strings.TrimSpace(*apiKey),
-		Model:          strings.TrimSpace(*model),
+		BaseURL:         strings.TrimRight(strings.TrimSpace(*baseURL), "/"),
+		APIKey:          strings.TrimSpace(*apiKey),
+		Model:           strings.TrimSpace(*model),
 		CompletionModel: strings.TrimSpace(*completionModel),
-		EmbeddingModel: strings.TrimSpace(*embeddingModel),
-		RequestTimeout: *timeout,
-		ListSuites:     *listSuites,
+		EmbeddingModel:  strings.TrimSpace(*embeddingModel),
+		RequestTimeout:  *timeout,
+		ListSuites:      *listSuites,
+	}
+
+	if !timeoutFlagExplicit(args) {
+		envTimeout, err := envDurationOrDefault(EnvRequestTimeout, cfg.RequestTimeout)
+		if err != nil {
+			return nil, err
+		}
+		cfg.RequestTimeout = envTimeout
 	}
 
 	if cfg.CompletionModel == "" {
 		cfg.CompletionModel = cfg.Model
 	}
 
-	if *suites == "all" {
+	if *suiteList == "all" {
 		cfg.Suites = append([]string(nil), DefaultSuites...)
 	} else {
-		for _, name := range strings.Split(*suites, ",") {
+		seen := make(map[string]struct{})
+		for _, name := range strings.Split(*suiteList, ",") {
 			name = strings.TrimSpace(name)
-			if name != "" {
-				cfg.Suites = append(cfg.Suites, name)
+			if name == "" {
+				continue
 			}
+			if _, ok := seen[name]; ok {
+				return nil, fmt.Errorf("duplicate test suite %q", name)
+			}
+			seen[name] = struct{}{}
+			cfg.Suites = append(cfg.Suites, name)
 		}
 	}
 
@@ -103,8 +122,50 @@ func Load(args []string) (*Config, error) {
 	if len(cfg.Suites) == 0 {
 		return nil, fmt.Errorf("at least one test suite must be selected")
 	}
+	if err := validateSuiteNames(cfg.Suites); err != nil {
+		return nil, err
+	}
+	if cfg.RequestTimeout <= 0 {
+		return nil, fmt.Errorf("request timeout must be greater than zero")
+	}
+	if err := validateModelsForSuites(cfg); err != nil {
+		return nil, err
+	}
 
 	return cfg, nil
+}
+
+func validateSuiteNames(names []string) error {
+	for _, name := range names {
+		if _, ok := knownSuites[name]; !ok {
+			return fmt.Errorf("unknown test suite %q (use --list-suites to see options)", name)
+		}
+	}
+	return nil
+}
+
+func validateModelsForSuites(cfg *Config) error {
+	var needsChat, needsCompletion, needsEmbedding bool
+	for _, name := range cfg.Suites {
+		switch name {
+		case "chat_completions", "chat_completions_stream", "responses", "responses_stream":
+			needsChat = true
+		case "completions":
+			needsCompletion = true
+		case "embeddings":
+			needsEmbedding = true
+		}
+	}
+	if needsChat && cfg.Model == "" {
+		return fmt.Errorf("%s or --model is required for selected suites", EnvModel)
+	}
+	if needsCompletion && cfg.CompletionModel == "" {
+		return fmt.Errorf("%s or --completion-model is required for selected suites", EnvCompletionModel)
+	}
+	if needsEmbedding && cfg.EmbeddingModel == "" {
+		return fmt.Errorf("%s or --embedding-model is required for selected suites", EnvEmbeddingModel)
+	}
+	return nil
 }
 
 func validateBaseURL(raw string) error {
@@ -119,6 +180,15 @@ func validateBaseURL(raw string) error {
 		return fmt.Errorf("%s: URL must include a host", EnvBaseURL)
 	}
 	return nil
+}
+
+func timeoutFlagExplicit(args []string) bool {
+	for _, arg := range args {
+		if arg == "--timeout" || strings.HasPrefix(arg, "--timeout=") {
+			return true
+		}
+	}
+	return false
 }
 
 func envOrDefault(key, fallback string) string {

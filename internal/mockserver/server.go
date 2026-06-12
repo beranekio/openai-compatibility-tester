@@ -79,6 +79,20 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 			data, _ := json.Marshal(payload)
 			_, _ = w.Write([]byte("data: " + string(data) + "\n\n"))
 		}
+		final, _ := json.Marshal(map[string]any{
+			"id":      "chatcmpl-mock",
+			"object":  "chat.completion.chunk",
+			"created": 1700000000,
+			"model":   "gpt-4o-mini",
+			"choices": []map[string]any{
+				{
+					"index":         0,
+					"delta":         map[string]any{},
+					"finish_reason": "stop",
+				},
+			},
+		})
+		_, _ = w.Write([]byte("data: " + string(final) + "\n\n"))
 		_, _ = w.Write([]byte("data: [DONE]\n\n"))
 		return
 	}

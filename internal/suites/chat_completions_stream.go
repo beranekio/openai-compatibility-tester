@@ -29,11 +29,16 @@ func (ChatCompletionsStream) Run(ctx context.Context, client openai.Client, cfg 
 
 	chunks := 0
 	var content string
+	var finished bool
 	for stream.Next() {
 		chunk := stream.Current()
 		chunks++
 		if len(chunk.Choices) > 0 {
-			content += chunk.Choices[0].Delta.Content
+			choice := chunk.Choices[0]
+			if choice.FinishReason != "" {
+				finished = true
+			}
+			content += choice.Delta.Content
 		}
 	}
 	if err := stream.Err(); err != nil {
@@ -41,6 +46,9 @@ func (ChatCompletionsStream) Run(ctx context.Context, client openai.Client, cfg 
 	}
 	if chunks == 0 {
 		return fail("chat_completions_stream", "stream returned no chunks")
+	}
+	if !finished {
+		return fail("chat_completions_stream", "stream missing terminal finish_reason")
 	}
 	if content == "" {
 		return fail("chat_completions_stream", "stream produced no text content")

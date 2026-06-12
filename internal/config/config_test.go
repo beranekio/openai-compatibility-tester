@@ -59,6 +59,30 @@ func TestLoadRejectsInvalidRequestTimeout(t *testing.T) {
 	}
 }
 
+func TestLoadTimeoutFlagOverridesInvalidEnvironment(t *testing.T) {
+	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvRequestTimeout, "typo")
+
+	cfg, err := Load([]string{"--timeout", "30s"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.RequestTimeout.String() != "30s" {
+		t.Fatalf("RequestTimeout = %s, want 30s", cfg.RequestTimeout)
+	}
+}
+
+func TestLoadRejectsNonPositiveTimeout(t *testing.T) {
+	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+
+	_, err := Load([]string{"--timeout", "0"})
+	if err == nil {
+		t.Fatal("expected error for zero timeout")
+	}
+}
+
 func TestLoadSelectedSuites(t *testing.T) {
 	t.Setenv(EnvBaseURL, "http://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
@@ -76,6 +100,38 @@ func TestLoadSelectedSuites(t *testing.T) {
 		if cfg.Suites[i] != suite {
 			t.Fatalf("Suites[%d] = %q, want %q", i, cfg.Suites[i], suite)
 		}
+	}
+}
+
+func TestLoadRejectsDuplicateSuites(t *testing.T) {
+	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+
+	_, err := Load([]string{"--suites", "models,models"})
+	if err == nil || !strings.Contains(err.Error(), "duplicate test suite") {
+		t.Fatalf("expected duplicate suite error, got %v", err)
+	}
+}
+
+func TestLoadAllowsModelsSuiteWithoutModelFlag(t *testing.T) {
+	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvModel, "")
+
+	_, err := Load([]string{"--suites", "models", "--model="})
+	if err != nil {
+		t.Fatalf("Load() error = %v, want models-only run without model", err)
+	}
+}
+
+func TestLoadRejectsEmptyModelForChatSuite(t *testing.T) {
+	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvModel, "")
+
+	_, err := Load([]string{"--suites", "chat_completions", "--model="})
+	if err == nil || !strings.Contains(err.Error(), EnvModel) {
+		t.Fatalf("expected missing model error, got %v", err)
 	}
 }
 

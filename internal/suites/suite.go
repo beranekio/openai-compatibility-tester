@@ -37,6 +37,29 @@ func ByName() map[string]Suite {
 	return registry
 }
 
+// ModelRequirements describes which model settings selected suites need.
+type ModelRequirements struct {
+	Chat       bool
+	Completion bool
+	Embedding  bool
+}
+
+// RequiredModels returns which model settings must be configured for the suites.
+func RequiredModels(names []string) ModelRequirements {
+	var req ModelRequirements
+	for _, name := range names {
+		switch name {
+		case "chat_completions", "chat_completions_stream", "responses", "responses_stream":
+			req.Chat = true
+		case "completions":
+			req.Completion = true
+		case "embeddings":
+			req.Embedding = true
+		}
+	}
+	return req
+}
+
 // ValidateNames reports whether every name is a registered suite.
 func ValidateNames(names []string) error {
 	registry := ByName()
