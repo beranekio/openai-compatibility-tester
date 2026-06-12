@@ -68,6 +68,28 @@ func TestRunAllFailsOnIncompatibleEndpoint(t *testing.T) {
 	}
 }
 
+func TestRunRejectsUnknownSuiteBeforeRequests(t *testing.T) {
+	server := mockserver.New()
+	t.Cleanup(server.Close)
+
+	cfg := &config.Config{
+		BaseURL:        server.BaseURL(),
+		APIKey:         "test-key",
+		Model:          "gpt-4o-mini",
+		RequestTimeout: 30 * time.Second,
+		Suites:         []string{"models", "not-a-suite"},
+	}
+
+	runner := New(cfg)
+	results, err := runner.Run(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "unknown test suite") {
+		t.Fatalf("expected unknown suite error, got results=%v err=%v", results, err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("expected no suite results before validation, got %d", len(results))
+	}
+}
+
 func TestRunRejectsUnknownSuite(t *testing.T) {
 	cfg := &config.Config{
 		BaseURL: "http://example.com/v1",

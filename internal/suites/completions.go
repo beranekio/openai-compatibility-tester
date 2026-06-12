@@ -17,7 +17,7 @@ func (Completions) Description() string { return "Text completion (POST /v1/comp
 
 func (Completions) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
 	resp, err := client.Completions.New(ctx, openai.CompletionNewParams{
-		Model: openai.CompletionNewParamsModel(cfg.Model),
+		Model: openai.CompletionNewParamsModel(cfg.CompletionModel),
 		Prompt: openai.CompletionNewParamsPromptUnion{
 			OfString: openai.String("Say hello"),
 		},

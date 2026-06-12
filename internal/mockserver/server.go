@@ -165,6 +165,11 @@ func handleResponses(w http.ResponseWriter, r *http.Request) {
 			data, _ := json.Marshal(payload)
 			_, _ = w.Write([]byte("data: " + string(data) + "\n\n"))
 		}
+		completed, _ := json.Marshal(map[string]any{
+			"type":            "response.completed",
+			"sequence_number": len(chunks),
+		})
+		_, _ = w.Write([]byte("data: " + string(completed) + "\n\n"))
 		_, _ = w.Write([]byte("data: [DONE]\n\n"))
 		return
 	}

@@ -2,6 +2,7 @@ package suites
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
 	"github.com/openai/openai-go/v3"
@@ -34,6 +35,17 @@ func ByName() map[string]Suite {
 		registry[suite.Name()] = suite
 	}
 	return registry
+}
+
+// ValidateNames reports whether every name is a registered suite.
+func ValidateNames(names []string) error {
+	registry := ByName()
+	for _, name := range names {
+		if _, ok := registry[name]; !ok {
+			return fmt.Errorf("unknown test suite %q (use --list-suites to see options)", name)
+		}
+	}
+	return nil
 }
 
 // Names returns sorted suite names for display.

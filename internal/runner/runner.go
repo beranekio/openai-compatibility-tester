@@ -46,14 +46,15 @@ func New(cfg *config.Config) *Runner {
 
 // Run executes all configured suites and returns per-suite results.
 func (r *Runner) Run(ctx context.Context) ([]Result, error) {
+	if err := suites.ValidateNames(r.Config.Suites); err != nil {
+		return nil, err
+	}
+
 	registry := suites.ByName()
 	results := make([]Result, 0, len(r.Config.Suites))
 
 	for _, name := range r.Config.Suites {
-		suite, ok := registry[name]
-		if !ok {
-			return nil, fmt.Errorf("unknown test suite %q (use --list-suites to see options)", name)
-		}
+		suite := registry[name]
 
 		fmt.Fprintf(r.Output, "==> running suite %q\n", suite.Name())
 		start := time.Now()

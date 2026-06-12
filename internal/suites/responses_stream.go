@@ -26,19 +26,30 @@ func (ResponsesStream) Run(ctx context.Context, client openai.Client, cfg *confi
 		},
 		MaxOutputTokens: openai.Int(32),
 	})
+	defer stream.Close()
 
-	events := 0
 	var text string
+	var completed bool
+	var terminalFailure bool
 	for stream.Next() {
 		event := stream.Current()
-		events++
-		text += event.Delta
+		switch event.Type {
+		case "response.output_text.delta":
+			text += event.Delta
+		case "response.completed":
+			completed = true
+		case "response.failed", "response.incomplete", "error":
+			terminalFailure = true
+		}
 	}
 	if err := stream.Err(); err != nil {
 		return fmt.Errorf("responses stream failed: %w", err)
 	}
-	if events == 0 {
-		return fail("responses_stream", "stream returned no events")
+	if terminalFailure {
+		return fail("responses_stream", "stream ended with a failure event")
+	}
+	if !completed {
+		return fail("responses_stream", "stream missing response.completed event")
 	}
 	if text == "" {
 		return fail("responses_stream", "stream produced no text content")

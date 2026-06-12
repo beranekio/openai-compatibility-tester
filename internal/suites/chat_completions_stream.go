@@ -25,6 +25,7 @@ func (ChatCompletionsStream) Run(ctx context.Context, client openai.Client, cfg 
 		},
 		MaxTokens: openai.Int(32),
 	})
+	defer stream.Close()
 
 	chunks := 0
 	var content string
