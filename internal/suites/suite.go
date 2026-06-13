@@ -24,6 +24,7 @@ func All() []Suite {
 		ChatCompletionsStream{},
 		Completions{},
 		Embeddings{},
+		EmbeddingsBatch{},
 		Responses{},
 		ResponsesStream{},
 	}
@@ -58,7 +59,7 @@ func RequiredModels(names []string) ModelRequirements {
 			req.Chat = true
 		case "completions":
 			req.Completion = true
-		case "embeddings":
+		case "embeddings", "embeddings_batch":
 			req.Embedding = true
 		case "chat_completions_vision":
 			req.Vision = true

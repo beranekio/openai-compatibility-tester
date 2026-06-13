@@ -52,6 +52,7 @@ var ExtendedSuites = []string{
 	"responses_stream",
 	"completions",
 	"embeddings",
+	"embeddings_batch",
 }
 
 // FullSuites lists every registered suite name. Keep in sync with suites.All().
@@ -62,6 +63,7 @@ var FullSuites = []string{
 	"chat_completions_stream",
 	"completions",
 	"embeddings",
+	"embeddings_batch",
 	"responses",
 	"responses_stream",
 }
@@ -73,6 +75,7 @@ var knownSuites = map[string]struct{}{
 	"chat_completions_stream":  {},
 	"completions":              {},
 	"embeddings":               {},
+	"embeddings_batch":         {},
 	"responses":                {},
 	"responses_stream":         {},
 }
@@ -104,7 +107,7 @@ func Load(args []string) (*Config, error) {
 	apiKey := fs.String("api-key", "", "API key for the endpoint (or set "+EnvAPIKey+")")
 	model := fs.String("model", envOrDefault(EnvModel, "gpt-4o-mini"), "Model for chat completion and models_get suites")
 	completionModel := fs.String("completion-model", envOrDefault(EnvCompletionModel, ""), "Model for legacy completions suite (defaults to "+DefaultCompletionModel+" when completions is selected)")
-	embeddingModel := fs.String("embedding-model", envOrDefault(EnvEmbeddingModel, ""), "Model for embedding tests (required when embeddings suite is selected)")
+	embeddingModel := fs.String("embedding-model", envOrDefault(EnvEmbeddingModel, ""), "Model for embedding tests (required when embeddings or embeddings_batch suite is selected)")
 	responsesModel := fs.String("responses-model", envOrDefault(EnvResponsesModel, ""), "Model for Responses API suites (defaults to --model)")
 	visionModel := fs.String("vision-model", envOrDefault(EnvVisionModel, ""), "Model for vision chat suites (defaults to --model)")
 	imageModel := fs.String("image-model", envOrDefault(EnvImageModel, ""), "Model for image generation suites")
@@ -264,7 +267,7 @@ func validateModelsForSuites(cfg *Config) error {
 			needsResponses = true
 		case "completions":
 			needsCompletion = true
-		case "embeddings":
+		case "embeddings", "embeddings_batch":
 			needsEmbedding = true
 		case "chat_completions_vision":
 			needsVision = true
