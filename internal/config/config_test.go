@@ -439,6 +439,46 @@ func TestLoadResponsesModelOverride(t *testing.T) {
 	}
 }
 
+func TestLoadResponsesToolsSuitesUseResponsesModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvModel, "chat-model")
+	t.Setenv(EnvResponsesModel, "responses-model")
+
+	cfg, err := Load([]string{"--suites", "responses_tools,responses_tools_stream"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.ResponsesModel != "responses-model" {
+		t.Fatalf("ResponsesModel = %q, want responses-model", cfg.ResponsesModel)
+	}
+	if len(cfg.Suites) != 2 {
+		t.Fatalf("len(Suites) = %d, want 2", len(cfg.Suites))
+	}
+}
+
+func TestLoadResponsesToolsSuitesInExtendedAndFullPresets(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
+
+	for _, preset := range []string{"extended", "full"} {
+		cfg, err := Load([]string{"--suites", preset})
+		if err != nil {
+			t.Fatalf("Load(%q) error = %v", preset, err)
+		}
+		seen := make(map[string]struct{}, len(cfg.Suites))
+		for _, name := range cfg.Suites {
+			seen[name] = struct{}{}
+		}
+		for _, name := range []string{"responses_tools", "responses_tools_stream"} {
+			if _, ok := seen[name]; !ok {
+				t.Fatalf("preset %q missing suite %q", preset, name)
+			}
+		}
+	}
+}
+
 func TestLoadCompletionModelOverride(t *testing.T) {
 	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")

@@ -37,6 +37,8 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"embeddings_batch",
 			"responses",
 			"responses_stream",
+			"responses_tools",
+			"responses_tools_stream",
 		},
 	}
 

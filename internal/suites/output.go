@@ -30,6 +30,25 @@ func hasResponseOutput(resp *responses.Response) bool {
 	return resp.OutputText() != "" || responseOutputRefusal(resp) != ""
 }
 
+func validateResponseEnvelope(suite string, resp *responses.Response) error {
+	if resp == nil {
+		return fail(suite, "response is nil")
+	}
+	if resp.ID == "" {
+		return fail(suite, "response missing id")
+	}
+	if !resp.JSON.CreatedAt.Valid() {
+		return fail(suite, "response missing created_at")
+	}
+	if resp.Model == "" {
+		return fail(suite, "response missing model")
+	}
+	if string(resp.Object) != "response" {
+		return fail(suite, fmt.Sprintf("response object is %q, want response", resp.Object))
+	}
+	return nil
+}
+
 func hasChatMessageOutput(msg openai.ChatCompletionMessage) bool {
 	return msg.Content != "" || msg.Refusal != ""
 }
@@ -102,6 +121,48 @@ func validateAccumulatedToolCall(suite string, call *accumulatedToolCall) error 
 	}
 	if call.arguments == "" {
 		return fail(suite, "tool call function missing arguments")
+	}
+	return nil
+}
+
+func hasResponseFunctionCalls(resp *responses.Response) bool {
+	return len(responseFunctionCalls(resp)) > 0
+}
+
+func responseFunctionCalls(resp *responses.Response) []responses.ResponseFunctionToolCall {
+	if resp == nil {
+		return nil
+	}
+	var calls []responses.ResponseFunctionToolCall
+	for _, item := range resp.Output {
+		if item.Type == "function_call" {
+			calls = append(calls, item.AsFunctionCall())
+		}
+	}
+	return calls
+}
+
+func validateResponseFunctionToolCall(suite string, call responses.ResponseFunctionToolCall) error {
+	if call.ID == "" {
+		return fail(suite, "function_call missing id")
+	}
+	if call.CallID == "" {
+		return fail(suite, "function_call missing call_id")
+	}
+	if !call.JSON.Status.Valid() {
+		return fail(suite, "function_call missing status")
+	}
+	if call.Status != responses.ResponseFunctionToolCallStatusCompleted {
+		return fail(suite, fmt.Sprintf("function_call status is %q, want completed", call.Status))
+	}
+	if call.Name == "" {
+		return fail(suite, "function_call missing name")
+	}
+	if call.Name != weatherToolName {
+		return fail(suite, fmt.Sprintf("function_call name is %q, want %s", call.Name, weatherToolName))
+	}
+	if call.Arguments == "" {
+		return fail(suite, "function_call missing arguments")
 	}
 	return nil
 }

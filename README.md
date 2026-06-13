@@ -56,10 +56,12 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `embeddings_batch` | `client.Embeddings.New` (array input) | `POST /v1/embeddings` |
 | `responses` | `client.Responses.New` | `POST /v1/responses` |
 | `responses_stream` | `client.Responses.NewStreaming` | `POST /v1/responses` (stream) |
+| `responses_tools` | `client.Responses.New` (with `tools`) | `POST /v1/responses` |
+| `responses_tools_stream` | `client.Responses.NewStreaming` (with `tools`) | `POST /v1/responses` (stream) |
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
-Extended preset (`extended`): default suites plus `chat_completions_json`, `chat_completions_tools`, `chat_completions_tools_stream`, `completions`, `completions_stream`, `embeddings`, `embeddings_batch`, and `chat_completions_vision`.
+Extended preset (`extended`): default suites plus `chat_completions_json`, `chat_completions_tools`, `chat_completions_tools_stream`, `responses_tools`, `responses_tools_stream`, `completions`, `completions_stream`, `embeddings`, `embeddings_batch`, and `chat_completions_vision`.
 
 Full preset (`full`): every registered suite (see `--list-suites`).
 
@@ -74,7 +76,7 @@ docker run --rm \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 
-Tool-calling suites (`chat_completions_tools`, `chat_completions_tools_stream`) are **opt-in** — included in `extended` and `full`, but not in the default `all` set:
+Tool-calling suites (`chat_completions_tools`, `chat_completions_tools_stream`, `responses_tools`, `responses_tools_stream`) are **opt-in** — included in `extended` and `full`, but not in the default `all` set:
 
 ```bash
 docker run --rm \
@@ -93,7 +95,7 @@ docker run --rm \
   -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
   -e OPENAI_API_KEY=your-api-key \
   -e OPENAI_MODEL=your-chat-model \
-  -e TEST_SUITES=chat_completions_tools,chat_completions_tools_stream \
+  -e TEST_SUITES=chat_completions_tools,chat_completions_tools_stream,responses_tools,responses_tools_stream \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 
