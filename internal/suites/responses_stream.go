@@ -3,10 +3,12 @@ package suites
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
 
 	"github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/option"
 	"github.com/openai/openai-go/v3/responses"
 )
 
@@ -19,14 +21,19 @@ func (ResponsesStream) Description() string {
 }
 
 func (ResponsesStream) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
+	var httpResp *http.Response
 	stream := client.Responses.NewStreaming(ctx, responses.ResponseNewParams{
 		Model: cfg.Model,
 		Input: responses.ResponseNewParamsInputUnion{
 			OfString: openai.String("Count from one to three."),
 		},
 		Store: openai.Bool(false),
-	})
+	}, option.WithResponseInto(&httpResp))
 	defer stream.Close()
+
+	if err := validateEventStreamContentType("responses_stream", httpResp); err != nil {
+		return err
+	}
 
 	var hasOutput bool
 	var completed bool

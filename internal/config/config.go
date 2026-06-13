@@ -63,7 +63,7 @@ func Load(args []string) (*Config, error) {
 	baseURL := fs.String("base-url", envOrDefault(EnvBaseURL, ""), "OpenAI-compatible API base URL")
 	apiKey := fs.String("api-key", "", "API key for the endpoint (or set "+EnvAPIKey+")")
 	model := fs.String("model", envOrDefault(EnvModel, "gpt-4o-mini"), "Model for chat and responses suites")
-	completionModel := fs.String("completion-model", envOrDefault(EnvCompletionModel, ""), "Model for legacy completions suite (defaults to --model)")
+	completionModel := fs.String("completion-model", envOrDefault(EnvCompletionModel, ""), "Model for legacy completions suite (defaults to "+DefaultCompletionModel+" when completions is selected)")
 	embeddingModel := fs.String("embedding-model", envOrDefault(EnvEmbeddingModel, ""), "Model for embedding tests (required when embeddings suite is selected)")
 	suiteList := fs.String("suites", envOrDefault(EnvTestSuites, "all"), "Comma-separated suite names to run, or 'all'")
 	timeout := fs.Duration("timeout", 2*time.Minute, "Per-request timeout")
@@ -89,15 +89,16 @@ func Load(args []string) (*Config, error) {
 		RequestTimeout:  *timeout,
 		ListSuites:      *listSuites,
 	}
+
+	if cfg.ListSuites {
+		return cfg, nil
+	}
+
 	if explicit, empty := apiKeyFlagExplicit(args); explicit && empty {
 		return nil, fmt.Errorf("%s or --api-key is required", EnvAPIKey)
 	}
 	if cfg.APIKey == "" {
 		cfg.APIKey = envOrDefault(EnvAPIKey, "")
-	}
-
-	if cfg.ListSuites {
-		return cfg, nil
 	}
 
 	if *suiteList == "all" {
@@ -237,7 +238,7 @@ func apiKeyFlagExplicit(args []string) (explicit bool, valueEmpty bool) {
 		switch {
 		case arg == "--api-key", arg == "-api-key":
 			explicit = true
-			if i+1 >= len(args) || strings.HasPrefix(args[i+1], "-") {
+			if i+1 >= len(args) {
 				valueEmpty = true
 			} else {
 				valueEmpty = strings.TrimSpace(args[i+1]) == ""
@@ -258,7 +259,7 @@ func completionModelFlagExplicit(args []string) (explicit bool, valueEmpty bool)
 		switch {
 		case arg == "--completion-model", arg == "-completion-model":
 			explicit = true
-			if i+1 >= len(args) || strings.HasPrefix(args[i+1], "-") {
+			if i+1 >= len(args) {
 				valueEmpty = true
 			} else {
 				valueEmpty = strings.TrimSpace(args[i+1]) == ""

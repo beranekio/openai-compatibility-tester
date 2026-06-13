@@ -3,10 +3,12 @@ package suites
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
 
 	"github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/option"
 )
 
 // ChatCompletionsStream verifies streaming chat completions.
@@ -18,14 +20,19 @@ func (ChatCompletionsStream) Description() string {
 }
 
 func (ChatCompletionsStream) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
+	var httpResp *http.Response
 	stream := client.Chat.Completions.NewStreaming(ctx, openai.ChatCompletionNewParams{
 		Model: cfg.Model,
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.UserMessage("Count from one to three."),
 		},
 		Store: openai.Bool(false),
-	})
+	}, option.WithResponseInto(&httpResp))
 	defer stream.Close()
+
+	if err := validateEventStreamContentType("chat_completions_stream", httpResp); err != nil {
+		return err
+	}
 
 	chunks := 0
 	var hasOutput bool

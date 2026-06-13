@@ -305,6 +305,31 @@ func TestLoadCompletionsSuiteUsesInstructDefault(t *testing.T) {
 	}
 }
 
+func TestLoadListSuitesAllowsEmptyAPIKeyFlag(t *testing.T) {
+	t.Setenv(EnvAPIKey, "production-secret")
+
+	cfg, err := Load([]string{"--list-suites", "--api-key="})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if !cfg.ListSuites {
+		t.Fatal("expected ListSuites to be true")
+	}
+}
+
+func TestLoadAcceptsDashPrefixedAPIKeyFlag(t *testing.T) {
+	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvAPIKey, "")
+
+	cfg, err := Load([]string{"--api-key", "-dash-prefixed-token"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.APIKey != "-dash-prefixed-token" {
+		t.Fatalf("APIKey = %q, want -dash-prefixed-token", cfg.APIKey)
+	}
+}
+
 func TestLoadRejectsEmptyAPIKeyFlagWhenEnvSet(t *testing.T) {
 	t.Setenv(EnvBaseURL, "http://example.com/v1")
 	t.Setenv(EnvAPIKey, "production-secret")

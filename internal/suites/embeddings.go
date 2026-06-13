@@ -37,12 +37,15 @@ func (Embeddings) Run(ctx context.Context, client openai.Client, cfg *config.Con
 	if !resp.JSON.Usage.Valid() {
 		return fail("embeddings", "response missing usage")
 	}
-	if len(resp.Data) == 0 {
-		return fail("embeddings", "response missing data")
+	if len(resp.Data) != 1 {
+		return fail("embeddings", fmt.Sprintf("response has %d embeddings, want 1", len(resp.Data)))
 	}
 	for i, item := range resp.Data {
 		if !item.JSON.Index.Valid() {
 			return fail("embeddings", fmt.Sprintf("embedding %d missing index", i))
+		}
+		if item.Index != 0 {
+			return fail("embeddings", fmt.Sprintf("embedding %d index is %d, want 0", i, item.Index))
 		}
 		if string(item.Object) != "embedding" {
 			return fail("embeddings", fmt.Sprintf("embedding %d object is %q, want embedding", i, item.Object))
