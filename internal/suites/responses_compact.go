@@ -10,6 +10,11 @@ import (
 	"github.com/openai/openai-go/v3/responses"
 )
 
+var compactUserTurns = []string{
+	"What is 2+2?",
+	"Summarize this conversation.",
+}
+
 // ResponsesCompact verifies POST /v1/responses/compact.
 type ResponsesCompact struct{}
 
@@ -23,7 +28,7 @@ func (ResponsesCompact) Run(ctx context.Context, client openai.Client, cfg *conf
 		Model: responses.ResponseCompactParamsModel(cfg.ResponsesModel),
 		Input: responses.ResponseCompactParamsInputUnion{
 			OfResponseInputItemArray: []responses.ResponseInputItemUnionParam{
-				responses.ResponseInputItemParamOfMessage("What is 2+2?", responses.EasyInputMessageRoleUser),
+				responses.ResponseInputItemParamOfMessage(compactUserTurns[0], responses.EasyInputMessageRoleUser),
 				responses.ResponseInputItemParamOfOutputMessage(
 					[]responses.ResponseOutputMessageContentUnionParam{{
 						OfOutputText: &responses.ResponseOutputTextParam{
@@ -34,7 +39,7 @@ func (ResponsesCompact) Run(ctx context.Context, client openai.Client, cfg *conf
 					"msg-assistant-1",
 					responses.ResponseOutputMessageStatusCompleted,
 				),
-				responses.ResponseInputItemParamOfMessage("Summarize this conversation.", responses.EasyInputMessageRoleUser),
+				responses.ResponseInputItemParamOfMessage(compactUserTurns[1], responses.EasyInputMessageRoleUser),
 			},
 		},
 	})
@@ -56,8 +61,8 @@ func (ResponsesCompact) Run(ctx context.Context, client openai.Client, cfg *conf
 	if !resp.JSON.Usage.Valid() {
 		return fail("responses_compact", "response missing usage")
 	}
-	if len(resp.Output) < 2 {
-		return fail("responses_compact", "output must include user messages and a compaction item")
+	if len(resp.Output) != len(compactUserTurns)+1 {
+		return fail("responses_compact", fmt.Sprintf("output has %d items, want %d user messages and 1 compaction item", len(resp.Output), len(compactUserTurns)))
 	}
 	last := resp.Output[len(resp.Output)-1]
 	if last.Type != "compaction" {
@@ -77,6 +82,25 @@ func (ResponsesCompact) Run(ctx context.Context, client openai.Client, cfg *conf
 		if item.Role != "user" {
 			return fail("responses_compact", fmt.Sprintf("output item %d role is %q, want user", i, item.Role))
 		}
+		text, ok := compactOutputUserText(item)
+		if !ok {
+			return fail("responses_compact", fmt.Sprintf("output item %d missing input_text content", i))
+		}
+		if text != compactUserTurns[i] {
+			return fail("responses_compact", fmt.Sprintf("output item %d text is %q, want %q", i, text, compactUserTurns[i]))
+		}
 	}
 	return nil
+}
+
+func compactOutputUserText(item responses.ResponseOutputItemUnion) (string, bool) {
+	for _, content := range item.Content {
+		if content.Text == "" {
+			continue
+		}
+		if content.Type == "input_text" || content.Type == "output_text" {
+			return content.Text, true
+		}
+	}
+	return "", false
 }
