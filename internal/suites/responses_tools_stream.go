@@ -40,7 +40,7 @@ func (ResponsesToolsStream) Run(ctx context.Context, client openai.Client, cfg *
 		return err
 	}
 
-	var hasArgumentDelta bool
+	var hasRefusal bool
 	var functionCallDone bool
 	var completed bool
 	var contentFilterIncomplete bool
@@ -53,13 +53,18 @@ func (ResponsesToolsStream) Run(ctx context.Context, client openai.Client, cfg *
 
 		event := stream.Current()
 		switch event.Type {
+		case "response.refusal.delta":
+			delta := event.AsResponseRefusalDelta()
+			if err := validateResponseRefusalDelta("responses_tools_stream", delta); err != nil {
+				return err
+			}
+			if delta.Delta != "" {
+				hasRefusal = true
+			}
 		case "response.function_call_arguments.delta":
 			delta := event.AsResponseFunctionCallArgumentsDelta()
 			if err := validateResponseFunctionCallArgumentsDelta("responses_tools_stream", delta); err != nil {
 				return err
-			}
-			if delta.Delta != "" {
-				hasArgumentDelta = true
 			}
 		case "response.function_call_arguments.done":
 			done := event.AsResponseFunctionCallArgumentsDone()
@@ -85,6 +90,9 @@ func (ResponsesToolsStream) Run(ctx context.Context, client openai.Client, cfg *
 			if !incompleteEvent.JSON.Response.Valid() {
 				return fail("responses_tools_stream", "response.incomplete missing response object")
 			}
+			if incompleteEvent.Response.ID == "" {
+				return fail("responses_tools_stream", "response.incomplete response missing id")
+			}
 			if isContentFilterIncompleteResponse(&incompleteEvent.Response) {
 				contentFilterIncomplete = true
 			} else {
@@ -105,11 +113,14 @@ func (ResponsesToolsStream) Run(ctx context.Context, client openai.Client, cfg *
 	if contentFilterIncomplete {
 		return nil
 	}
+	if hasRefusal {
+		return nil
+	}
 	if !completed {
 		return fail("responses_tools_stream", "stream missing response.completed event")
 	}
-	if !functionCallDone && !hasArgumentDelta {
-		return fail("responses_tools_stream", "stream produced no function call argument events")
+	if !functionCallDone {
+		return fail("responses_tools_stream", "stream missing response.function_call_arguments.done event")
 	}
 	return nil
 }

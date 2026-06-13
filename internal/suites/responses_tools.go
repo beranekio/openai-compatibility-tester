@@ -46,7 +46,7 @@ func (ResponsesTools) Run(ctx context.Context, client openai.Client, cfg *config
 			}
 			return nil
 		}
-		if hasResponseOutput(resp) {
+		if responseOutputRefusal(resp) != "" {
 			return nil
 		}
 		return fail("responses_tools", "response produced no function_call output or refusal")
