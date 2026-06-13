@@ -50,6 +50,13 @@ func (ResponsesStream) Run(ctx context.Context, client openai.Client, cfg *confi
 
 		event := stream.Current()
 		switch event.Type {
+		case "response.created", "response.in_progress",
+			"response.output_item.added", "response.output_item.done",
+			"response.content_part.added", "response.content_part.done",
+			"response.output_text.done", "response.refusal.done":
+			if err := validateOptionalResponsesStreamEvent("responses_stream", event); err != nil {
+				return err
+			}
 		case "response.output_text.delta":
 			delta := event.AsResponseOutputTextDelta()
 			if err := validateResponseTextDelta("responses_stream", delta); err != nil {
@@ -93,6 +100,8 @@ func (ResponsesStream) Run(ctx context.Context, client openai.Client, cfg *confi
 		case "response.failed", "error":
 			terminalFailure = true
 			terminalReached = true
+		default:
+			return fail("responses_stream", fmt.Sprintf("unsupported stream event %q", event.Type))
 		}
 	}
 	if err := stream.Err(); err != nil {
