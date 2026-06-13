@@ -11,8 +11,11 @@ docker run --rm \
   -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
   -e OPENAI_API_KEY=your-api-key \
   -e OPENAI_MODEL=your-chat-model \
+  -e OPENAI_EMBEDDING_MODEL=your-embedding-model \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
+
+For OpenAI, `your-embedding-model` is often `text-embedding-3-small`. Model IDs vary by provider, so set this to whatever your endpoint exposes for embeddings.
 
 ## Configuration
 
@@ -22,7 +25,7 @@ docker run --rm \
 | `OPENAI_API_KEY` | `--api-key` | yes | — | Bearer token sent to the endpoint |
 | `OPENAI_MODEL` | `--model` | no | `gpt-4o-mini` | Model used for chat and responses suites |
 | `OPENAI_COMPLETION_MODEL` | `--completion-model` | no | `gpt-3.5-turbo-instruct` when `completions` is selected, otherwise same as `OPENAI_MODEL` | Model used for the legacy completions suite |
-| `OPENAI_EMBEDDING_MODEL` | `--embedding-model` | no | `text-embedding-3-small` | Model used for the embeddings suite |
+| `OPENAI_EMBEDDING_MODEL` | `--embedding-model` | when `embeddings` is selected | — | Model used for the embeddings suite (required for the default suite set) |
 | `TEST_SUITES` | `--suites` | no | `all` | Comma-separated suite names, or `all` for the default set |
 | `REQUEST_TIMEOUT` | `--timeout` | no | `2m` | Per-suite request timeout |
 
@@ -72,6 +75,7 @@ go build -o bin/openai-compatibility-tester ./cmd/openai-compatibility-tester
 
 OPENAI_BASE_URL=http://127.0.0.1:4010/v1 \
 OPENAI_API_KEY=test \
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small \
 ./bin/openai-compatibility-tester
 ```
 
