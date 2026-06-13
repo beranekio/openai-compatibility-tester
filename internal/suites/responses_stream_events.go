@@ -133,6 +133,12 @@ func validateOptionalResponsesStreamEvent(suite string, event responses.Response
 		if !done.JSON.SequenceNumber.Valid() {
 			return fail(suite, "response.output_text.done missing sequence_number")
 		}
+		if !done.JSON.Text.Valid() {
+			return fail(suite, "response.output_text.done missing text")
+		}
+		if !done.JSON.Logprobs.Valid() {
+			return fail(suite, "response.output_text.done missing logprobs")
+		}
 	case "response.refusal.done":
 		done := event.AsResponseRefusalDone()
 		if done.ItemID == "" {
@@ -146,6 +152,9 @@ func validateOptionalResponsesStreamEvent(suite string, event responses.Response
 		}
 		if !done.JSON.SequenceNumber.Valid() {
 			return fail(suite, "response.refusal.done missing sequence_number")
+		}
+		if !done.JSON.Refusal.Valid() {
+			return fail(suite, "response.refusal.done missing refusal")
 		}
 	default:
 		return fail(suite, fmt.Sprintf("unexpected optional event %q", event.Type))
