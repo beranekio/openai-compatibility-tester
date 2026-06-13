@@ -60,7 +60,7 @@ Follow this checklist for every new suite:
    - `suites.RequiredModels()` and `config.validateModelsForSuites()` (if a model env var is needed)
    - `config.Load()` flags/env vars (if new settings are required)
 5. **Extend** `internal/mockserver/server.go` with a handler so CI stays offline.
-6. **Test** — add or extend `internal/runner/runner_test.go` to run the new suite against the mock server.
+6. **Test** — add or extend `internal/runner/runner_test.go` to run the new suite against the mock server. If step 4 changed config (flags, env vars, presets, validation), add or update cases in `internal/config/config_test.go` too — `runner_test.go` constructs `config.Config` directly and does not exercise `config.Load()`.
 7. **Document** — update `README.md` suite table and env var table.
 
 ### Suite design principles
@@ -87,7 +87,7 @@ Prefer extending shared helpers over duplicating validation logic across suites.
 | Env var | Purpose |
 |---------|---------|
 | `OPENAI_BASE_URL` | Required. Conventionally ends with `/v1` (see README); SDK appends paths relative to this base. No query params. |
-| `OPENAI_API_KEY` | Required. Bearer token. |
+| `OPENAI_API_KEY` | Required when running suites. Not required for `--list-suites`. Bearer token. |
 | `OPENAI_MODEL` | Chat completion suites (default `gpt-4o-mini`) |
 | `OPENAI_RESPONSES_MODEL` | Responses suites (defaults to `OPENAI_MODEL`) |
 | `OPENAI_COMPLETION_MODEL` | Legacy completions (defaults to `gpt-3.5-turbo-instruct` when selected) |
@@ -96,7 +96,7 @@ Prefer extending shared helpers over duplicating validation logic across suites.
 | `REQUEST_TIMEOUT` | Per-suite timeout (default `2m`) |
 | `ALLOW_INSECURE_HTTP` | Allow non-loopback `http://` |
 
-When adding model-specific suites, add a dedicated env var and validate it in `validateModelsForSuites`. Planned presets (`extended`, `full`) are tracked in [#45](https://github.com/beranekio/openai-compatibility-tester/issues/45).
+Reuse existing model settings when the suite belongs to an established family (`OPENAI_MODEL` for chat, `OPENAI_RESPONSES_MODEL` for Responses, etc.). Add a dedicated env var and `validateModelsForSuites` entry only when the suite needs a genuinely different model category (e.g. vision, image generation, TTS). Planned presets (`extended`, `full`) are tracked in [#45](https://github.com/beranekio/openai-compatibility-tester/issues/45).
 
 ## Testing
 
@@ -173,5 +173,6 @@ Do not add suites for:
 - [ ] New suite registered in `suite.go` (+ config/README if needed)
 - [ ] Mock server handler added
 - [ ] `runner_test.go` includes new suite in `TestRunAllPassesAgainstMockServer`
+- [ ] `config_test.go` updated if config parsing, validation, or presets changed
 - [ ] README updated for user-facing changes
 - [ ] Focused diff — no unrelated changes
