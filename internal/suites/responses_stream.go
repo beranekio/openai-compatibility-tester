@@ -40,6 +40,16 @@ func (ResponsesStream) Run(ctx context.Context, client openai.Client, cfg *confi
 			}
 		case "response.completed":
 			completed = true
+			completedEvent := event.AsResponseCompleted()
+			if !completedEvent.JSON.Response.Valid() {
+				return fail("responses_stream", "response.completed missing response object")
+			}
+			if completedEvent.Response.ID == "" {
+				return fail("responses_stream", "response.completed response missing id")
+			}
+			if string(completedEvent.Response.Status) != "completed" {
+				return fail("responses_stream", fmt.Sprintf("response.completed status is %q, want completed", completedEvent.Response.Status))
+			}
 		case "response.failed", "response.incomplete", "error":
 			terminalFailure = true
 		}

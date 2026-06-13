@@ -224,6 +224,27 @@ func TestLoadRejectsEmptyCompletionModelFlag(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsEmptyCompletionModelWhenLastFlagWins(t *testing.T) {
+	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvCompletionModel, "")
+
+	_, err := Load([]string{"--suites", "completions", "--completion-model=custom", "--completion-model="})
+	if err == nil || !strings.Contains(err.Error(), EnvCompletionModel) {
+		t.Fatalf("expected missing completion model error, got %v", err)
+	}
+}
+
+func TestLoadRejectsBaseURLWithEncodedSlash(t *testing.T) {
+	t.Setenv(EnvBaseURL, "")
+	t.Setenv(EnvAPIKey, "test-key")
+
+	_, err := Load([]string{"--base-url", "https://host/proxy%2Ftenant/v1"})
+	if err == nil || !strings.Contains(err.Error(), "%2F") {
+		t.Fatalf("expected encoded slash error, got %v", err)
+	}
+}
+
 func TestLoadCompletionsSuiteUsesInstructDefault(t *testing.T) {
 	t.Setenv(EnvBaseURL, "http://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")

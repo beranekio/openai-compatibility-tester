@@ -33,6 +33,9 @@ func (ChatCompletionsStream) Run(ctx context.Context, client openai.Client, cfg 
 	for stream.Next() {
 		chunk := stream.Current()
 		chunks++
+		if chunk.ID == "" {
+			return fail("chat_completions_stream", "stream chunk missing id")
+		}
 		if len(chunk.Choices) > 0 {
 			choice := chunk.Choices[0]
 			if choice.FinishReason != "" {

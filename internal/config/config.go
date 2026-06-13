@@ -219,6 +219,9 @@ func validateBaseURL(raw string) error {
 	if u.RawQuery != "" {
 		return fmt.Errorf("%s: query parameters in the base URL are not supported by the OpenAI Go SDK", EnvBaseURL)
 	}
+	if strings.Contains(strings.ToLower(raw), "%2f") {
+		return fmt.Errorf("%s: encoded path separators (%%2F) are not supported by the OpenAI Go SDK", EnvBaseURL)
+	}
 	return nil
 }
 
@@ -226,17 +229,21 @@ func completionModelFlagExplicit(args []string) (explicit bool, valueEmpty bool)
 	for i, arg := range args {
 		switch {
 		case arg == "--completion-model", arg == "-completion-model":
+			explicit = true
 			if i+1 >= len(args) || strings.HasPrefix(args[i+1], "-") {
-				return true, true
+				valueEmpty = true
+			} else {
+				valueEmpty = args[i+1] == ""
 			}
-			return true, args[i+1] == ""
 		case strings.HasPrefix(arg, "--completion-model="):
-			return true, strings.TrimPrefix(arg, "--completion-model=") == ""
+			explicit = true
+			valueEmpty = strings.TrimPrefix(arg, "--completion-model=") == ""
 		case strings.HasPrefix(arg, "-completion-model="):
-			return true, strings.TrimPrefix(arg, "-completion-model=") == ""
+			explicit = true
+			valueEmpty = strings.TrimPrefix(arg, "-completion-model=") == ""
 		}
 	}
-	return false, false
+	return explicit, valueEmpty
 }
 
 func timeoutFlagExplicit(args []string) bool {
