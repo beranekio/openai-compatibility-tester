@@ -286,6 +286,11 @@ func handleResponses(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Stream bool              `json:"stream"`
 		Tools  []json.RawMessage `json:"tools"`
+		Text   *struct {
+			Format *struct {
+				Type string `json:"type"`
+			} `json:"format"`
+		} `json:"text"`
 	}
 	_ = json.Unmarshal(body, &req)
 
@@ -375,6 +380,11 @@ func handleResponses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	outputText := "pong"
+	if req.Text != nil && req.Text.Format != nil && req.Text.Format.Type == "json_schema" {
+		outputText = `{"answer":"pong"}`
+	}
+
 	writeJSON(w, map[string]any{
 		"id":         "resp-mock",
 		"object":     "response",
@@ -390,7 +400,7 @@ func handleResponses(w http.ResponseWriter, r *http.Request) {
 				"content": []map[string]any{
 					{
 						"type": "output_text",
-						"text": "pong",
+						"text": outputText,
 					},
 				},
 			},
