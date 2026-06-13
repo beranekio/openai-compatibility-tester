@@ -67,7 +67,7 @@ Follow this checklist for every new suite:
 
 - **Minimal requests** — use the smallest prompt/input that exercises the endpoint (e.g. "Reply with exactly the word: pong").
 - **Lenient where providers differ** — accept `content_filter` finish reasons and refusals as valid outcomes (see `output.go`, `isContentFilterFinishReason`).
-- **Streaming** — reuse `validateEventStreamContentType` and chunk validators from `stream.go`; always check for a terminal event (`finish_reason` or `response.completed`).
+- **Streaming** — reuse `validateEventStreamContentType` and chunk validators from `stream.go`; always check for a terminal event. Chat: `finish_reason` (including `content_filter`). Responses: `response.completed`, or `response.incomplete` when `isContentFilterIncompleteResponse` applies (see `responses_stream.go`).
 - **No retries** — the runner sets `option.WithMaxRetries(0)`; suites should not enable retries.
 - **No live OpenAI calls in unit tests** — use `mockserver` only.
 - **Per-suite timeout** — suites receive a context from `runner` bounded by `cfg.RequestTimeout`.
@@ -86,7 +86,7 @@ Prefer extending shared helpers over duplicating validation logic across suites.
 
 | Env var | Purpose |
 |---------|---------|
-| `OPENAI_BASE_URL` | Required. Must include `/v1`. No query params. |
+| `OPENAI_BASE_URL` | Required. Conventionally ends with `/v1` (see README); SDK appends paths relative to this base. No query params. |
 | `OPENAI_API_KEY` | Required. Bearer token. |
 | `OPENAI_MODEL` | Chat completion suites (default `gpt-4o-mini`) |
 | `OPENAI_RESPONSES_MODEL` | Responses suites (defaults to `OPENAI_MODEL`) |
@@ -107,7 +107,7 @@ go build -o bin/openai-compatibility-tester ./cmd/openai-compatibility-tester
 
 `internal/config/config_test.go` covers flag/env parsing. `internal/runner/runner_test.go` runs suites against `mockserver.New()` and `mockserver.BrokenServer()`.
 
-**Every new suite must have a mock handler.** CI runs `go test ./...` only; it does not hit real APIs.
+**Every new suite must have a mock handler.** CI runs `go test ./...`, builds the binary, and builds the Docker image (see `.github/workflows/ci.yml`); it does not hit real APIs.
 
 Local smoke test against the mock server:
 
@@ -135,7 +135,7 @@ Do not break the Docker entrypoint contract (no shell wrapper; flags/env only).
 
 ## Roadmap and issue tracking
 
-Expansion work is tracked in GitHub issues [#7–#47](https://github.com/beranekio/openai-compatibility-tester/issues/48), organized into milestones:
+Expansion work is tracked in GitHub issues #7–#47, organized into milestones:
 
 | Milestone | Focus |
 |-----------|-------|
@@ -160,7 +160,7 @@ Do not add suites for:
 
 ## Common pitfalls
 
-- **Base URL** — must end with `/v1`; SDK appends paths like `chat/completions`. Query strings are rejected.
+- **Base URL** — conventionally ends with `/v1` (not enforced by `validateBaseURL`); SDK appends paths like `chat/completions`. Query strings are rejected.
 - **Default suites** — `completions` and `embeddings` exist but are not in `DefaultSuites`; changing defaults affects all Docker users.
 - **Content filter** — empty text with `finish_reason: content_filter` is a pass, not a fail.
 - **Responses stream** — terminal events must not be followed by more events; see `responses_stream.go`.
@@ -172,6 +172,6 @@ Do not add suites for:
 - [ ] `go test ./...` passes
 - [ ] New suite registered in `suite.go` (+ config/README if needed)
 - [ ] Mock server handler added
-- [ ] `runner_test.go` includes new suite in mock pass test (when in default or all suites)
+- [ ] `runner_test.go` includes new suite in `TestRunAllPassesAgainstMockServer`
 - [ ] README updated for user-facing changes
 - [ ] Focused diff — no unrelated changes
