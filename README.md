@@ -62,10 +62,11 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `responses_get` | `client.Responses.Get` | `GET /v1/responses/{id}` |
 | `responses_delete` | `client.Responses.Delete` | `DELETE /v1/responses/{id}` |
 | `responses_cancel` | `client.Responses.Cancel` | `POST /v1/responses/{id}/cancel` |
+| `responses_input_items` | `client.Responses.InputItems.List` | `GET /v1/responses/{id}/input_items` |
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
-Extended preset (`extended`): default suites plus `chat_completions_json`, `chat_completions_tools`, `chat_completions_tools_stream`, `responses_tools`, `responses_tools_stream`, `responses_json`, `responses_get`, `responses_delete`, `responses_cancel`, `completions`, `completions_stream`, `embeddings`, `embeddings_batch`, and `chat_completions_vision`.
+Extended preset (`extended`): default suites plus `chat_completions_json`, `chat_completions_tools`, `chat_completions_tools_stream`, `responses_tools`, `responses_tools_stream`, `responses_json`, `responses_get`, `responses_delete`, `responses_cancel`, `responses_input_items`, `completions`, `completions_stream`, `embeddings`, `embeddings_batch`, and `chat_completions_vision`.
 
 Full preset (`full`): every registered suite (see `--list-suites`).
 
