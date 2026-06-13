@@ -31,11 +31,8 @@ func (ResponsesTools) Run(ctx context.Context, client openai.Client, cfg *config
 	if err != nil {
 		return fmt.Errorf("responses tools request failed: %w", err)
 	}
-	if resp == nil {
-		return fail("responses_tools", "response is nil")
-	}
-	if resp.ID == "" {
-		return fail("responses_tools", "response missing id")
+	if err := validateResponseEnvelope("responses_tools", resp); err != nil {
+		return err
 	}
 	if string(resp.Status) == "completed" {
 		if hasResponseFunctionCalls(resp) {

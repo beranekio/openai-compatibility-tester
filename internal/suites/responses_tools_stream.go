@@ -110,14 +110,14 @@ func (ResponsesToolsStream) Run(ctx context.Context, client openai.Client, cfg *
 	if terminalFailure {
 		return fail("responses_tools_stream", "stream ended with a failure event")
 	}
+	if !completed && !contentFilterIncomplete {
+		return fail("responses_tools_stream", "stream missing terminal event")
+	}
 	if contentFilterIncomplete {
 		return nil
 	}
 	if hasRefusal {
 		return nil
-	}
-	if !completed {
-		return fail("responses_tools_stream", "stream missing response.completed event")
 	}
 	if !functionCallDone {
 		return fail("responses_tools_stream", "stream missing response.function_call_arguments.done event")

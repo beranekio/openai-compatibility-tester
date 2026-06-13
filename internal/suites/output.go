@@ -30,6 +30,25 @@ func hasResponseOutput(resp *responses.Response) bool {
 	return resp.OutputText() != "" || responseOutputRefusal(resp) != ""
 }
 
+func validateResponseEnvelope(suite string, resp *responses.Response) error {
+	if resp == nil {
+		return fail(suite, "response is nil")
+	}
+	if resp.ID == "" {
+		return fail(suite, "response missing id")
+	}
+	if !resp.JSON.CreatedAt.Valid() {
+		return fail(suite, "response missing created_at")
+	}
+	if resp.Model == "" {
+		return fail(suite, "response missing model")
+	}
+	if string(resp.Object) != "response" {
+		return fail(suite, fmt.Sprintf("response object is %q, want response", resp.Object))
+	}
+	return nil
+}
+
 func hasChatMessageOutput(msg openai.ChatCompletionMessage) bool {
 	return msg.Content != "" || msg.Refusal != ""
 }

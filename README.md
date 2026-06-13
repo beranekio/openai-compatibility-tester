@@ -76,7 +76,7 @@ docker run --rm \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 
-Tool-calling suites (`chat_completions_tools`, `chat_completions_tools_stream`) are **opt-in** — included in `extended` and `full`, but not in the default `all` set:
+Tool-calling suites (`chat_completions_tools`, `chat_completions_tools_stream`, `responses_tools`, `responses_tools_stream`) are **opt-in** — included in `extended` and `full`, but not in the default `all` set:
 
 ```bash
 docker run --rm \
@@ -95,7 +95,7 @@ docker run --rm \
   -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
   -e OPENAI_API_KEY=your-api-key \
   -e OPENAI_MODEL=your-chat-model \
-  -e TEST_SUITES=chat_completions_tools,chat_completions_tools_stream \
+  -e TEST_SUITES=chat_completions_tools,chat_completions_tools_stream,responses_tools,responses_tools_stream \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 
