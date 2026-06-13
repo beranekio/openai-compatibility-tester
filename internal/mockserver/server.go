@@ -69,8 +69,18 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 		Messages []struct {
 			Content json.RawMessage `json:"content"`
 		} `json:"messages"`
+		Tools []json.RawMessage `json:"tools"`
 	}
 	_ = json.Unmarshal(body, &req)
+
+	if len(req.Tools) > 0 {
+		if req.Stream {
+			writeChatCompletionToolCallStream(w)
+			return
+		}
+		writeChatCompletionToolCallResponse(w)
+		return
+	}
 
 	if req.Stream {
 		w.Header().Set("Content-Type", "text/event-stream")
@@ -332,6 +342,111 @@ func handleResponses(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 	})
+}
+
+func writeChatCompletionToolCallResponse(w http.ResponseWriter) {
+	writeJSON(w, map[string]any{
+		"id":      "chatcmpl-mock-tools",
+		"object":  "chat.completion",
+		"created": 1700000000,
+		"model":   "gpt-4o-mini",
+		"choices": []map[string]any{
+			{
+				"index": 0,
+				"message": map[string]any{
+					"role": "assistant",
+					"tool_calls": []map[string]any{
+						{
+							"id":   "call_mock_weather",
+							"type": "function",
+							"function": map[string]any{
+								"name":      "get_weather",
+								"arguments": `{"location":"San Francisco, CA"}`,
+							},
+						},
+					},
+				},
+				"finish_reason": "tool_calls",
+			},
+		},
+		"usage": map[string]any{
+			"prompt_tokens":     12,
+			"completion_tokens": 18,
+			"total_tokens":      30,
+		},
+	})
+}
+
+func writeChatCompletionToolCallStream(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.WriteHeader(http.StatusOK)
+
+	chunks := []map[string]any{
+		{
+			"id":      "chatcmpl-mock-tools",
+			"object":  "chat.completion.chunk",
+			"created": 1700000000,
+			"model":   "gpt-4o-mini",
+			"choices": []map[string]any{
+				{
+					"index": 0,
+					"delta": map[string]any{
+						"role": "assistant",
+						"tool_calls": []map[string]any{
+							{
+								"index": 0,
+								"id":    "call_mock_weather",
+								"type":  "function",
+								"function": map[string]any{
+									"name": "get_weather",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			"id":      "chatcmpl-mock-tools",
+			"object":  "chat.completion.chunk",
+			"created": 1700000000,
+			"model":   "gpt-4o-mini",
+			"choices": []map[string]any{
+				{
+					"index": 0,
+					"delta": map[string]any{
+						"tool_calls": []map[string]any{
+							{
+								"index": 0,
+								"function": map[string]any{
+									"arguments": `{"location":"San Francisco, CA"}`,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			"id":      "chatcmpl-mock-tools",
+			"object":  "chat.completion.chunk",
+			"created": 1700000000,
+			"model":   "gpt-4o-mini",
+			"choices": []map[string]any{
+				{
+					"index":         0,
+					"delta":         map[string]any{},
+					"finish_reason": "tool_calls",
+				},
+			},
+		},
+	}
+
+	for _, payload := range chunks {
+		data, _ := json.Marshal(payload)
+		_, _ = w.Write([]byte("data: " + string(data) + "\n\n"))
+	}
+	_, _ = w.Write([]byte("data: [DONE]\n\n"))
 }
 
 func writeJSON(w http.ResponseWriter, payload any) {
