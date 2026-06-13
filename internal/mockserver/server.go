@@ -11,19 +11,23 @@ import (
 // Server provides a minimal OpenAI-compatible HTTP API for CI tests.
 type Server struct {
 	*httptest.Server
+	store *responseStore
 }
 
 // New starts a mock OpenAI API server.
 func New() *Server {
 	mux := http.NewServeMux()
-	s := &Server{}
+	s := &Server{store: newResponseStore()}
 
 	mux.HandleFunc("GET /v1/models", handleModels)
 	mux.HandleFunc("GET /v1/models/{id}", handleModelGet)
 	mux.HandleFunc("POST /v1/chat/completions", handleChatCompletions)
 	mux.HandleFunc("POST /v1/completions", handleCompletions)
 	mux.HandleFunc("POST /v1/embeddings", handleEmbeddings)
-	mux.HandleFunc("POST /v1/responses", handleResponses)
+	mux.HandleFunc("POST /v1/responses", s.handleResponses)
+	mux.HandleFunc("GET /v1/responses/{id}", s.handleResponseGet)
+	mux.HandleFunc("DELETE /v1/responses/{id}", s.handleResponseDelete)
+	mux.HandleFunc("POST /v1/responses/{id}/cancel", s.handleResponseCancel)
 
 	s.Server = httptest.NewServer(mux)
 	return s
@@ -276,227 +280,6 @@ func handleEmbeddings(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func handleResponses(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var req struct {
-		Stream bool              `json:"stream"`
-		Tools  []json.RawMessage `json:"tools"`
-		Text   *struct {
-			Format *struct {
-				Type   string `json:"type"`
-				Strict *bool  `json:"strict"`
-			} `json:"format"`
-		} `json:"text"`
-	}
-	_ = json.Unmarshal(body, &req)
-
-	if len(req.Tools) > 0 {
-		if req.Stream {
-			writeResponsesToolCallStream(w)
-			return
-		}
-		writeResponsesToolCallResponse(w)
-		return
-	}
-
-	if req.Stream {
-		w.Header().Set("Content-Type", "text/event-stream")
-		w.WriteHeader(http.StatusOK)
-		seq := 0
-		writeResponseStreamEvent := func(payload map[string]any) {
-			payload["sequence_number"] = seq
-			seq++
-			data, _ := json.Marshal(payload)
-			_, _ = w.Write([]byte("data: " + string(data) + "\n\n"))
-		}
-
-		writeResponseStreamEvent(map[string]any{
-			"type": "response.created",
-			"response": map[string]any{
-				"id":         "resp-mock",
-				"object":     "response",
-				"status":     "in_progress",
-				"model":      "gpt-4o-mini",
-				"created_at": 1700000000,
-			},
-		})
-		writeResponseStreamEvent(map[string]any{
-			"type": "response.in_progress",
-			"response": map[string]any{
-				"id":         "resp-mock",
-				"object":     "response",
-				"status":     "in_progress",
-				"model":      "gpt-4o-mini",
-				"created_at": 1700000000,
-			},
-		})
-		writeResponseStreamEvent(map[string]any{
-			"type":          "response.output_item.added",
-			"output_index":  0,
-			"item": map[string]any{
-				"id":     "msg-mock",
-				"type":   "message",
-				"role":   "assistant",
-				"status": "in_progress",
-			},
-		})
-		writeResponseStreamEvent(map[string]any{
-			"type":          "response.content_part.added",
-			"item_id":       "msg-mock",
-			"output_index":  0,
-			"content_index": 0,
-			"part": map[string]any{
-				"type": "output_text",
-				"text": "",
-			},
-		})
-
-		chunks := []string{"one", " two", " three"}
-		for _, chunk := range chunks {
-			writeResponseStreamEvent(map[string]any{
-				"type":          "response.output_text.delta",
-				"content_index": 0,
-				"item_id":       "msg-mock",
-				"output_index":  0,
-				"logprobs":      []any{},
-				"delta":         chunk,
-			})
-		}
-		writeResponseStreamEvent(map[string]any{
-			"type": "response.completed",
-			"response": map[string]any{
-				"id":         "resp-mock",
-				"object":     "response",
-				"status":     "completed",
-				"model":      "gpt-4o-mini",
-				"created_at": 1700000000,
-			},
-		})
-		_, _ = w.Write([]byte("data: [DONE]\n\n"))
-		return
-	}
-
-	outputText := "pong"
-	if req.Text != nil && req.Text.Format != nil && req.Text.Format.Type == "json_schema" {
-		if req.Text.Format.Strict != nil && *req.Text.Format.Strict {
-			outputText = `{"answer":"pong"}`
-		}
-	}
-
-	writeJSON(w, map[string]any{
-		"id":         "resp-mock",
-		"object":     "response",
-		"status":     "completed",
-		"model":      "gpt-4o-mini",
-		"created_at": 1700000000,
-		"output": []map[string]any{
-			{
-				"id":     "msg-mock",
-				"type":   "message",
-				"role":   "assistant",
-				"status": "completed",
-				"content": []map[string]any{
-					{
-						"type": "output_text",
-						"text": outputText,
-					},
-				},
-			},
-		},
-	})
-}
-
-func writeResponsesToolCallResponse(w http.ResponseWriter) {
-	writeJSON(w, map[string]any{
-		"id":         "resp-mock-tools",
-		"object":     "response",
-		"status":     "completed",
-		"model":      "gpt-4o-mini",
-		"created_at": 1700000000,
-		"output": []map[string]any{
-			{
-				"id":        "fc-mock",
-				"type":      "function_call",
-				"status":    "completed",
-				"call_id":   "call_mock_weather",
-				"name":      "get_weather",
-				"arguments": `{"location":"San Francisco, CA"}`,
-			},
-		},
-	})
-}
-
-func writeResponsesToolCallStream(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.WriteHeader(http.StatusOK)
-
-	seq := 0
-	writeEvent := func(payload map[string]any) {
-		payload["sequence_number"] = seq
-		seq++
-		data, _ := json.Marshal(payload)
-		_, _ = w.Write([]byte("data: " + string(data) + "\n\n"))
-	}
-
-	writeEvent(map[string]any{
-		"type":          "response.output_item.added",
-		"output_index":  0,
-		"item": map[string]any{
-			"id":        "fc-mock",
-			"type":      "function_call",
-			"status":    "in_progress",
-			"call_id":   "call_mock_weather",
-			"name":      "get_weather",
-			"arguments": "",
-		},
-	})
-
-	argChunks := []string{`{"location"`, `:"San Francisco, CA"`, `}`}
-	for _, chunk := range argChunks {
-		writeEvent(map[string]any{
-			"type":          "response.function_call_arguments.delta",
-			"item_id":       "fc-mock",
-			"output_index":  0,
-			"delta":         chunk,
-		})
-	}
-	writeEvent(map[string]any{
-		"type":          "response.function_call_arguments.done",
-		"item_id":       "fc-mock",
-		"output_index":  0,
-		"name":          "get_weather",
-		"arguments":     `{"location":"San Francisco, CA"}`,
-	})
-	writeEvent(map[string]any{
-		"type":         "response.output_item.done",
-		"output_index": 0,
-		"item": map[string]any{
-			"id":        "fc-mock",
-			"type":      "function_call",
-			"status":    "completed",
-			"call_id":   "call_mock_weather",
-			"name":      "get_weather",
-			"arguments": `{"location":"San Francisco, CA"}`,
-		},
-	})
-	writeEvent(map[string]any{
-		"type": "response.completed",
-		"response": map[string]any{
-			"id":         "resp-mock-tools",
-			"object":     "response",
-			"status":     "completed",
-			"model":      "gpt-4o-mini",
-			"created_at": 1700000000,
-		},
-	})
-	_, _ = w.Write([]byte("data: [DONE]\n\n"))
-}
-
 func writeChatCompletionToolCallResponse(w http.ResponseWriter) {
 	writeJSON(w, map[string]any{
 		"id":      "chatcmpl-mock-tools",
@@ -599,6 +382,92 @@ func writeChatCompletionToolCallStream(w http.ResponseWriter) {
 		data, _ := json.Marshal(payload)
 		_, _ = w.Write([]byte("data: " + string(data) + "\n\n"))
 	}
+	_, _ = w.Write([]byte("data: [DONE]\n\n"))
+}
+
+func writeResponsesToolCallResponse(w http.ResponseWriter) {
+	writeJSON(w, map[string]any{
+		"id":         "resp-mock-tools",
+		"object":     "response",
+		"status":     "completed",
+		"model":      "gpt-4o-mini",
+		"created_at": 1700000000,
+		"output": []map[string]any{
+			{
+				"id":        "fc-mock",
+				"type":      "function_call",
+				"status":    "completed",
+				"call_id":   "call_mock_weather",
+				"name":      "get_weather",
+				"arguments": `{"location":"San Francisco, CA"}`,
+			},
+		},
+	})
+}
+
+func writeResponsesToolCallStream(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.WriteHeader(http.StatusOK)
+
+	seq := 0
+	writeEvent := func(payload map[string]any) {
+		payload["sequence_number"] = seq
+		seq++
+		data, _ := json.Marshal(payload)
+		_, _ = w.Write([]byte("data: " + string(data) + "\n\n"))
+	}
+
+	writeEvent(map[string]any{
+		"type":         "response.output_item.added",
+		"output_index": 0,
+		"item": map[string]any{
+			"id":        "fc-mock",
+			"type":      "function_call",
+			"status":    "in_progress",
+			"call_id":   "call_mock_weather",
+			"name":      "get_weather",
+			"arguments": "",
+		},
+	})
+
+	argChunks := []string{`{"location"`, `:"San Francisco, CA"`, `}`}
+	for _, chunk := range argChunks {
+		writeEvent(map[string]any{
+			"type":         "response.function_call_arguments.delta",
+			"item_id":      "fc-mock",
+			"output_index": 0,
+			"delta":        chunk,
+		})
+	}
+	writeEvent(map[string]any{
+		"type":         "response.function_call_arguments.done",
+		"item_id":      "fc-mock",
+		"output_index": 0,
+		"name":         "get_weather",
+		"arguments":    `{"location":"San Francisco, CA"}`,
+	})
+	writeEvent(map[string]any{
+		"type":         "response.output_item.done",
+		"output_index": 0,
+		"item": map[string]any{
+			"id":        "fc-mock",
+			"type":      "function_call",
+			"status":    "completed",
+			"call_id":   "call_mock_weather",
+			"name":      "get_weather",
+			"arguments": `{"location":"San Francisco, CA"}`,
+		},
+	})
+	writeEvent(map[string]any{
+		"type": "response.completed",
+		"response": map[string]any{
+			"id":         "resp-mock-tools",
+			"object":     "response",
+			"status":     "completed",
+			"model":      "gpt-4o-mini",
+			"created_at": 1700000000,
+		},
+	})
 	_, _ = w.Write([]byte("data: [DONE]\n\n"))
 }
 

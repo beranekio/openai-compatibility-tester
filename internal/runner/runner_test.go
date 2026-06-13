@@ -40,6 +40,9 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"responses_tools",
 			"responses_tools_stream",
 			"responses_json",
+			"responses_get",
+			"responses_delete",
+			"responses_cancel",
 		},
 	}
 
