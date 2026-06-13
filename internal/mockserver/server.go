@@ -66,6 +66,9 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 		ResponseFormat *struct {
 			Type string `json:"type"`
 		} `json:"response_format"`
+		Messages []struct {
+			Content json.RawMessage `json:"content"`
+		} `json:"messages"`
 	}
 	_ = json.Unmarshal(body, &req)
 
@@ -110,6 +113,8 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 	content := "pong"
 	if req.ResponseFormat != nil && req.ResponseFormat.Type == "json_schema" {
 		content = `{"answer":"pong"}`
+	} else if chatCompletionRequestHasImageURL(req.Messages) {
+		content = "I see an image"
 	}
 
 	writeJSON(w, map[string]any{
@@ -133,6 +138,25 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 			"total_tokens":      6,
 		},
 	})
+}
+
+func chatCompletionRequestHasImageURL(messages []struct {
+	Content json.RawMessage `json:"content"`
+}) bool {
+	for _, msg := range messages {
+		var parts []struct {
+			Type string `json:"type"`
+		}
+		if err := json.Unmarshal(msg.Content, &parts); err != nil {
+			continue
+		}
+		for _, part := range parts {
+			if part.Type == "image_url" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func handleCompletions(w http.ResponseWriter, r *http.Request) {
@@ -184,7 +208,6 @@ func handleCompletions(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("data: [DONE]\n\n"))
 		return
 	}
-
 	writeJSON(w, map[string]any{
 		"id":      "cmpl-mock",
 		"object":  "text_completion",

@@ -47,6 +47,7 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `chat_completions` | `client.Chat.Completions.New` | `POST /v1/chat/completions` |
 | `chat_completions_stream` | `client.Chat.Completions.NewStreaming` | `POST /v1/chat/completions` (stream) |
 | `chat_completions_json` | `client.Chat.Completions.New` (`response_format` json_schema) | `POST /v1/chat/completions` |
+| `chat_completions_vision` | `client.Chat.Completions.New` (with image input) | `POST /v1/chat/completions` |
 | `completions` | `client.Completions.New` | `POST /v1/completions` |
 | `completions_stream` | `client.Completions.NewStreaming` | `POST /v1/completions` (stream) |
 | `embeddings` | `client.Embeddings.New` | `POST /v1/embeddings` |
@@ -56,7 +57,7 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
-Extended preset (`extended`): default suites plus `chat_completions_json`, `completions`, `completions_stream`, `embeddings`, and `embeddings_batch`.
+Extended preset (`extended`): default suites plus `chat_completions_json`, `completions`, `completions_stream`, `embeddings`, `embeddings_batch`, and `chat_completions_vision`.
 
 Full preset (`full`): every registered suite (see `--list-suites`).
 
@@ -91,6 +92,17 @@ docker run --rm \
   -e OPENAI_MODEL=your-chat-model \
   -e OPENAI_EMBEDDING_MODEL=your-embedding-model \
   -e TEST_SUITES=models,chat_completions,chat_completions_stream,responses,responses_stream,embeddings,embeddings_batch \
+  ghcr.io/beranekio/openai-compatibility-tester:latest
+```
+
+**Vision** — requires a vision-capable model (`OPENAI_VISION_MODEL` defaults to `OPENAI_MODEL`):
+
+```bash
+docker run --rm \
+  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
+  -e OPENAI_API_KEY=your-api-key \
+  -e OPENAI_MODEL=your-vision-model \
+  -e TEST_SUITES=chat_completions_vision \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 

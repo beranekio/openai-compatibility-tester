@@ -23,6 +23,7 @@ func All() []Suite {
 		ChatCompletions{},
 		ChatCompletionsStream{},
 		ChatCompletionsJSON{},
+		ChatCompletionsVision{},
 		Completions{},
 		CompletionsStream{},
 		Embeddings{},

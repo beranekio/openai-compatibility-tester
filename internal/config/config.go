@@ -55,6 +55,7 @@ var ExtendedSuites = []string{
 	"completions_stream",
 	"embeddings",
 	"embeddings_batch",
+	"chat_completions_vision",
 }
 
 // FullSuites lists every registered suite name. Keep in sync with suites.All().
@@ -64,6 +65,7 @@ var FullSuites = []string{
 	"chat_completions",
 	"chat_completions_stream",
 	"chat_completions_json",
+	"chat_completions_vision",
 	"completions",
 	"completions_stream",
 	"embeddings",
@@ -78,6 +80,7 @@ var knownSuites = map[string]struct{}{
 	"chat_completions":         {},
 	"chat_completions_stream":  {},
 	"chat_completions_json":    {},
+	"chat_completions_vision":  {},
 	"completions":              {},
 	"completions_stream":       {},
 	"embeddings":               {},
