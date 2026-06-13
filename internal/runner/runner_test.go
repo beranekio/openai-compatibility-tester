@@ -27,6 +27,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"models_get",
 			"chat_completions",
 			"chat_completions_stream",
+			"chat_completions_json",
 			"completions",
 			"completions_stream",
 			"embeddings",

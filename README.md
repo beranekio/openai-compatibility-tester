@@ -46,6 +46,7 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `models_get` | `client.Models.Get` | `GET /v1/models/{id}` |
 | `chat_completions` | `client.Chat.Completions.New` | `POST /v1/chat/completions` |
 | `chat_completions_stream` | `client.Chat.Completions.NewStreaming` | `POST /v1/chat/completions` (stream) |
+| `chat_completions_json` | `client.Chat.Completions.New` (`response_format` json_schema) | `POST /v1/chat/completions` |
 | `completions` | `client.Completions.New` | `POST /v1/completions` |
 | `completions_stream` | `client.Completions.NewStreaming` | `POST /v1/completions` (stream) |
 | `embeddings` | `client.Embeddings.New` | `POST /v1/embeddings` |
@@ -55,9 +56,20 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
-Extended preset (`extended`): default suites plus `completions`, `completions_stream`, `embeddings`, and `embeddings_batch`.
+Extended preset (`extended`): default suites plus `chat_completions_json`, `completions`, `completions_stream`, `embeddings`, and `embeddings_batch`.
 
 Full preset (`full`): every registered suite (see `--list-suites`).
+
+Structured JSON output (`chat_completions_json`) is **opt-in** — included in `extended` and `full`, but not in the default `all` set:
+
+```bash
+docker run --rm \
+  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
+  -e OPENAI_API_KEY=your-api-key \
+  -e OPENAI_MODEL=your-chat-model \
+  -e TEST_SUITES=chat_completions_json \
+  ghcr.io/beranekio/openai-compatibility-tester:latest
+```
 
 Add `completions` and `completions_stream` only when your endpoint exposes legacy `/v1/completions`:
 
