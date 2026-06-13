@@ -421,3 +421,81 @@ func TestLoadCompletionModelOverride(t *testing.T) {
 		t.Fatalf("Model = %q, want gpt-4o-mini", cfg.Model)
 	}
 }
+
+func TestLoadSuitePresets(t *testing.T) {
+	tests := []struct {
+		name       string
+		preset     string
+		wantSuites []string
+		setup      func(t *testing.T)
+	}{
+		{
+			name:       "extended preset",
+			preset:     "extended",
+			wantSuites: ExtendedSuites,
+			setup: func(t *testing.T) {
+				t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
+			},
+		},
+		{
+			name:       "full preset",
+			preset:     "full",
+			wantSuites: FullSuites,
+			setup: func(t *testing.T) {
+				t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
+			},
+		},
+		{
+			name:       "default preset alias",
+			preset:     "default",
+			wantSuites: DefaultSuites,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(EnvBaseURL, "https://example.com/v1")
+			t.Setenv(EnvAPIKey, "test-key")
+			if tt.setup != nil {
+				tt.setup(t)
+			}
+
+			cfg, err := Load([]string{"--suites", tt.preset})
+			if err != nil {
+				t.Fatalf("Load() error = %v", err)
+			}
+			if len(cfg.Suites) != len(tt.wantSuites) {
+				t.Fatalf("len(Suites) = %d, want %d", len(cfg.Suites), len(tt.wantSuites))
+			}
+			for i, name := range tt.wantSuites {
+				if cfg.Suites[i] != name {
+					t.Fatalf("Suites[%d] = %q, want %q", i, cfg.Suites[i], name)
+				}
+			}
+		})
+	}
+}
+
+func TestLoadRejectsExplicitlyEmptySuiteSelection(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+
+	_, err := Load([]string{"--suites", ""})
+	if err == nil || !strings.Contains(err.Error(), "at least one test suite must be selected") {
+		t.Fatalf("expected empty suite selection error, got %v", err)
+	}
+}
+
+func TestLoadVisionModelDefaultsToChatModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvModel, "gpt-4o")
+
+	cfg, err := Load([]string{})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.VisionModel != "gpt-4o" {
+		t.Fatalf("VisionModel = %q, want gpt-4o", cfg.VisionModel)
+	}
+}

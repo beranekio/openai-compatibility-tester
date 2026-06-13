@@ -56,6 +56,7 @@ Follow this checklist for every new suite:
 3. **Validate** parsed responses with `fail(suite, message)` from `errors.go`; wrap transport/SDK errors with `fmt.Errorf("...: %w", err)`.
 4. **Register** the suite in `suites.All()` and update:
    - `config.DefaultSuites` (only if it should run by default)
+   - `config.ExtendedSuites` and `config.FullSuites` (keep `FullSuites` in sync — `internal/suites/suite_test.go` enforces this)
    - `config.knownSuites`
    - `suites.RequiredModels()` and `config.validateModelsForSuites()` (if a model env var is needed)
    - `config.Load()` flags/env vars (if new settings are required)

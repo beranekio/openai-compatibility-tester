@@ -42,6 +42,10 @@ type ModelRequirements struct {
 	Chat       bool
 	Completion bool
 	Embedding  bool
+	Vision     bool
+	Image      bool
+	TTS        bool
+	Whisper    bool
 }
 
 // RequiredModels returns which model settings must be configured for the suites.
@@ -55,6 +59,14 @@ func RequiredModels(names []string) ModelRequirements {
 			req.Completion = true
 		case "embeddings":
 			req.Embedding = true
+		case "chat_completions_vision":
+			req.Vision = true
+		case "images_generations", "images_edits", "images_variations":
+			req.Image = true
+		case "audio_speech":
+			req.TTS = true
+		case "audio_transcriptions", "audio_transcriptions_stream", "audio_translations":
+			req.Whisper = true
 		}
 	}
 	return req
