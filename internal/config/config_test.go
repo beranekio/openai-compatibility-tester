@@ -218,6 +218,30 @@ func TestLoadRejectsEmptyModelForChatSuite(t *testing.T) {
 	}
 }
 
+func TestLoadAllowsModelsGetSuiteWithModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+
+	cfg, err := Load([]string{"--suites", "models_get", "--model", "my-model"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.Model != "my-model" {
+		t.Fatalf("Model = %q, want my-model", cfg.Model)
+	}
+}
+
+func TestLoadRejectsEmptyModelForModelsGetSuite(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvModel, "")
+
+	_, err := Load([]string{"--suites", "models_get", "--model="})
+	if err == nil || !strings.Contains(err.Error(), EnvModel) {
+		t.Fatalf("expected missing model error, got %v", err)
+	}
+}
+
 func TestLoadRejectsEmptyCompletionModelFlag(t *testing.T) {
 	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")

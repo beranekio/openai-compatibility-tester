@@ -34,6 +34,7 @@ const (
 // DefaultSuites are run when TEST_SUITES is unset or set to "all" or "default".
 var DefaultSuites = []string{
 	"models",
+	"models_get",
 	"chat_completions",
 	"chat_completions_stream",
 	"responses",
@@ -44,6 +45,7 @@ var DefaultSuites = []string{
 // Update this list when new opt-in suites ship (see issue #45).
 var ExtendedSuites = []string{
 	"models",
+	"models_get",
 	"chat_completions",
 	"chat_completions_stream",
 	"responses",
@@ -55,6 +57,7 @@ var ExtendedSuites = []string{
 // FullSuites lists every registered suite name. Keep in sync with suites.All().
 var FullSuites = []string{
 	"models",
+	"models_get",
 	"chat_completions",
 	"chat_completions_stream",
 	"completions",
@@ -65,6 +68,7 @@ var FullSuites = []string{
 
 var knownSuites = map[string]struct{}{
 	"models":                   {},
+	"models_get":               {},
 	"chat_completions":         {},
 	"chat_completions_stream":  {},
 	"completions":              {},
@@ -98,7 +102,7 @@ func Load(args []string) (*Config, error) {
 
 	baseURL := fs.String("base-url", envOrDefault(EnvBaseURL, ""), "OpenAI-compatible API base URL")
 	apiKey := fs.String("api-key", "", "API key for the endpoint (or set "+EnvAPIKey+")")
-	model := fs.String("model", envOrDefault(EnvModel, "gpt-4o-mini"), "Model for chat completion suites")
+	model := fs.String("model", envOrDefault(EnvModel, "gpt-4o-mini"), "Model for chat completion and models_get suites")
 	completionModel := fs.String("completion-model", envOrDefault(EnvCompletionModel, ""), "Model for legacy completions suite (defaults to "+DefaultCompletionModel+" when completions is selected)")
 	embeddingModel := fs.String("embedding-model", envOrDefault(EnvEmbeddingModel, ""), "Model for embedding tests (required when embeddings suite is selected)")
 	responsesModel := fs.String("responses-model", envOrDefault(EnvResponsesModel, ""), "Model for Responses API suites (defaults to --model)")
@@ -254,7 +258,7 @@ func validateModelsForSuites(cfg *Config) error {
 	var needsVision, needsImage, needsTTS, needsWhisper bool
 	for _, name := range cfg.Suites {
 		switch name {
-		case "chat_completions", "chat_completions_stream":
+		case "chat_completions", "chat_completions_stream", "models_get":
 			needsChat = true
 		case "responses", "responses_stream":
 			needsResponses = true
