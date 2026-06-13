@@ -55,6 +55,7 @@ var ExtendedSuites = []string{
 	"responses_stream",
 	"responses_tools",
 	"responses_tools_stream",
+	"responses_json",
 	"completions",
 	"completions_stream",
 	"embeddings",
@@ -80,6 +81,7 @@ var FullSuites = []string{
 	"responses_stream",
 	"responses_tools",
 	"responses_tools_stream",
+	"responses_json",
 }
 
 var knownSuites = map[string]struct{}{
@@ -99,6 +101,7 @@ var knownSuites = map[string]struct{}{
 	"responses_stream":              {},
 	"responses_tools":               {},
 	"responses_tools_stream":        {},
+	"responses_json":                {},
 }
 
 // Config holds runtime settings for compatibility testing.
@@ -284,7 +287,7 @@ func validateModelsForSuites(cfg *Config) error {
 		switch name {
 		case "chat_completions", "chat_completions_stream", "chat_completions_json", "chat_completions_tools", "chat_completions_tools_stream", "models_get":
 			needsChat = true
-		case "responses", "responses_stream", "responses_tools", "responses_tools_stream":
+		case "responses", "responses_stream", "responses_tools", "responses_tools_stream", "responses_json":
 			needsResponses = true
 		case "completions", "completions_stream":
 			needsCompletion = true
