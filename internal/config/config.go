@@ -29,7 +29,8 @@ var DefaultSuites = []string{
 	"models",
 	"chat_completions",
 	"chat_completions_stream",
-	"embeddings",
+	"responses",
+	"responses_stream",
 }
 
 var knownSuites = map[string]struct{}{

@@ -13,8 +13,6 @@ import (
 func TestLoadDefaults(t *testing.T) {
 	t.Setenv(EnvBaseURL, "http://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
-	t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
-
 	cfg, err := Load([]string{})
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
@@ -68,7 +66,6 @@ func TestLoadRejectsInvalidRequestTimeout(t *testing.T) {
 func TestLoadTimeoutFlagOverridesInvalidEnvironment(t *testing.T) {
 	t.Setenv(EnvBaseURL, "http://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
-	t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
 	t.Setenv(EnvRequestTimeout, "typo")
 
 	cfg, err := Load([]string{"--timeout", "30s"})
@@ -83,7 +80,6 @@ func TestLoadTimeoutFlagOverridesInvalidEnvironment(t *testing.T) {
 func TestLoadSingleDashTimeoutOverridesInvalidEnvironment(t *testing.T) {
 	t.Setenv(EnvBaseURL, "http://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
-	t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
 	t.Setenv(EnvRequestTimeout, "typo")
 
 	cfg, err := Load([]string{"-timeout=30s"})
@@ -312,20 +308,18 @@ func TestLoadCompletionsSuiteUsesInstructDefault(t *testing.T) {
 func TestLoadRejectsEmptyAPIKeyFlagWhenEnvSet(t *testing.T) {
 	t.Setenv(EnvBaseURL, "http://example.com/v1")
 	t.Setenv(EnvAPIKey, "production-secret")
-	t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
-
 	_, err := Load([]string{"--api-key="})
 	if err == nil || !strings.Contains(err.Error(), EnvAPIKey) {
 		t.Fatalf("expected missing API key error, got %v", err)
 	}
 }
 
-func TestLoadRejectsDefaultSuitesWithoutEmbeddingModel(t *testing.T) {
+func TestLoadRejectsEmbeddingsSuiteWithoutEmbeddingModel(t *testing.T) {
 	t.Setenv(EnvBaseURL, "http://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 	t.Setenv(EnvEmbeddingModel, "")
 
-	_, err := Load([]string{})
+	_, err := Load([]string{"--suites", "embeddings"})
 	if err == nil || !strings.Contains(err.Error(), EnvEmbeddingModel) {
 		t.Fatalf("expected missing embedding model error, got %v", err)
 	}
@@ -336,7 +330,6 @@ func TestLoadCompletionModelOverride(t *testing.T) {
 	t.Setenv(EnvAPIKey, "test-key")
 	t.Setenv(EnvModel, "gpt-4o-mini")
 	t.Setenv(EnvCompletionModel, "gpt-3.5-turbo-instruct")
-	t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
 
 	cfg, err := Load([]string{})
 	if err != nil {
