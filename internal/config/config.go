@@ -49,6 +49,8 @@ var ExtendedSuites = []string{
 	"chat_completions",
 	"chat_completions_stream",
 	"chat_completions_json",
+	"chat_completions_tools",
+	"chat_completions_tools_stream",
 	"responses",
 	"responses_stream",
 	"completions",
@@ -66,6 +68,8 @@ var FullSuites = []string{
 	"chat_completions_stream",
 	"chat_completions_json",
 	"chat_completions_vision",
+	"chat_completions_tools",
+	"chat_completions_tools_stream",
 	"completions",
 	"completions_stream",
 	"embeddings",
@@ -75,18 +79,20 @@ var FullSuites = []string{
 }
 
 var knownSuites = map[string]struct{}{
-	"models":                   {},
-	"models_get":               {},
-	"chat_completions":         {},
-	"chat_completions_stream":  {},
-	"chat_completions_json":    {},
-	"chat_completions_vision":  {},
-	"completions":              {},
-	"completions_stream":       {},
-	"embeddings":               {},
-	"embeddings_batch":         {},
-	"responses":                {},
-	"responses_stream":         {},
+	"models":                        {},
+	"models_get":                    {},
+	"chat_completions":              {},
+	"chat_completions_stream":       {},
+	"chat_completions_json":         {},
+	"chat_completions_vision":       {},
+	"chat_completions_tools":        {},
+	"chat_completions_tools_stream": {},
+	"completions":                   {},
+	"completions_stream":            {},
+	"embeddings":                    {},
+	"embeddings_batch":              {},
+	"responses":                     {},
+	"responses_stream":              {},
 }
 
 // Config holds runtime settings for compatibility testing.
@@ -270,7 +276,7 @@ func validateModelsForSuites(cfg *Config) error {
 	var needsVision, needsImage, needsTTS, needsWhisper bool
 	for _, name := range cfg.Suites {
 		switch name {
-		case "chat_completions", "chat_completions_stream", "chat_completions_json", "models_get":
+		case "chat_completions", "chat_completions_stream", "chat_completions_json", "chat_completions_tools", "chat_completions_tools_stream", "models_get":
 			needsChat = true
 		case "responses", "responses_stream":
 			needsResponses = true
