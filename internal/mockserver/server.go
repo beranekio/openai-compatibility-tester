@@ -460,6 +460,18 @@ func writeResponsesToolCallStream(w http.ResponseWriter) {
 		"arguments":     `{"location":"San Francisco, CA"}`,
 	})
 	writeEvent(map[string]any{
+		"type":         "response.output_item.done",
+		"output_index": 0,
+		"item": map[string]any{
+			"id":        "fc-mock",
+			"type":      "function_call",
+			"status":    "completed",
+			"call_id":   "call_mock_weather",
+			"name":      "get_weather",
+			"arguments": `{"location":"San Francisco, CA"}`,
+		},
+	})
+	writeEvent(map[string]any{
 		"type": "response.completed",
 		"response": map[string]any{
 			"id":         "resp-mock-tools",

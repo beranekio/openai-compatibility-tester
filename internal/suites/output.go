@@ -143,8 +143,17 @@ func responseFunctionCalls(resp *responses.Response) []responses.ResponseFunctio
 }
 
 func validateResponseFunctionToolCall(suite string, call responses.ResponseFunctionToolCall) error {
+	if call.ID == "" {
+		return fail(suite, "function_call missing id")
+	}
 	if call.CallID == "" {
 		return fail(suite, "function_call missing call_id")
+	}
+	if !call.JSON.Status.Valid() {
+		return fail(suite, "function_call missing status")
+	}
+	if call.Status != responses.ResponseFunctionToolCallStatusCompleted {
+		return fail(suite, fmt.Sprintf("function_call status is %q, want completed", call.Status))
 	}
 	if call.Name == "" {
 		return fail(suite, "function_call missing name")

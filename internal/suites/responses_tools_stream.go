@@ -42,6 +42,7 @@ func (ResponsesToolsStream) Run(ctx context.Context, client openai.Client, cfg *
 
 	var hasRefusal bool
 	var functionCallDone bool
+	var functionCallOutputItemDone bool
 	var completed bool
 	var contentFilterIncomplete bool
 	var terminalFailure bool
@@ -72,10 +73,31 @@ func (ResponsesToolsStream) Run(ctx context.Context, client openai.Client, cfg *
 				return err
 			}
 			functionCallDone = true
+		case "response.output_item.done":
+			done := event.AsResponseOutputItemDone()
+			if !done.JSON.Item.Valid() {
+				return fail("responses_tools_stream", "response.output_item.done missing item")
+			}
+			if !done.JSON.OutputIndex.Valid() {
+				return fail("responses_tools_stream", "response.output_item.done missing output_index")
+			}
+			if !done.JSON.SequenceNumber.Valid() {
+				return fail("responses_tools_stream", "response.output_item.done missing sequence_number")
+			}
+			if done.Item.Type != "function_call" {
+				return fail("responses_tools_stream", fmt.Sprintf("response.output_item.done item type is %q, want function_call", done.Item.Type))
+			}
+			if err := validateResponseFunctionToolCall("responses_tools_stream", done.Item.AsFunctionCall()); err != nil {
+				return err
+			}
+			functionCallOutputItemDone = true
 		case "response.completed":
 			completedEvent := event.AsResponseCompleted()
 			if !completedEvent.JSON.Response.Valid() {
 				return fail("responses_tools_stream", "response.completed missing response object")
+			}
+			if !completedEvent.JSON.SequenceNumber.Valid() {
+				return fail("responses_tools_stream", "response.completed missing sequence_number")
 			}
 			if completedEvent.Response.ID == "" {
 				return fail("responses_tools_stream", "response.completed response missing id")
@@ -89,6 +111,9 @@ func (ResponsesToolsStream) Run(ctx context.Context, client openai.Client, cfg *
 			incompleteEvent := event.AsResponseIncomplete()
 			if !incompleteEvent.JSON.Response.Valid() {
 				return fail("responses_tools_stream", "response.incomplete missing response object")
+			}
+			if !incompleteEvent.JSON.SequenceNumber.Valid() {
+				return fail("responses_tools_stream", "response.incomplete missing sequence_number")
 			}
 			if incompleteEvent.Response.ID == "" {
 				return fail("responses_tools_stream", "response.incomplete response missing id")
@@ -122,6 +147,9 @@ func (ResponsesToolsStream) Run(ctx context.Context, client openai.Client, cfg *
 	if !functionCallDone {
 		return fail("responses_tools_stream", "stream missing response.function_call_arguments.done event")
 	}
+	if !functionCallOutputItemDone {
+		return fail("responses_tools_stream", "stream missing response.output_item.done event")
+	}
 	return nil
 }
 
@@ -134,6 +162,9 @@ func validateResponseFunctionCallArgumentsDelta(suite string, delta responses.Re
 	}
 	if !delta.JSON.SequenceNumber.Valid() {
 		return fail(suite, "response.function_call_arguments.delta missing sequence_number")
+	}
+	if !delta.JSON.Delta.Valid() {
+		return fail(suite, "response.function_call_arguments.delta missing delta")
 	}
 	return nil
 }
