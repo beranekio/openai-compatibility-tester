@@ -99,6 +99,38 @@ func TestLoadListSuitesIgnoresInvalidRequestTimeout(t *testing.T) {
 	}
 }
 
+func TestLoadListSuitesIgnoresDuplicateSuites(t *testing.T) {
+	t.Setenv(EnvTestSuites, "models,models")
+
+	cfg, err := Load([]string{"--list-suites"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if !cfg.ListSuites {
+		t.Fatal("expected ListSuites to be true")
+	}
+}
+
+func TestLoadRejectsBaseURLWithoutHostname(t *testing.T) {
+	t.Setenv(EnvBaseURL, "")
+	t.Setenv(EnvAPIKey, "test-key")
+
+	_, err := Load([]string{"--base-url", "http://:8080/v1"})
+	if err == nil || !strings.Contains(err.Error(), "hostname") {
+		t.Fatalf("expected hostname error, got %v", err)
+	}
+}
+
+func TestLoadRejectsBaseURLWithInvalidPort(t *testing.T) {
+	t.Setenv(EnvBaseURL, "")
+	t.Setenv(EnvAPIKey, "test-key")
+
+	_, err := Load([]string{"--base-url", "http://host:99999/v1"})
+	if err == nil || !strings.Contains(err.Error(), "port") {
+		t.Fatalf("expected port error, got %v", err)
+	}
+}
+
 func TestLoadRejectsUnexpectedArguments(t *testing.T) {
 	t.Setenv(EnvBaseURL, "http://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")

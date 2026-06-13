@@ -23,7 +23,6 @@ func (ChatCompletionsStream) Run(ctx context.Context, client openai.Client, cfg 
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.UserMessage("Count from one to three."),
 		},
-		MaxTokens: openai.Int(32),
 	})
 	defer stream.Close()
 

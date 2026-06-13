@@ -23,7 +23,6 @@ func (ChatCompletions) Run(ctx context.Context, client openai.Client, cfg *confi
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.UserMessage("Reply with exactly the word: pong"),
 		},
-		MaxTokens: openai.Int(16),
 	})
 	if err != nil {
 		return fmt.Errorf("chat completion request failed: %w", err)

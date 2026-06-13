@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -84,6 +85,10 @@ func Load(args []string) (*Config, error) {
 		ListSuites:      *listSuites,
 	}
 
+	if cfg.ListSuites {
+		return cfg, nil
+	}
+
 	if cfg.CompletionModel == "" {
 		cfg.CompletionModel = cfg.Model
 	}
@@ -103,10 +108,6 @@ func Load(args []string) (*Config, error) {
 			seen[name] = struct{}{}
 			cfg.Suites = append(cfg.Suites, name)
 		}
-	}
-
-	if cfg.ListSuites {
-		return cfg, nil
 	}
 
 	if !timeoutFlagExplicit(args) {
@@ -185,6 +186,15 @@ func validateBaseURL(raw string) error {
 	}
 	if u.Host == "" {
 		return fmt.Errorf("%s: URL must include a host", EnvBaseURL)
+	}
+	if u.Hostname() == "" {
+		return fmt.Errorf("%s: URL must include a hostname", EnvBaseURL)
+	}
+	if port := u.Port(); port != "" {
+		p, err := strconv.Atoi(port)
+		if err != nil || p < 1 || p > 65535 {
+			return fmt.Errorf("%s: URL port must be between 1 and 65535", EnvBaseURL)
+		}
 	}
 	if u.RawQuery != "" {
 		return fmt.Errorf("%s: query parameters in the base URL are not supported by the OpenAI Go SDK", EnvBaseURL)
