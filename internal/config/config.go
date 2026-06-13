@@ -63,7 +63,7 @@ func Load(args []string) (*Config, error) {
 	apiKey := fs.String("api-key", "", "API key for the endpoint (or set "+EnvAPIKey+")")
 	model := fs.String("model", envOrDefault(EnvModel, "gpt-4o-mini"), "Model for chat and responses suites")
 	completionModel := fs.String("completion-model", envOrDefault(EnvCompletionModel, ""), "Model for legacy completions suite (defaults to --model)")
-	embeddingModel := fs.String("embedding-model", envOrDefault(EnvEmbeddingModel, "text-embedding-3-small"), "Model for embedding tests")
+	embeddingModel := fs.String("embedding-model", envOrDefault(EnvEmbeddingModel, ""), "Model for embedding tests (required when embeddings suite is selected)")
 	suiteList := fs.String("suites", envOrDefault(EnvTestSuites, "all"), "Comma-separated suite names to run, or 'all'")
 	timeout := fs.Duration("timeout", 2*time.Minute, "Per-request timeout")
 	listSuites := fs.Bool("list-suites", false, "List available test suites and exit")
@@ -87,6 +87,9 @@ func Load(args []string) (*Config, error) {
 		EmbeddingModel:  strings.TrimSpace(*embeddingModel),
 		RequestTimeout:  *timeout,
 		ListSuites:      *listSuites,
+	}
+	if explicit, empty := apiKeyFlagExplicit(args); explicit && empty {
+		return nil, fmt.Errorf("%s or --api-key is required", EnvAPIKey)
 	}
 	if cfg.APIKey == "" {
 		cfg.APIKey = envOrDefault(EnvAPIKey, "")
@@ -226,6 +229,27 @@ func validateBaseURL(raw string) error {
 		return fmt.Errorf("%s: encoded path separators (%%2F) are not supported by the OpenAI Go SDK", EnvBaseURL)
 	}
 	return nil
+}
+
+func apiKeyFlagExplicit(args []string) (explicit bool, valueEmpty bool) {
+	for i, arg := range args {
+		switch {
+		case arg == "--api-key", arg == "-api-key":
+			explicit = true
+			if i+1 >= len(args) || strings.HasPrefix(args[i+1], "-") {
+				valueEmpty = true
+			} else {
+				valueEmpty = strings.TrimSpace(args[i+1]) == ""
+			}
+		case strings.HasPrefix(arg, "--api-key="):
+			explicit = true
+			valueEmpty = strings.TrimSpace(strings.TrimPrefix(arg, "--api-key=")) == ""
+		case strings.HasPrefix(arg, "-api-key="):
+			explicit = true
+			valueEmpty = strings.TrimSpace(strings.TrimPrefix(arg, "-api-key=")) == ""
+		}
+	}
+	return explicit, valueEmpty
 }
 
 func completionModelFlagExplicit(args []string) (explicit bool, valueEmpty bool) {

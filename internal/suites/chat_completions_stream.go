@@ -30,6 +30,7 @@ func (ChatCompletionsStream) Run(ctx context.Context, client openai.Client, cfg 
 	chunks := 0
 	var hasOutput bool
 	var finished bool
+	var finishReason string
 	for stream.Next() {
 		chunk := stream.Current()
 		chunks++
@@ -40,6 +41,7 @@ func (ChatCompletionsStream) Run(ctx context.Context, client openai.Client, cfg 
 			choice := chunk.Choices[0]
 			if choice.FinishReason != "" {
 				finished = true
+				finishReason = choice.FinishReason
 			}
 			if choice.Delta.Content != "" || choice.Delta.Refusal != "" {
 				hasOutput = true
@@ -55,7 +57,7 @@ func (ChatCompletionsStream) Run(ctx context.Context, client openai.Client, cfg 
 	if !finished {
 		return fail("chat_completions_stream", "stream missing terminal finish_reason")
 	}
-	if !hasOutput {
+	if !hasOutput && !isContentFilterFinishReason(finishReason) {
 		return fail("chat_completions_stream", "stream produced no text content or refusal")
 	}
 	return nil

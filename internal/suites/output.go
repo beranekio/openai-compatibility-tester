@@ -32,3 +32,7 @@ func hasResponseOutput(resp *responses.Response) bool {
 func hasChatMessageOutput(msg openai.ChatCompletionMessage) bool {
 	return msg.Content != "" || msg.Refusal != ""
 }
+
+func isContentFilterFinishReason(reason string) bool {
+	return reason == "content_filter"
+}
