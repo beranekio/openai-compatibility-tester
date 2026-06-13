@@ -183,9 +183,11 @@ func handleResponses(w http.ResponseWriter, r *http.Request) {
 			"type":            "response.completed",
 			"sequence_number": len(chunks),
 			"response": map[string]any{
-				"id":     "resp-mock",
-				"object": "response",
-				"status": "completed",
+				"id":         "resp-mock",
+				"object":     "response",
+				"status":     "completed",
+				"model":      "gpt-4o-mini",
+				"created_at": 1700000000,
 			},
 		})
 		_, _ = w.Write([]byte("data: " + string(completed) + "\n\n"))
@@ -194,9 +196,11 @@ func handleResponses(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, map[string]any{
-		"id":     "resp-mock",
-		"object": "response",
-		"status": "completed",
+		"id":         "resp-mock",
+		"object":     "response",
+		"status":     "completed",
+		"model":      "gpt-4o-mini",
+		"created_at": 1700000000,
 		"output": []map[string]any{
 			{
 				"id":     "msg-mock",

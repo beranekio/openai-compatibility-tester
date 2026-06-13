@@ -60,7 +60,7 @@ func Load(args []string) (*Config, error) {
 	fs.SetOutput(os.Stderr)
 
 	baseURL := fs.String("base-url", envOrDefault(EnvBaseURL, ""), "OpenAI-compatible API base URL")
-	apiKey := fs.String("api-key", envOrDefault(EnvAPIKey, ""), "API key for the endpoint")
+	apiKey := fs.String("api-key", "", "API key for the endpoint (or set "+EnvAPIKey+")")
 	model := fs.String("model", envOrDefault(EnvModel, "gpt-4o-mini"), "Model for chat and responses suites")
 	completionModel := fs.String("completion-model", envOrDefault(EnvCompletionModel, ""), "Model for legacy completions suite (defaults to --model)")
 	embeddingModel := fs.String("embedding-model", envOrDefault(EnvEmbeddingModel, "text-embedding-3-small"), "Model for embedding tests")
@@ -87,6 +87,9 @@ func Load(args []string) (*Config, error) {
 		EmbeddingModel:  strings.TrimSpace(*embeddingModel),
 		RequestTimeout:  *timeout,
 		ListSuites:      *listSuites,
+	}
+	if cfg.APIKey == "" {
+		cfg.APIKey = envOrDefault(EnvAPIKey, "")
 	}
 
 	if cfg.ListSuites {
@@ -233,14 +236,14 @@ func completionModelFlagExplicit(args []string) (explicit bool, valueEmpty bool)
 			if i+1 >= len(args) || strings.HasPrefix(args[i+1], "-") {
 				valueEmpty = true
 			} else {
-				valueEmpty = args[i+1] == ""
+				valueEmpty = strings.TrimSpace(args[i+1]) == ""
 			}
 		case strings.HasPrefix(arg, "--completion-model="):
 			explicit = true
-			valueEmpty = strings.TrimPrefix(arg, "--completion-model=") == ""
+			valueEmpty = strings.TrimSpace(strings.TrimPrefix(arg, "--completion-model=")) == ""
 		case strings.HasPrefix(arg, "-completion-model="):
 			explicit = true
-			valueEmpty = strings.TrimPrefix(arg, "-completion-model=") == ""
+			valueEmpty = strings.TrimSpace(strings.TrimPrefix(arg, "-completion-model=")) == ""
 		}
 	}
 	return explicit, valueEmpty

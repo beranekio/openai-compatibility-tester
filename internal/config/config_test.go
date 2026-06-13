@@ -1,6 +1,11 @@
 package config
 
 import (
+	"bytes"
+	"errors"
+	"flag"
+	"io"
+	"os"
 	"strings"
 	"testing"
 )
@@ -219,6 +224,47 @@ func TestLoadRejectsEmptyCompletionModelFlag(t *testing.T) {
 	t.Setenv(EnvCompletionModel, "")
 
 	_, err := Load([]string{"--suites", "completions", "--completion-model="})
+	if err == nil || !strings.Contains(err.Error(), EnvCompletionModel) {
+		t.Fatalf("expected missing completion model error, got %v", err)
+	}
+}
+
+func TestLoadHelpDoesNotExposeAPIKey(t *testing.T) {
+	t.Setenv(EnvAPIKey, "super-secret-key")
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldStderr := os.Stderr
+	os.Stderr = w
+
+	outputDone := make(chan string)
+	go func() {
+		var buf bytes.Buffer
+		_, _ = io.Copy(&buf, r)
+		outputDone <- buf.String()
+	}()
+
+	_, err = Load([]string{"-h"})
+	w.Close()
+	os.Stderr = oldStderr
+	output := <-outputDone
+
+	if !errors.Is(err, flag.ErrHelp) {
+		t.Fatalf("expected ErrHelp, got %v", err)
+	}
+	if strings.Contains(output, "super-secret-key") {
+		t.Fatalf("help output leaked API key: %q", output)
+	}
+}
+
+func TestLoadRejectsWhitespaceOnlyCompletionModelFlag(t *testing.T) {
+	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvCompletionModel, "")
+
+	_, err := Load([]string{"--suites", "completions", "--completion-model", "   "})
 	if err == nil || !strings.Contains(err.Error(), EnvCompletionModel) {
 		t.Fatalf("expected missing completion model error, got %v", err)
 	}

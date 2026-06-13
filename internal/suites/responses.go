@@ -33,6 +33,15 @@ func (Responses) Run(ctx context.Context, client openai.Client, cfg *config.Conf
 	if resp.ID == "" {
 		return fail("responses", "response missing id")
 	}
+	if !resp.JSON.CreatedAt.Valid() {
+		return fail("responses", "response missing created_at")
+	}
+	if resp.Model == "" {
+		return fail("responses", "response missing model")
+	}
+	if string(resp.Object) != "response" {
+		return fail("responses", fmt.Sprintf("response object is %q, want response", resp.Object))
+	}
 	if string(resp.Status) != "completed" {
 		return fail("responses", fmt.Sprintf("response status is %q, want completed", resp.Status))
 	}

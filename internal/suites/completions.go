@@ -32,13 +32,26 @@ func (Completions) Run(ctx context.Context, client openai.Client, cfg *config.Co
 	if resp.ID == "" {
 		return fail("completions", "response missing id")
 	}
+	if !resp.JSON.Created.Valid() {
+		return fail("completions", "response missing created")
+	}
+	if resp.Model == "" {
+		return fail("completions", "response missing model")
+	}
+	if string(resp.Object) != "text_completion" {
+		return fail("completions", fmt.Sprintf("response object is %q, want text_completion", resp.Object))
+	}
 	if len(resp.Choices) == 0 {
 		return fail("completions", "response missing choices")
 	}
-	if string(resp.Choices[0].FinishReason) == "" {
+	choice := resp.Choices[0]
+	if !choice.JSON.Index.Valid() {
+		return fail("completions", "choice missing index")
+	}
+	if string(choice.FinishReason) == "" {
 		return fail("completions", "choice missing finish_reason")
 	}
-	if resp.Choices[0].Text == "" {
+	if choice.Text == "" && choice.FinishReason != openai.CompletionChoiceFinishReasonContentFilter {
 		return fail("completions", "choice text is empty")
 	}
 	return nil
