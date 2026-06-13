@@ -422,49 +422,67 @@ func TestLoadCompletionModelOverride(t *testing.T) {
 	}
 }
 
-func TestLoadExtendedSuitePreset(t *testing.T) {
-	t.Setenv(EnvBaseURL, "https://example.com/v1")
-	t.Setenv(EnvAPIKey, "test-key")
-	t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
+func TestLoadSuitePresets(t *testing.T) {
+	tests := []struct {
+		name       string
+		preset     string
+		wantSuites []string
+		setup      func(t *testing.T)
+	}{
+		{
+			name:       "extended preset",
+			preset:     "extended",
+			wantSuites: ExtendedSuites,
+			setup: func(t *testing.T) {
+				t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
+			},
+		},
+		{
+			name:       "full preset",
+			preset:     "full",
+			wantSuites: FullSuites,
+			setup: func(t *testing.T) {
+				t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
+			},
+		},
+		{
+			name:       "default preset alias",
+			preset:     "default",
+			wantSuites: DefaultSuites,
+		},
+	}
 
-	cfg, err := Load([]string{"--suites", "extended"})
-	if err != nil {
-		t.Fatalf("Load() error = %v", err)
-	}
-	if len(cfg.Suites) != len(ExtendedSuites) {
-		t.Fatalf("len(Suites) = %d, want %d", len(cfg.Suites), len(ExtendedSuites))
-	}
-	for i, name := range ExtendedSuites {
-		if cfg.Suites[i] != name {
-			t.Fatalf("Suites[%d] = %q, want %q", i, cfg.Suites[i], name)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(EnvBaseURL, "https://example.com/v1")
+			t.Setenv(EnvAPIKey, "test-key")
+			if tt.setup != nil {
+				tt.setup(t)
+			}
+
+			cfg, err := Load([]string{"--suites", tt.preset})
+			if err != nil {
+				t.Fatalf("Load() error = %v", err)
+			}
+			if len(cfg.Suites) != len(tt.wantSuites) {
+				t.Fatalf("len(Suites) = %d, want %d", len(cfg.Suites), len(tt.wantSuites))
+			}
+			for i, name := range tt.wantSuites {
+				if cfg.Suites[i] != name {
+					t.Fatalf("Suites[%d] = %q, want %q", i, cfg.Suites[i], name)
+				}
+			}
+		})
 	}
 }
 
-func TestLoadFullSuitePreset(t *testing.T) {
-	t.Setenv(EnvBaseURL, "https://example.com/v1")
-	t.Setenv(EnvAPIKey, "test-key")
-	t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
-
-	cfg, err := Load([]string{"--suites", "full"})
-	if err != nil {
-		t.Fatalf("Load() error = %v", err)
-	}
-	if len(cfg.Suites) != len(FullSuites) {
-		t.Fatalf("len(Suites) = %d, want %d", len(cfg.Suites), len(FullSuites))
-	}
-}
-
-func TestLoadDefaultSuitePresetAlias(t *testing.T) {
+func TestLoadRejectsExplicitlyEmptySuiteSelection(t *testing.T) {
 	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 
-	cfg, err := Load([]string{"--suites", "default"})
-	if err != nil {
-		t.Fatalf("Load() error = %v", err)
-	}
-	if len(cfg.Suites) != len(DefaultSuites) {
-		t.Fatalf("len(Suites) = %d, want %d", len(cfg.Suites), len(DefaultSuites))
+	_, err := Load([]string{"--suites", ""})
+	if err == nil || !strings.Contains(err.Error(), "at least one test suite must be selected") {
+		t.Fatalf("expected empty suite selection error, got %v", err)
 	}
 }
 

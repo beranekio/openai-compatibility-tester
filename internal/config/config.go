@@ -207,7 +207,7 @@ func Load(args []string) (*Config, error) {
 
 func resolveSuiteSelection(raw string) ([]string, error) {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
-	case "", "all", "default":
+	case "all", "default":
 		return append([]string(nil), DefaultSuites...), nil
 	case "extended":
 		return append([]string(nil), ExtendedSuites...), nil
