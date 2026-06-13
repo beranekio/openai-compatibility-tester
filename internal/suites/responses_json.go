@@ -26,16 +26,13 @@ func (ResponsesJSON) Run(ctx context.Context, client openai.Client, cfg *config.
 			OfString: openai.String("Reply with JSON containing an answer field"),
 		},
 		Text: responses.ResponseTextConfigParam{
-			Format: responses.ResponseFormatTextConfigParamOfJSONSchema("answer", map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"answer": map[string]any{
-						"type": "string",
-					},
+			Format: responses.ResponseFormatTextConfigUnionParam{
+				OfJSONSchema: &responses.ResponseFormatTextJSONSchemaConfigParam{
+					Name:   "answer",
+					Strict: openai.Bool(true),
+					Schema: answerJSONSchema(),
 				},
-				"required":             []string{"answer"},
-				"additionalProperties": false,
-			}),
+			},
 		},
 		Store: openai.Bool(false),
 	})
@@ -45,10 +42,10 @@ func (ResponsesJSON) Run(ctx context.Context, client openai.Client, cfg *config.
 	if resp == nil {
 		return fail("responses_json", "response is nil")
 	}
-	if resp.ID == "" {
-		return fail("responses_json", "response missing id")
+	if err := validateResponseEnvelope("responses_json", resp); err != nil {
+		return err
 	}
-	if string(resp.Status) == "completed" {
+	if resp.Status == responses.ResponseStatusCompleted {
 		if isContentFilterIncompleteResponse(resp) {
 			return nil
 		}
@@ -63,6 +60,9 @@ func (ResponsesJSON) Run(ctx context.Context, client openai.Client, cfg *config.
 		if err := json.Unmarshal([]byte(text), &parsed); err != nil {
 			return fail("responses_json", fmt.Sprintf("output text is not valid JSON: %v", err))
 		}
+		if len(parsed) != 1 {
+			return fail("responses_json", fmt.Sprintf("parsed JSON has %d top-level fields, want 1", len(parsed)))
+		}
 		answer, ok := parsed["answer"]
 		if !ok {
 			return fail("responses_json", `parsed JSON missing "answer" field`)
@@ -76,4 +76,17 @@ func (ResponsesJSON) Run(ctx context.Context, client openai.Client, cfg *config.
 		return nil
 	}
 	return fail("responses_json", fmt.Sprintf("response status is %q, want completed", resp.Status))
+}
+
+func answerJSONSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"answer": map[string]any{
+				"type": "string",
+			},
+		},
+		"required":             []string{"answer"},
+		"additionalProperties": false,
+	}
 }

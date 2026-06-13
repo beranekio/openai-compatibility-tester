@@ -288,7 +288,8 @@ func handleResponses(w http.ResponseWriter, r *http.Request) {
 		Tools  []json.RawMessage `json:"tools"`
 		Text   *struct {
 			Format *struct {
-				Type string `json:"type"`
+				Type   string `json:"type"`
+				Strict *bool  `json:"strict"`
 			} `json:"format"`
 		} `json:"text"`
 	}
@@ -382,7 +383,9 @@ func handleResponses(w http.ResponseWriter, r *http.Request) {
 
 	outputText := "pong"
 	if req.Text != nil && req.Text.Format != nil && req.Text.Format.Type == "json_schema" {
-		outputText = `{"answer":"pong"}`
+		if req.Text.Format.Strict != nil && *req.Text.Format.Strict {
+			outputText = `{"answer":"pong"}`
+		}
 	}
 
 	writeJSON(w, map[string]any{
