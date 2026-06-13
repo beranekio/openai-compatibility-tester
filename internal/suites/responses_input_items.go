@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
 
@@ -25,7 +26,9 @@ func (ResponsesInputItems) Run(ctx context.Context, client openai.Client, cfg *c
 		return err
 	}
 	defer func() {
-		_ = client.Responses.Delete(ctx, created.ID)
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_ = client.Responses.Delete(cleanupCtx, created.ID)
 	}()
 
 	page, err := client.Responses.InputItems.List(ctx, created.ID, responses.InputItemListParams{})
@@ -37,6 +40,9 @@ func (ResponsesInputItems) Run(ctx context.Context, client openai.Client, cfg *c
 	}
 	if !page.JSON.HasMore.Valid() {
 		return fail("responses_input_items", "list missing has_more")
+	}
+	if page.HasMore {
+		return fail("responses_input_items", "list has_more is true, want false for single-item response")
 	}
 	var envelope struct {
 		Object  string `json:"object"`
@@ -57,6 +63,12 @@ func (ResponsesInputItems) Run(ctx context.Context, client openai.Client, cfg *c
 	}
 	if envelope.LastID == "" {
 		return fail("responses_input_items", "list missing last_id")
+	}
+	if envelope.FirstID != page.Data[0].ID {
+		return fail("responses_input_items", fmt.Sprintf("list first_id is %q, want %q", envelope.FirstID, page.Data[0].ID))
+	}
+	if envelope.LastID != page.Data[len(page.Data)-1].ID {
+		return fail("responses_input_items", fmt.Sprintf("list last_id is %q, want %q", envelope.LastID, page.Data[len(page.Data)-1].ID))
 	}
 	for _, item := range page.Data {
 		if item.ID == "" {
