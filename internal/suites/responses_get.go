@@ -28,17 +28,20 @@ func (ResponsesGet) Run(ctx context.Context, client openai.Client, cfg *config.C
 	if err != nil {
 		return fmt.Errorf("responses get failed: %w", err)
 	}
-	if got == nil {
-		return fail("responses_get", "get response is nil")
+	if err := validateResponseEnvelope("responses_get", got); err != nil {
+		return err
 	}
 	if got.ID != created.ID {
 		return fail("responses_get", fmt.Sprintf("get id is %q, want %q", got.ID, created.ID))
 	}
-	if string(got.Object) != "response" {
-		return fail("responses_get", fmt.Sprintf("get object is %q, want response", got.Object))
+	if string(got.Status) == "completed" {
+		if !hasResponseOutput(got) {
+			return fail("responses_get", "get response produced no output text or refusal")
+		}
+		return nil
 	}
-	if string(got.Status) != "completed" && !isContentFilterIncompleteResponse(got) {
-		return fail("responses_get", fmt.Sprintf("get status is %q, want completed", got.Status))
+	if isContentFilterIncompleteResponse(got) {
+		return nil
 	}
-	return nil
+	return fail("responses_get", fmt.Sprintf("get status is %q, want completed", got.Status))
 }

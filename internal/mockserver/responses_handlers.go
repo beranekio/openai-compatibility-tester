@@ -184,7 +184,20 @@ func (s *Server) handleResponseGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleResponseDelete(w http.ResponseWriter, r *http.Request) {
-	_ = s.store.delete(r.PathValue("id"))
+	id := r.PathValue("id")
+	if !s.store.delete(id) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		writeJSON(w, map[string]any{
+			"error": map[string]any{
+				"message": "Response not found",
+				"type":    "invalid_request_error",
+				"param":   "id",
+				"code":    "not_found",
+			},
+		})
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 }
 

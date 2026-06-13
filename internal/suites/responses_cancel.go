@@ -33,6 +33,10 @@ func (ResponsesCancel) Run(ctx context.Context, client openai.Client, cfg *confi
 	if created == nil || created.ID == "" {
 		return fail("responses_cancel", "background create missing response id")
 	}
+	status := string(created.Status)
+	if status != "queued" && status != "in_progress" {
+		return fail("responses_cancel", fmt.Sprintf("background create status is %q, want queued or in_progress", status))
+	}
 
 	cancelled, err := client.Responses.Cancel(ctx, created.ID)
 	if err != nil {
