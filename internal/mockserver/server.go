@@ -120,7 +120,56 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func handleCompletions(w http.ResponseWriter, _ *http.Request) {
+func handleCompletions(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Stream bool `json:"stream"`
+	}
+	_ = json.Unmarshal(body, &req)
+
+	if req.Stream {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		chunks := []string{"hel", "lo"}
+		for _, chunk := range chunks {
+			payload := map[string]any{
+				"id":      "cmpl-mock",
+				"object":  "text_completion",
+				"created": 1700000000,
+				"model":   "gpt-4o-mini",
+				"choices": []map[string]any{
+					{
+						"index": 0,
+						"text":  chunk,
+					},
+				},
+			}
+			data, _ := json.Marshal(payload)
+			_, _ = w.Write([]byte("data: " + string(data) + "\n\n"))
+		}
+		final, _ := json.Marshal(map[string]any{
+			"id":      "cmpl-mock",
+			"object":  "text_completion",
+			"created": 1700000000,
+			"model":   "gpt-4o-mini",
+			"choices": []map[string]any{
+				{
+					"index":         0,
+					"text":          "",
+					"finish_reason": "stop",
+				},
+			},
+		})
+		_, _ = w.Write([]byte("data: " + string(final) + "\n\n"))
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+		return
+	}
+
 	writeJSON(w, map[string]any{
 		"id":      "cmpl-mock",
 		"object":  "text_completion",
@@ -136,20 +185,45 @@ func handleCompletions(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
-func handleEmbeddings(w http.ResponseWriter, _ *http.Request) {
+func handleEmbeddings(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Input json.RawMessage `json:"input"`
+	}
+	if err := json.Unmarshal(body, &req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	data := []map[string]any{
+		{
+			"object":    "embedding",
+			"index":     0,
+			"embedding": []float64{0.1, 0.2, 0.3},
+		},
+	}
+	promptTokens := 3
+	if len(req.Input) > 0 && req.Input[0] == '[' {
+		data = append(data, map[string]any{
+			"object":    "embedding",
+			"index":     1,
+			"embedding": []float64{0.4, 0.5, 0.6},
+		})
+		promptTokens = 6
+	}
+
 	writeJSON(w, map[string]any{
 		"object": "list",
-		"data": []map[string]any{
-			{
-				"object":    "embedding",
-				"index":     0,
-				"embedding": []float64{0.1, 0.2, 0.3},
-			},
-		},
-		"model": "text-embedding-3-small",
+		"data":   data,
+		"model":  "text-embedding-3-small",
 		"usage": map[string]any{
-			"prompt_tokens": 3,
-			"total_tokens":  3,
+			"prompt_tokens": promptTokens,
+			"total_tokens":  promptTokens,
 		},
 	})
 }

@@ -350,6 +350,17 @@ func TestLoadRejectsEmbeddingsSuiteWithoutEmbeddingModel(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsEmbeddingsBatchSuiteWithoutEmbeddingModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvEmbeddingModel, "")
+
+	_, err := Load([]string{"--suites", "embeddings_batch"})
+	if err == nil || !strings.Contains(err.Error(), EnvEmbeddingModel) {
+		t.Fatalf("expected missing embedding model error, got %v", err)
+	}
+}
+
 func TestLoadAllowsLoopbackHTTP(t *testing.T) {
 	t.Setenv(EnvBaseURL, "http://127.0.0.1:4010/v1")
 	t.Setenv(EnvAPIKey, "test-key")
