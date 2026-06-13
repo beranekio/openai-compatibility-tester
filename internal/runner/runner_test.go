@@ -23,6 +23,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 		RequestTimeout: 30 * time.Second,
 		Suites: []string{
 			"models",
+			"models_get",
 			"chat_completions",
 			"chat_completions_stream",
 			"completions",

@@ -19,6 +19,7 @@ func New() *Server {
 	s := &Server{}
 
 	mux.HandleFunc("GET /v1/models", handleModels)
+	mux.HandleFunc("GET /v1/models/{id}", handleModelGet)
 	mux.HandleFunc("POST /v1/chat/completions", handleChatCompletions)
 	mux.HandleFunc("POST /v1/completions", handleCompletions)
 	mux.HandleFunc("POST /v1/embeddings", handleEmbeddings)
@@ -33,18 +34,24 @@ func (s *Server) BaseURL() string {
 	return s.URL + "/v1"
 }
 
+func mockModel() map[string]any {
+	return map[string]any{
+		"id":       "gpt-4o-mini",
+		"object":   "model",
+		"created":  1700000000,
+		"owned_by": "mock",
+	}
+}
+
 func handleModels(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, map[string]any{
 		"object": "list",
-		"data": []map[string]any{
-			{
-				"id":       "gpt-4o-mini",
-				"object":   "model",
-				"created":  1700000000,
-				"owned_by": "mock",
-			},
-		},
+		"data":   []map[string]any{mockModel()},
 	})
+}
+
+func handleModelGet(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, mockModel())
 }
 
 func handleChatCompletions(w http.ResponseWriter, r *http.Request) {

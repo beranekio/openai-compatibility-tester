@@ -43,6 +43,7 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | Suite | SDK surface | Endpoint |
 |-------|-------------|----------|
 | `models` | `client.Models.List` | `GET /v1/models` |
+| `models_get` | `client.Models.Get` | `GET /v1/models/{id}` |
 | `chat_completions` | `client.Chat.Completions.New` | `POST /v1/chat/completions` |
 | `chat_completions_stream` | `client.Chat.Completions.NewStreaming` | `POST /v1/chat/completions` (stream) |
 | `completions` | `client.Completions.New` | `POST /v1/completions` |
@@ -50,7 +51,7 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `responses` | `client.Responses.New` | `POST /v1/responses` |
 | `responses_stream` | `client.Responses.NewStreaming` | `POST /v1/responses` (stream) |
 
-Default suites (`all` or `default`): `models`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
+Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
 Extended preset (`extended`): default suites plus `completions` and `embeddings`.
 

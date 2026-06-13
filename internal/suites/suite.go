@@ -19,6 +19,7 @@ type Suite interface {
 func All() []Suite {
 	return []Suite{
 		Models{},
+		ModelsGet{},
 		ChatCompletions{},
 		ChatCompletionsStream{},
 		Completions{},
@@ -53,7 +54,7 @@ func RequiredModels(names []string) ModelRequirements {
 	var req ModelRequirements
 	for _, name := range names {
 		switch name {
-		case "chat_completions", "chat_completions_stream", "responses", "responses_stream":
+		case "chat_completions", "chat_completions_stream", "models_get", "responses", "responses_stream":
 			req.Chat = true
 		case "completions":
 			req.Completion = true
