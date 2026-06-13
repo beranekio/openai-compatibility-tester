@@ -100,8 +100,6 @@ func (ResponsesStream) Run(ctx context.Context, client openai.Client, cfg *confi
 		case "response.failed", "error":
 			terminalFailure = true
 			terminalReached = true
-		default:
-			return fail("responses_stream", fmt.Sprintf("unsupported stream event %q", event.Type))
 		}
 	}
 	if err := stream.Err(); err != nil {
