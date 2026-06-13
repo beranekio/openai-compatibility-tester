@@ -106,6 +106,39 @@ func validateAccumulatedToolCall(suite string, call *accumulatedToolCall) error 
 	return nil
 }
 
+func hasResponseFunctionCalls(resp *responses.Response) bool {
+	return len(responseFunctionCalls(resp)) > 0
+}
+
+func responseFunctionCalls(resp *responses.Response) []responses.ResponseFunctionToolCall {
+	if resp == nil {
+		return nil
+	}
+	var calls []responses.ResponseFunctionToolCall
+	for _, item := range resp.Output {
+		if item.Type == "function_call" {
+			calls = append(calls, item.AsFunctionCall())
+		}
+	}
+	return calls
+}
+
+func validateResponseFunctionToolCall(suite string, call responses.ResponseFunctionToolCall) error {
+	if call.CallID == "" {
+		return fail(suite, "function_call missing call_id")
+	}
+	if call.Name == "" {
+		return fail(suite, "function_call missing name")
+	}
+	if call.Name != weatherToolName {
+		return fail(suite, fmt.Sprintf("function_call name is %q, want %s", call.Name, weatherToolName))
+	}
+	if call.Arguments == "" {
+		return fail(suite, "function_call missing arguments")
+	}
+	return nil
+}
+
 func validateFunctionToolCall(suite string, call openai.ChatCompletionMessageToolCallUnion) error {
 	fn := call.AsFunction()
 	if fn.ID == "" {
