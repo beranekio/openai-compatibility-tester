@@ -24,6 +24,26 @@ func validateEventStreamContentType(suite string, resp *http.Response) error {
 	return nil
 }
 
+func validateCompletionChunk(suite string, chunk openai.Completion) error {
+	if !chunk.JSON.Created.Valid() {
+		return fail(suite, "stream chunk missing created")
+	}
+	if chunk.Model == "" {
+		return fail(suite, "stream chunk missing model")
+	}
+	if string(chunk.Object) != "text_completion" {
+		return fail(suite, fmt.Sprintf("stream chunk object is %q, want text_completion", chunk.Object))
+	}
+	if len(chunk.Choices) == 0 {
+		return fail(suite, "stream chunk missing choices")
+	}
+	choice := chunk.Choices[0]
+	if !choice.JSON.Index.Valid() {
+		return fail(suite, "stream chunk choice missing index")
+	}
+	return nil
+}
+
 func validateChatCompletionChunk(suite string, chunk openai.ChatCompletionChunk) error {
 	if !chunk.JSON.Created.Valid() {
 		return fail(suite, "stream chunk missing created")

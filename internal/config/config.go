@@ -51,6 +51,7 @@ var ExtendedSuites = []string{
 	"responses",
 	"responses_stream",
 	"completions",
+	"completions_stream",
 	"embeddings",
 	"embeddings_batch",
 }
@@ -62,6 +63,7 @@ var FullSuites = []string{
 	"chat_completions",
 	"chat_completions_stream",
 	"completions",
+	"completions_stream",
 	"embeddings",
 	"embeddings_batch",
 	"responses",
@@ -74,6 +76,7 @@ var knownSuites = map[string]struct{}{
 	"chat_completions":         {},
 	"chat_completions_stream":  {},
 	"completions":              {},
+	"completions_stream":       {},
 	"embeddings":               {},
 	"embeddings_batch":         {},
 	"responses":                {},
@@ -240,7 +243,7 @@ func resolveSuiteSelection(raw string) ([]string, error) {
 
 func suiteNeedsCompletion(names []string) bool {
 	for _, name := range names {
-		if name == "completions" {
+		if name == "completions" || name == "completions_stream" {
 			return true
 		}
 	}
@@ -265,7 +268,7 @@ func validateModelsForSuites(cfg *Config) error {
 			needsChat = true
 		case "responses", "responses_stream":
 			needsResponses = true
-		case "completions":
+		case "completions", "completions_stream":
 			needsCompletion = true
 		case "embeddings", "embeddings_batch":
 			needsEmbedding = true
