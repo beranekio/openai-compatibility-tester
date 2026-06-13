@@ -20,6 +20,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 		APIKey:           "test-key",
 		Model:            "gpt-4o-mini",
 		CompletionModel:  config.DefaultCompletionModel,
+		VisionModel:      "gpt-4o-mini",
 		EmbeddingModel:   "text-embedding-3-small",
 		RequestTimeout:   30 * time.Second,
 		Suites: []string{
@@ -28,6 +29,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"chat_completions",
 			"chat_completions_stream",
 			"chat_completions_json",
+			"chat_completions_vision",
 			"completions",
 			"completions_stream",
 			"embeddings",
