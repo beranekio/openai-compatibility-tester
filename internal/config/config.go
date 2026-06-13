@@ -110,6 +110,9 @@ func Load(args []string) (*Config, error) {
 		}
 	}
 
+	if explicit, empty := completionModelFlagExplicit(args); explicit && empty && suiteNeedsCompletion(cfg.Suites) {
+		return nil, fmt.Errorf("%s or --completion-model is required for selected suites", EnvCompletionModel)
+	}
 	if cfg.CompletionModel == "" {
 		if suiteNeedsCompletion(cfg.Suites) {
 			cfg.CompletionModel = DefaultCompletionModel
@@ -217,6 +220,23 @@ func validateBaseURL(raw string) error {
 		return fmt.Errorf("%s: query parameters in the base URL are not supported by the OpenAI Go SDK", EnvBaseURL)
 	}
 	return nil
+}
+
+func completionModelFlagExplicit(args []string) (explicit bool, valueEmpty bool) {
+	for i, arg := range args {
+		switch {
+		case arg == "--completion-model", arg == "-completion-model":
+			if i+1 >= len(args) || strings.HasPrefix(args[i+1], "-") {
+				return true, true
+			}
+			return true, args[i+1] == ""
+		case strings.HasPrefix(arg, "--completion-model="):
+			return true, strings.TrimPrefix(arg, "--completion-model=") == ""
+		case strings.HasPrefix(arg, "-completion-model="):
+			return true, strings.TrimPrefix(arg, "-completion-model=") == ""
+		}
+	}
+	return false, false
 }
 
 func timeoutFlagExplicit(args []string) bool {

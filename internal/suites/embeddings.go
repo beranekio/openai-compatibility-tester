@@ -28,11 +28,28 @@ func (Embeddings) Run(ctx context.Context, client openai.Client, cfg *config.Con
 	if resp == nil {
 		return fail("embeddings", "response is nil")
 	}
+	if string(resp.Object) != "list" {
+		return fail("embeddings", fmt.Sprintf("response object is %q, want list", resp.Object))
+	}
+	if resp.Model == "" {
+		return fail("embeddings", "response missing model")
+	}
+	if !resp.JSON.Usage.Valid() {
+		return fail("embeddings", "response missing usage")
+	}
 	if len(resp.Data) == 0 {
 		return fail("embeddings", "response missing data")
 	}
-	if len(resp.Data[0].Embedding) == 0 {
-		return fail("embeddings", "embedding vector is empty")
+	for i, item := range resp.Data {
+		if !item.JSON.Index.Valid() {
+			return fail("embeddings", fmt.Sprintf("embedding %d missing index", i))
+		}
+		if string(item.Object) != "embedding" {
+			return fail("embeddings", fmt.Sprintf("embedding %d object is %q, want embedding", i, item.Object))
+		}
+		if len(item.Embedding) == 0 {
+			return fail("embeddings", fmt.Sprintf("embedding %d vector is empty", i))
+		}
 	}
 	return nil
 }

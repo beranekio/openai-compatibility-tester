@@ -213,6 +213,17 @@ func TestLoadRejectsEmptyModelForChatSuite(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsEmptyCompletionModelFlag(t *testing.T) {
+	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvCompletionModel, "")
+
+	_, err := Load([]string{"--suites", "completions", "--completion-model="})
+	if err == nil || !strings.Contains(err.Error(), EnvCompletionModel) {
+		t.Fatalf("expected missing completion model error, got %v", err)
+	}
+}
+
 func TestLoadCompletionsSuiteUsesInstructDefault(t *testing.T) {
 	t.Setenv(EnvBaseURL, "http://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")

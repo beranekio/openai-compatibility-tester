@@ -22,6 +22,7 @@ func (Responses) Run(ctx context.Context, client openai.Client, cfg *config.Conf
 		Input: responses.ResponseNewParamsInputUnion{
 			OfString: openai.String("Reply with exactly the word: pong"),
 		},
+		Store: openai.Bool(false),
 	})
 	if err != nil {
 		return fmt.Errorf("responses request failed: %w", err)

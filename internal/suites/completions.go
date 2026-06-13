@@ -35,6 +35,9 @@ func (Completions) Run(ctx context.Context, client openai.Client, cfg *config.Co
 	if len(resp.Choices) == 0 {
 		return fail("completions", "response missing choices")
 	}
+	if string(resp.Choices[0].FinishReason) == "" {
+		return fail("completions", "choice missing finish_reason")
+	}
 	if resp.Choices[0].Text == "" {
 		return fail("completions", "choice text is empty")
 	}

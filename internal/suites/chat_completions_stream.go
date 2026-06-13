@@ -23,12 +23,12 @@ func (ChatCompletionsStream) Run(ctx context.Context, client openai.Client, cfg 
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.UserMessage("Count from one to three."),
 		},
+		Store: openai.Bool(false),
 	})
 	defer stream.Close()
 
 	chunks := 0
-	var content string
-	var refusal string
+	var hasOutput bool
 	var finished bool
 	for stream.Next() {
 		chunk := stream.Current()
@@ -38,8 +38,9 @@ func (ChatCompletionsStream) Run(ctx context.Context, client openai.Client, cfg 
 			if choice.FinishReason != "" {
 				finished = true
 			}
-			content += choice.Delta.Content
-			refusal += choice.Delta.Refusal
+			if choice.Delta.Content != "" || choice.Delta.Refusal != "" {
+				hasOutput = true
+			}
 		}
 	}
 	if err := stream.Err(); err != nil {
@@ -51,7 +52,7 @@ func (ChatCompletionsStream) Run(ctx context.Context, client openai.Client, cfg 
 	if !finished {
 		return fail("chat_completions_stream", "stream missing terminal finish_reason")
 	}
-	if content == "" && refusal == "" {
+	if !hasOutput {
 		return fail("chat_completions_stream", "stream produced no text content or refusal")
 	}
 	return nil
