@@ -18,6 +18,10 @@ const (
 	EnvCompletionModel = "OPENAI_COMPLETION_MODEL"
 	EnvEmbeddingModel  = "OPENAI_EMBEDDING_MODEL"
 	EnvResponsesModel  = "OPENAI_RESPONSES_MODEL"
+	EnvVisionModel     = "OPENAI_VISION_MODEL"
+	EnvImageModel      = "OPENAI_IMAGE_MODEL"
+	EnvTTSModel        = "OPENAI_TTS_MODEL"
+	EnvWhisperModel    = "OPENAI_WHISPER_MODEL"
 	EnvTestSuites      = "TEST_SUITES"
 	EnvRequestTimeout  = "REQUEST_TIMEOUT"
 	EnvAllowInsecureHTTP = "ALLOW_INSECURE_HTTP"
@@ -27,11 +31,34 @@ const (
 	DefaultCompletionModel = "gpt-3.5-turbo-instruct"
 )
 
-// DefaultSuites are run when TEST_SUITES is unset or set to "all".
+// DefaultSuites are run when TEST_SUITES is unset or set to "all" or "default".
 var DefaultSuites = []string{
 	"models",
 	"chat_completions",
 	"chat_completions_stream",
+	"responses",
+	"responses_stream",
+}
+
+// ExtendedSuites adds commonly optional inference suites to the default set.
+// Update this list when new opt-in suites ship (see issue #45).
+var ExtendedSuites = []string{
+	"models",
+	"chat_completions",
+	"chat_completions_stream",
+	"responses",
+	"responses_stream",
+	"completions",
+	"embeddings",
+}
+
+// FullSuites lists every registered suite name. Keep in sync with suites.All().
+var FullSuites = []string{
+	"models",
+	"chat_completions",
+	"chat_completions_stream",
+	"completions",
+	"embeddings",
 	"responses",
 	"responses_stream",
 }
@@ -54,6 +81,10 @@ type Config struct {
 	CompletionModel string
 	EmbeddingModel  string
 	ResponsesModel  string
+	VisionModel     string
+	ImageModel      string
+	TTSModel        string
+	WhisperModel    string
 	Suites          []string
 	RequestTimeout  time.Duration
 	AllowInsecureHTTP bool
@@ -71,8 +102,12 @@ func Load(args []string) (*Config, error) {
 	completionModel := fs.String("completion-model", envOrDefault(EnvCompletionModel, ""), "Model for legacy completions suite (defaults to "+DefaultCompletionModel+" when completions is selected)")
 	embeddingModel := fs.String("embedding-model", envOrDefault(EnvEmbeddingModel, ""), "Model for embedding tests (required when embeddings suite is selected)")
 	responsesModel := fs.String("responses-model", envOrDefault(EnvResponsesModel, ""), "Model for Responses API suites (defaults to --model)")
+	visionModel := fs.String("vision-model", envOrDefault(EnvVisionModel, ""), "Model for vision chat suites (defaults to --model)")
+	imageModel := fs.String("image-model", envOrDefault(EnvImageModel, ""), "Model for image generation suites")
+	ttsModel := fs.String("tts-model", envOrDefault(EnvTTSModel, ""), "Model for text-to-speech suites")
+	whisperModel := fs.String("whisper-model", envOrDefault(EnvWhisperModel, ""), "Model for speech-to-text suites")
 	allowInsecureHTTP := fs.Bool("allow-insecure-http", envBoolOrDefault(EnvAllowInsecureHTTP, false), "Allow plaintext HTTP to non-loopback hosts")
-	suiteList := fs.String("suites", envOrDefault(EnvTestSuites, "all"), "Comma-separated suite names to run, or 'all'")
+	suiteList := fs.String("suites", envOrDefault(EnvTestSuites, "all"), "Comma-separated suite names, or preset: all, default, extended, full")
 	timeout := fs.Duration("timeout", 2*time.Minute, "Per-request timeout")
 	listSuites := fs.Bool("list-suites", false, "List available test suites and exit")
 	fs.Usage = func() {
@@ -94,6 +129,10 @@ func Load(args []string) (*Config, error) {
 		CompletionModel: strings.TrimSpace(*completionModel),
 		EmbeddingModel:    strings.TrimSpace(*embeddingModel),
 		ResponsesModel:    strings.TrimSpace(*responsesModel),
+		VisionModel:       strings.TrimSpace(*visionModel),
+		ImageModel:        strings.TrimSpace(*imageModel),
+		TTSModel:          strings.TrimSpace(*ttsModel),
+		WhisperModel:      strings.TrimSpace(*whisperModel),
 		RequestTimeout:    *timeout,
 		AllowInsecureHTTP: *allowInsecureHTTP,
 		ListSuites:        *listSuites,
@@ -110,22 +149,11 @@ func Load(args []string) (*Config, error) {
 		cfg.APIKey = envOrDefault(EnvAPIKey, "")
 	}
 
-	if *suiteList == "all" {
-		cfg.Suites = append([]string(nil), DefaultSuites...)
-	} else {
-		seen := make(map[string]struct{})
-		for _, name := range strings.Split(*suiteList, ",") {
-			name = strings.TrimSpace(name)
-			if name == "" {
-				continue
-			}
-			if _, ok := seen[name]; ok {
-				return nil, fmt.Errorf("duplicate test suite %q", name)
-			}
-			seen[name] = struct{}{}
-			cfg.Suites = append(cfg.Suites, name)
-		}
+	suites, err := resolveSuiteSelection(*suiteList)
+	if err != nil {
+		return nil, err
 	}
+	cfg.Suites = suites
 
 	if explicit, empty := completionModelFlagExplicit(args); explicit && empty && suiteNeedsCompletion(cfg.Suites) {
 		return nil, fmt.Errorf("%s or --completion-model is required for selected suites", EnvCompletionModel)
@@ -139,6 +167,9 @@ func Load(args []string) (*Config, error) {
 	}
 	if cfg.ResponsesModel == "" {
 		cfg.ResponsesModel = cfg.Model
+	}
+	if cfg.VisionModel == "" {
+		cfg.VisionModel = cfg.Model
 	}
 
 	if !timeoutFlagExplicit(args) {
@@ -174,6 +205,32 @@ func Load(args []string) (*Config, error) {
 	return cfg, nil
 }
 
+func resolveSuiteSelection(raw string) ([]string, error) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "", "all", "default":
+		return append([]string(nil), DefaultSuites...), nil
+	case "extended":
+		return append([]string(nil), ExtendedSuites...), nil
+	case "full":
+		return append([]string(nil), FullSuites...), nil
+	}
+
+	seen := make(map[string]struct{})
+	var suites []string
+	for _, name := range strings.Split(raw, ",") {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			return nil, fmt.Errorf("duplicate test suite %q", name)
+		}
+		seen[name] = struct{}{}
+		suites = append(suites, name)
+	}
+	return suites, nil
+}
+
 func suiteNeedsCompletion(names []string) bool {
 	for _, name := range names {
 		if name == "completions" {
@@ -194,6 +251,7 @@ func validateSuiteNames(names []string) error {
 
 func validateModelsForSuites(cfg *Config) error {
 	var needsChat, needsResponses, needsCompletion, needsEmbedding bool
+	var needsVision, needsImage, needsTTS, needsWhisper bool
 	for _, name := range cfg.Suites {
 		switch name {
 		case "chat_completions", "chat_completions_stream":
@@ -204,6 +262,14 @@ func validateModelsForSuites(cfg *Config) error {
 			needsCompletion = true
 		case "embeddings":
 			needsEmbedding = true
+		case "chat_completions_vision":
+			needsVision = true
+		case "images_generations", "images_edits", "images_variations":
+			needsImage = true
+		case "audio_speech":
+			needsTTS = true
+		case "audio_transcriptions", "audio_transcriptions_stream", "audio_translations":
+			needsWhisper = true
 		}
 	}
 	if needsChat && cfg.Model == "" {
@@ -217,6 +283,18 @@ func validateModelsForSuites(cfg *Config) error {
 	}
 	if needsEmbedding && cfg.EmbeddingModel == "" {
 		return fmt.Errorf("%s or --embedding-model is required for selected suites", EnvEmbeddingModel)
+	}
+	if needsVision && cfg.VisionModel == "" {
+		return fmt.Errorf("%s or --vision-model is required for selected suites", EnvVisionModel)
+	}
+	if needsImage && cfg.ImageModel == "" {
+		return fmt.Errorf("%s or --image-model is required for selected suites", EnvImageModel)
+	}
+	if needsTTS && cfg.TTSModel == "" {
+		return fmt.Errorf("%s or --tts-model is required for selected suites", EnvTTSModel)
+	}
+	if needsWhisper && cfg.WhisperModel == "" {
+		return fmt.Errorf("%s or --whisper-model is required for selected suites", EnvWhisperModel)
 	}
 	return nil
 }

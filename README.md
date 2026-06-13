@@ -24,7 +24,11 @@ docker run --rm \
 | `OPENAI_RESPONSES_MODEL` | `--responses-model` | no | same as `OPENAI_MODEL` | Model used for Responses API suites |
 | `OPENAI_COMPLETION_MODEL` | `--completion-model` | no | `gpt-3.5-turbo-instruct` when `completions` is selected, otherwise same as `OPENAI_MODEL` | Model used for the legacy completions suite |
 | `OPENAI_EMBEDDING_MODEL` | `--embedding-model` | when `embeddings` is selected | — | Model used for the embeddings suite |
-| `TEST_SUITES` | `--suites` | no | `all` | Comma-separated suite names, or `all` for the default set |
+| `OPENAI_VISION_MODEL` | `--vision-model` | when `chat_completions_vision` is selected | same as `OPENAI_MODEL` | Model used for vision chat suites |
+| `OPENAI_IMAGE_MODEL` | `--image-model` | when image suites are selected | — | Model used for image generation suites |
+| `OPENAI_TTS_MODEL` | `--tts-model` | when `audio_speech` is selected | — | Model used for text-to-speech suites |
+| `OPENAI_WHISPER_MODEL` | `--whisper-model` | when audio transcription suites are selected | — | Model used for speech-to-text suites |
+| `TEST_SUITES` | `--suites` | no | `all` | Comma-separated suite names, or preset: `all`/`default`, `extended`, `full` |
 | `REQUEST_TIMEOUT` | `--timeout` | no | `2m` | Per-suite request timeout |
 | `ALLOW_INSECURE_HTTP` | `--allow-insecure-http` | no | `false` | Allow plaintext `http://` to non-loopback hosts (loopback HTTP is always permitted) |
 
@@ -46,7 +50,11 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `responses` | `client.Responses.New` | `POST /v1/responses` |
 | `responses_stream` | `client.Responses.NewStreaming` | `POST /v1/responses` (stream) |
 
-Default suites: `models`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
+Default suites (`all` or `default`): `models`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
+
+Extended preset (`extended`): default suites plus `completions` and `embeddings`.
+
+Full preset (`full`): every registered suite (see `--list-suites`).
 
 Add `embeddings` only when your endpoint exposes embedding models:
 

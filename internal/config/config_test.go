@@ -421,3 +421,63 @@ func TestLoadCompletionModelOverride(t *testing.T) {
 		t.Fatalf("Model = %q, want gpt-4o-mini", cfg.Model)
 	}
 }
+
+func TestLoadExtendedSuitePreset(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
+
+	cfg, err := Load([]string{"--suites", "extended"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if len(cfg.Suites) != len(ExtendedSuites) {
+		t.Fatalf("len(Suites) = %d, want %d", len(cfg.Suites), len(ExtendedSuites))
+	}
+	for i, name := range ExtendedSuites {
+		if cfg.Suites[i] != name {
+			t.Fatalf("Suites[%d] = %q, want %q", i, cfg.Suites[i], name)
+		}
+	}
+}
+
+func TestLoadFullSuitePreset(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
+
+	cfg, err := Load([]string{"--suites", "full"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if len(cfg.Suites) != len(FullSuites) {
+		t.Fatalf("len(Suites) = %d, want %d", len(cfg.Suites), len(FullSuites))
+	}
+}
+
+func TestLoadDefaultSuitePresetAlias(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+
+	cfg, err := Load([]string{"--suites", "default"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if len(cfg.Suites) != len(DefaultSuites) {
+		t.Fatalf("len(Suites) = %d, want %d", len(cfg.Suites), len(DefaultSuites))
+	}
+}
+
+func TestLoadVisionModelDefaultsToChatModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvModel, "gpt-4o")
+
+	cfg, err := Load([]string{})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.VisionModel != "gpt-4o" {
+		t.Fatalf("VisionModel = %q, want gpt-4o", cfg.VisionModel)
+	}
+}
