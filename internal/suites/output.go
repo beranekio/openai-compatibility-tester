@@ -36,3 +36,12 @@ func hasChatMessageOutput(msg openai.ChatCompletionMessage) bool {
 func isContentFilterFinishReason(reason string) bool {
 	return reason == "content_filter"
 }
+
+func isContentFilterIncompleteResponse(resp *responses.Response) bool {
+	if resp == nil {
+		return false
+	}
+	return string(resp.Status) == "incomplete" &&
+		resp.JSON.IncompleteDetails.Valid() &&
+		resp.IncompleteDetails.Reason == "content_filter"
+}

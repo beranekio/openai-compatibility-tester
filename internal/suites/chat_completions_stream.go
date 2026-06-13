@@ -30,6 +30,9 @@ func (ChatCompletionsStream) Run(ctx context.Context, client openai.Client, cfg 
 	}, option.WithResponseInto(&httpResp))
 	defer stream.Close()
 
+	if err := stream.Err(); err != nil {
+		return fmt.Errorf("chat completion stream failed: %w", err)
+	}
 	if err := validateEventStreamContentType("chat_completions_stream", httpResp); err != nil {
 		return err
 	}
@@ -44,15 +47,16 @@ func (ChatCompletionsStream) Run(ctx context.Context, client openai.Client, cfg 
 		if chunk.ID == "" {
 			return fail("chat_completions_stream", "stream chunk missing id")
 		}
-		if len(chunk.Choices) > 0 {
-			choice := chunk.Choices[0]
-			if choice.FinishReason != "" {
-				finished = true
-				finishReason = choice.FinishReason
-			}
-			if choice.Delta.Content != "" || choice.Delta.Refusal != "" {
-				hasOutput = true
-			}
+		if err := validateChatCompletionChunk("chat_completions_stream", chunk); err != nil {
+			return err
+		}
+		choice := chunk.Choices[0]
+		if choice.FinishReason != "" {
+			finished = true
+			finishReason = choice.FinishReason
+		}
+		if choice.Delta.Content != "" || choice.Delta.Refusal != "" {
+			hasOutput = true
 		}
 	}
 	if err := stream.Err(); err != nil {

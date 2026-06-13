@@ -174,6 +174,10 @@ func handleResponses(w http.ResponseWriter, r *http.Request) {
 			payload := map[string]any{
 				"type":            "response.output_text.delta",
 				"sequence_number": i,
+				"content_index":   0,
+				"item_id":         "msg-mock",
+				"output_index":    0,
+				"logprobs":        []any{},
 				"delta":           chunk,
 			}
 			data, _ := json.Marshal(payload)

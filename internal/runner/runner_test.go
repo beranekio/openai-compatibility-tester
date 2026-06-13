@@ -92,7 +92,7 @@ func TestRunRejectsUnknownSuiteBeforeRequests(t *testing.T) {
 
 func TestRunRejectsUnknownSuite(t *testing.T) {
 	cfg := &config.Config{
-		BaseURL: "http://example.com/v1",
+		BaseURL: "https://example.com/v1",
 		APIKey:  "test-key",
 		Suites:  []string{"not-a-suite"},
 	}

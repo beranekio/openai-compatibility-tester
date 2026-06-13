@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"strconv"
@@ -16,8 +17,10 @@ const (
 	EnvModel           = "OPENAI_MODEL"
 	EnvCompletionModel = "OPENAI_COMPLETION_MODEL"
 	EnvEmbeddingModel  = "OPENAI_EMBEDDING_MODEL"
+	EnvResponsesModel  = "OPENAI_RESPONSES_MODEL"
 	EnvTestSuites      = "TEST_SUITES"
 	EnvRequestTimeout  = "REQUEST_TIMEOUT"
+	EnvAllowInsecureHTTP = "ALLOW_INSECURE_HTTP"
 
 	// DefaultCompletionModel is used when the completions suite is selected without
 	// an explicit completion model. Legacy /v1/completions expects instruct models.
@@ -50,8 +53,10 @@ type Config struct {
 	Model           string
 	CompletionModel string
 	EmbeddingModel  string
+	ResponsesModel  string
 	Suites          []string
 	RequestTimeout  time.Duration
+	AllowInsecureHTTP bool
 	ListSuites      bool
 }
 
@@ -62,9 +67,11 @@ func Load(args []string) (*Config, error) {
 
 	baseURL := fs.String("base-url", envOrDefault(EnvBaseURL, ""), "OpenAI-compatible API base URL")
 	apiKey := fs.String("api-key", "", "API key for the endpoint (or set "+EnvAPIKey+")")
-	model := fs.String("model", envOrDefault(EnvModel, "gpt-4o-mini"), "Model for chat and responses suites")
+	model := fs.String("model", envOrDefault(EnvModel, "gpt-4o-mini"), "Model for chat completion suites")
 	completionModel := fs.String("completion-model", envOrDefault(EnvCompletionModel, ""), "Model for legacy completions suite (defaults to "+DefaultCompletionModel+" when completions is selected)")
 	embeddingModel := fs.String("embedding-model", envOrDefault(EnvEmbeddingModel, ""), "Model for embedding tests (required when embeddings suite is selected)")
+	responsesModel := fs.String("responses-model", envOrDefault(EnvResponsesModel, ""), "Model for Responses API suites (defaults to --model)")
+	allowInsecureHTTP := fs.Bool("allow-insecure-http", envBoolOrDefault(EnvAllowInsecureHTTP, false), "Allow plaintext HTTP to non-loopback hosts")
 	suiteList := fs.String("suites", envOrDefault(EnvTestSuites, "all"), "Comma-separated suite names to run, or 'all'")
 	timeout := fs.Duration("timeout", 2*time.Minute, "Per-request timeout")
 	listSuites := fs.Bool("list-suites", false, "List available test suites and exit")
@@ -85,9 +92,11 @@ func Load(args []string) (*Config, error) {
 		APIKey:          strings.TrimSpace(*apiKey),
 		Model:           strings.TrimSpace(*model),
 		CompletionModel: strings.TrimSpace(*completionModel),
-		EmbeddingModel:  strings.TrimSpace(*embeddingModel),
-		RequestTimeout:  *timeout,
-		ListSuites:      *listSuites,
+		EmbeddingModel:    strings.TrimSpace(*embeddingModel),
+		ResponsesModel:    strings.TrimSpace(*responsesModel),
+		RequestTimeout:    *timeout,
+		AllowInsecureHTTP: *allowInsecureHTTP,
+		ListSuites:        *listSuites,
 	}
 
 	if cfg.ListSuites {
@@ -128,6 +137,9 @@ func Load(args []string) (*Config, error) {
 			cfg.CompletionModel = cfg.Model
 		}
 	}
+	if cfg.ResponsesModel == "" {
+		cfg.ResponsesModel = cfg.Model
+	}
 
 	if !timeoutFlagExplicit(args) {
 		envTimeout, err := envDurationOrDefault(EnvRequestTimeout, cfg.RequestTimeout)
@@ -140,7 +152,7 @@ func Load(args []string) (*Config, error) {
 	if cfg.BaseURL == "" {
 		return nil, fmt.Errorf("%s or --base-url is required", EnvBaseURL)
 	}
-	if err := validateBaseURL(cfg.BaseURL); err != nil {
+	if err := validateBaseURL(cfg.BaseURL, cfg.AllowInsecureHTTP); err != nil {
 		return nil, err
 	}
 	if cfg.APIKey == "" {
@@ -181,11 +193,13 @@ func validateSuiteNames(names []string) error {
 }
 
 func validateModelsForSuites(cfg *Config) error {
-	var needsChat, needsCompletion, needsEmbedding bool
+	var needsChat, needsResponses, needsCompletion, needsEmbedding bool
 	for _, name := range cfg.Suites {
 		switch name {
-		case "chat_completions", "chat_completions_stream", "responses", "responses_stream":
+		case "chat_completions", "chat_completions_stream":
 			needsChat = true
+		case "responses", "responses_stream":
+			needsResponses = true
 		case "completions":
 			needsCompletion = true
 		case "embeddings":
@@ -194,6 +208,9 @@ func validateModelsForSuites(cfg *Config) error {
 	}
 	if needsChat && cfg.Model == "" {
 		return fmt.Errorf("%s or --model is required for selected suites", EnvModel)
+	}
+	if needsResponses && cfg.ResponsesModel == "" {
+		return fmt.Errorf("%s or --responses-model is required for selected suites", EnvResponsesModel)
 	}
 	if needsCompletion && cfg.CompletionModel == "" {
 		return fmt.Errorf("%s or --completion-model is required for selected suites", EnvCompletionModel)
@@ -204,7 +221,7 @@ func validateModelsForSuites(cfg *Config) error {
 	return nil
 }
 
-func validateBaseURL(raw string) error {
+func validateBaseURL(raw string, allowInsecureHTTP bool) error {
 	u, err := url.Parse(raw)
 	if err != nil {
 		return fmt.Errorf("%s: invalid URL: %w", EnvBaseURL, err)
@@ -230,7 +247,18 @@ func validateBaseURL(raw string) error {
 	if strings.Contains(strings.ToLower(raw), "%2f") {
 		return fmt.Errorf("%s: encoded path separators (%%2F) are not supported by the OpenAI Go SDK", EnvBaseURL)
 	}
+	if u.Scheme == "http" && !allowInsecureHTTP && !isLoopbackHost(u.Hostname()) {
+		return fmt.Errorf("%s: plaintext HTTP is only permitted for loopback hosts unless --allow-insecure-http is set", EnvBaseURL)
+	}
 	return nil
+}
+
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func apiKeyFlagExplicit(args []string) (explicit bool, valueEmpty bool) {
@@ -292,6 +320,21 @@ func envOrDefault(key, fallback string) string {
 		return strings.TrimSpace(value)
 	}
 	return fallback
+}
+
+func envBoolOrDefault(key string, fallback bool) bool {
+	value, ok := os.LookupEnv(key)
+	if !ok {
+		return fallback
+	}
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "1", "true", "yes", "on":
+		return true
+	case "0", "false", "no", "off":
+		return false
+	default:
+		return fallback
+	}
 }
 
 func envDurationOrDefault(key string, fallback time.Duration) (time.Duration, error) {

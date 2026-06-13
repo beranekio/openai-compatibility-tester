@@ -23,7 +23,7 @@ func (ResponsesStream) Description() string {
 func (ResponsesStream) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
 	var httpResp *http.Response
 	stream := client.Responses.NewStreaming(ctx, responses.ResponseNewParams{
-		Model: cfg.Model,
+		Model: cfg.ResponsesModel,
 		Input: responses.ResponseNewParamsInputUnion{
 			OfString: openai.String("Count from one to three."),
 		},
@@ -31,22 +31,42 @@ func (ResponsesStream) Run(ctx context.Context, client openai.Client, cfg *confi
 	}, option.WithResponseInto(&httpResp))
 	defer stream.Close()
 
+	if err := stream.Err(); err != nil {
+		return fmt.Errorf("responses stream failed: %w", err)
+	}
 	if err := validateEventStreamContentType("responses_stream", httpResp); err != nil {
 		return err
 	}
 
 	var hasOutput bool
 	var completed bool
+	var contentFilterIncomplete bool
 	var terminalFailure bool
+	var terminalReached bool
 	for stream.Next() {
+		if terminalReached {
+			return fail("responses_stream", fmt.Sprintf("stream event %q after terminal event", stream.Current().Type))
+		}
+
 		event := stream.Current()
 		switch event.Type {
-		case "response.output_text.delta", "response.refusal.delta":
-			if event.Delta != "" {
+		case "response.output_text.delta":
+			delta := event.AsResponseOutputTextDelta()
+			if err := validateResponseTextDelta("responses_stream", delta); err != nil {
+				return err
+			}
+			if delta.Delta != "" {
+				hasOutput = true
+			}
+		case "response.refusal.delta":
+			delta := event.AsResponseRefusalDelta()
+			if err := validateResponseRefusalDelta("responses_stream", delta); err != nil {
+				return err
+			}
+			if delta.Delta != "" {
 				hasOutput = true
 			}
 		case "response.completed":
-			completed = true
 			completedEvent := event.AsResponseCompleted()
 			if !completedEvent.JSON.Response.Valid() {
 				return fail("responses_stream", "response.completed missing response object")
@@ -57,8 +77,22 @@ func (ResponsesStream) Run(ctx context.Context, client openai.Client, cfg *confi
 			if string(completedEvent.Response.Status) != "completed" {
 				return fail("responses_stream", fmt.Sprintf("response.completed status is %q, want completed", completedEvent.Response.Status))
 			}
-		case "response.failed", "response.incomplete", "error":
+			completed = true
+			terminalReached = true
+		case "response.incomplete":
+			incompleteEvent := event.AsResponseIncomplete()
+			if !incompleteEvent.JSON.Response.Valid() {
+				return fail("responses_stream", "response.incomplete missing response object")
+			}
+			if isContentFilterIncompleteResponse(&incompleteEvent.Response) {
+				contentFilterIncomplete = true
+			} else {
+				terminalFailure = true
+			}
+			terminalReached = true
+		case "response.failed", "error":
 			terminalFailure = true
+			terminalReached = true
 		}
 	}
 	if err := stream.Err(); err != nil {
@@ -67,11 +101,43 @@ func (ResponsesStream) Run(ctx context.Context, client openai.Client, cfg *confi
 	if terminalFailure {
 		return fail("responses_stream", "stream ended with a failure event")
 	}
-	if !completed {
+	if !completed && !contentFilterIncomplete {
 		return fail("responses_stream", "stream missing response.completed event")
 	}
-	if !hasOutput {
+	if !hasOutput && !contentFilterIncomplete {
 		return fail("responses_stream", "stream produced no output text or refusal")
+	}
+	return nil
+}
+
+func validateResponseTextDelta(suite string, delta responses.ResponseTextDeltaEvent) error {
+	if !delta.JSON.ContentIndex.Valid() {
+		return fail(suite, "response.output_text.delta missing content_index")
+	}
+	if delta.ItemID == "" {
+		return fail(suite, "response.output_text.delta missing item_id")
+	}
+	if !delta.JSON.OutputIndex.Valid() {
+		return fail(suite, "response.output_text.delta missing output_index")
+	}
+	if !delta.JSON.SequenceNumber.Valid() {
+		return fail(suite, "response.output_text.delta missing sequence_number")
+	}
+	return nil
+}
+
+func validateResponseRefusalDelta(suite string, delta responses.ResponseRefusalDeltaEvent) error {
+	if !delta.JSON.ContentIndex.Valid() {
+		return fail(suite, "response.refusal.delta missing content_index")
+	}
+	if delta.ItemID == "" {
+		return fail(suite, "response.refusal.delta missing item_id")
+	}
+	if !delta.JSON.OutputIndex.Valid() {
+		return fail(suite, "response.refusal.delta missing output_index")
+	}
+	if !delta.JSON.SequenceNumber.Valid() {
+		return fail(suite, "response.refusal.delta missing sequence_number")
 	}
 	return nil
 }

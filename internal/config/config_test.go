@@ -11,15 +11,15 @@ import (
 )
 
 func TestLoadDefaults(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 	cfg, err := Load([]string{})
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
 
-	if cfg.BaseURL != "http://example.com/v1" {
-		t.Fatalf("BaseURL = %q, want http://example.com/v1", cfg.BaseURL)
+	if cfg.BaseURL != "https://example.com/v1" {
+		t.Fatalf("BaseURL = %q, want https://example.com/v1", cfg.BaseURL)
 	}
 	if cfg.APIKey != "test-key" {
 		t.Fatalf("APIKey = %q, want test-key", cfg.APIKey)
@@ -53,7 +53,7 @@ func TestLoadRejectsInvalidBaseURL(t *testing.T) {
 }
 
 func TestLoadRejectsInvalidRequestTimeout(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 	t.Setenv(EnvRequestTimeout, "2minutes")
 
@@ -64,7 +64,7 @@ func TestLoadRejectsInvalidRequestTimeout(t *testing.T) {
 }
 
 func TestLoadTimeoutFlagOverridesInvalidEnvironment(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 	t.Setenv(EnvRequestTimeout, "typo")
 
@@ -78,7 +78,7 @@ func TestLoadTimeoutFlagOverridesInvalidEnvironment(t *testing.T) {
 }
 
 func TestLoadSingleDashTimeoutOverridesInvalidEnvironment(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 	t.Setenv(EnvRequestTimeout, "typo")
 
@@ -136,7 +136,7 @@ func TestLoadRejectsBaseURLWithInvalidPort(t *testing.T) {
 }
 
 func TestLoadRejectsUnexpectedArguments(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 
 	_, err := Load([]string{"--suites", "models", "typo"})
@@ -156,7 +156,7 @@ func TestLoadRejectsBaseURLWithQuery(t *testing.T) {
 }
 
 func TestLoadRejectsNonPositiveTimeout(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 
 	_, err := Load([]string{"--timeout", "0"})
@@ -166,7 +166,7 @@ func TestLoadRejectsNonPositiveTimeout(t *testing.T) {
 }
 
 func TestLoadSelectedSuites(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 	t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
 
@@ -187,7 +187,7 @@ func TestLoadSelectedSuites(t *testing.T) {
 }
 
 func TestLoadRejectsDuplicateSuites(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 
 	_, err := Load([]string{"--suites", "models,models"})
@@ -197,7 +197,7 @@ func TestLoadRejectsDuplicateSuites(t *testing.T) {
 }
 
 func TestLoadAllowsModelsSuiteWithoutModelFlag(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 	t.Setenv(EnvModel, "")
 
@@ -208,7 +208,7 @@ func TestLoadAllowsModelsSuiteWithoutModelFlag(t *testing.T) {
 }
 
 func TestLoadRejectsEmptyModelForChatSuite(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 	t.Setenv(EnvModel, "")
 
@@ -219,7 +219,7 @@ func TestLoadRejectsEmptyModelForChatSuite(t *testing.T) {
 }
 
 func TestLoadRejectsEmptyCompletionModelFlag(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 	t.Setenv(EnvCompletionModel, "")
 
@@ -260,7 +260,7 @@ func TestLoadHelpDoesNotExposeAPIKey(t *testing.T) {
 }
 
 func TestLoadRejectsWhitespaceOnlyCompletionModelFlag(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 	t.Setenv(EnvCompletionModel, "")
 
@@ -271,7 +271,7 @@ func TestLoadRejectsWhitespaceOnlyCompletionModelFlag(t *testing.T) {
 }
 
 func TestLoadRejectsEmptyCompletionModelWhenLastFlagWins(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 	t.Setenv(EnvCompletionModel, "")
 
@@ -292,7 +292,7 @@ func TestLoadRejectsBaseURLWithEncodedSlash(t *testing.T) {
 }
 
 func TestLoadCompletionsSuiteUsesInstructDefault(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 	t.Setenv(EnvCompletionModel, "")
 
@@ -318,7 +318,7 @@ func TestLoadListSuitesAllowsEmptyAPIKeyFlag(t *testing.T) {
 }
 
 func TestLoadAcceptsDashPrefixedAPIKeyFlag(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "")
 
 	cfg, err := Load([]string{"--api-key", "-dash-prefixed-token"})
@@ -331,7 +331,7 @@ func TestLoadAcceptsDashPrefixedAPIKeyFlag(t *testing.T) {
 }
 
 func TestLoadRejectsEmptyAPIKeyFlagWhenEnvSet(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "production-secret")
 	_, err := Load([]string{"--api-key="})
 	if err == nil || !strings.Contains(err.Error(), EnvAPIKey) {
@@ -340,7 +340,7 @@ func TestLoadRejectsEmptyAPIKeyFlagWhenEnvSet(t *testing.T) {
 }
 
 func TestLoadRejectsEmbeddingsSuiteWithoutEmbeddingModel(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 	t.Setenv(EnvEmbeddingModel, "")
 
@@ -350,8 +350,62 @@ func TestLoadRejectsEmbeddingsSuiteWithoutEmbeddingModel(t *testing.T) {
 	}
 }
 
+func TestLoadAllowsLoopbackHTTP(t *testing.T) {
+	t.Setenv(EnvBaseURL, "http://127.0.0.1:4010/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+
+	cfg, err := Load([]string{})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.BaseURL != "http://127.0.0.1:4010/v1" {
+		t.Fatalf("BaseURL = %q, want loopback HTTP URL", cfg.BaseURL)
+	}
+}
+
+func TestLoadRejectsPlaintextHTTPForRemoteHost(t *testing.T) {
+	t.Setenv(EnvBaseURL, "")
+	t.Setenv(EnvAPIKey, "test-key")
+
+	_, err := Load([]string{"--base-url", "http://example.com/v1"})
+	if err == nil || !strings.Contains(err.Error(), "plaintext HTTP") {
+		t.Fatalf("expected plaintext HTTP error, got %v", err)
+	}
+}
+
+func TestLoadAllowsPlaintextHTTPWithExplicitOptIn(t *testing.T) {
+	t.Setenv(EnvBaseURL, "")
+	t.Setenv(EnvAPIKey, "test-key")
+
+	cfg, err := Load([]string{"--base-url", "http://example.com/v1", "--allow-insecure-http"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if !cfg.AllowInsecureHTTP {
+		t.Fatal("expected AllowInsecureHTTP to be true")
+	}
+}
+
+func TestLoadResponsesModelOverride(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvModel, "chat-model")
+	t.Setenv(EnvResponsesModel, "responses-model")
+
+	cfg, err := Load([]string{"--suites", "responses"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.ResponsesModel != "responses-model" {
+		t.Fatalf("ResponsesModel = %q, want responses-model", cfg.ResponsesModel)
+	}
+	if cfg.Model != "chat-model" {
+		t.Fatalf("Model = %q, want chat-model", cfg.Model)
+	}
+}
+
 func TestLoadCompletionModelOverride(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 	t.Setenv(EnvModel, "gpt-4o-mini")
 	t.Setenv(EnvCompletionModel, "gpt-3.5-turbo-instruct")

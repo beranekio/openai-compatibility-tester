@@ -18,7 +18,7 @@ func (Responses) Description() string { return "Responses API (POST /v1/response
 
 func (Responses) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
 	resp, err := client.Responses.New(ctx, responses.ResponseNewParams{
-		Model: cfg.Model,
+		Model: cfg.ResponsesModel,
 		Input: responses.ResponseNewParamsInputUnion{
 			OfString: openai.String("Reply with exactly the word: pong"),
 		},
@@ -42,11 +42,14 @@ func (Responses) Run(ctx context.Context, client openai.Client, cfg *config.Conf
 	if string(resp.Object) != "response" {
 		return fail("responses", fmt.Sprintf("response object is %q, want response", resp.Object))
 	}
-	if string(resp.Status) != "completed" {
-		return fail("responses", fmt.Sprintf("response status is %q, want completed", resp.Status))
+	if string(resp.Status) == "completed" {
+		if !hasResponseOutput(resp) {
+			return fail("responses", "response produced no output text or refusal")
+		}
+		return nil
 	}
-	if !hasResponseOutput(resp) {
-		return fail("responses", "response produced no output text or refusal")
+	if isContentFilterIncompleteResponse(resp) {
+		return nil
 	}
-	return nil
+	return fail("responses", fmt.Sprintf("response status is %q, want completed", resp.Status))
 }
