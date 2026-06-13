@@ -11,19 +11,23 @@ import (
 // Server provides a minimal OpenAI-compatible HTTP API for CI tests.
 type Server struct {
 	*httptest.Server
+	store *responseStore
 }
 
 // New starts a mock OpenAI API server.
 func New() *Server {
 	mux := http.NewServeMux()
-	s := &Server{}
+	s := &Server{store: newResponseStore()}
 
 	mux.HandleFunc("GET /v1/models", handleModels)
 	mux.HandleFunc("GET /v1/models/{id}", handleModelGet)
 	mux.HandleFunc("POST /v1/chat/completions", handleChatCompletions)
 	mux.HandleFunc("POST /v1/completions", handleCompletions)
 	mux.HandleFunc("POST /v1/embeddings", handleEmbeddings)
-	mux.HandleFunc("POST /v1/responses", handleResponses)
+	mux.HandleFunc("POST /v1/responses", s.handleResponses)
+	mux.HandleFunc("GET /v1/responses/{id}", s.handleResponseGet)
+	mux.HandleFunc("DELETE /v1/responses/{id}", s.handleResponseDelete)
+	mux.HandleFunc("POST /v1/responses/{id}/cancel", s.handleResponseCancel)
 
 	s.Server = httptest.NewServer(mux)
 	return s
@@ -276,139 +280,109 @@ func handleEmbeddings(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func handleResponses(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var req struct {
-		Stream bool              `json:"stream"`
-		Tools  []json.RawMessage `json:"tools"`
-		Text   *struct {
-			Format *struct {
-				Type   string `json:"type"`
-				Strict *bool  `json:"strict"`
-			} `json:"format"`
-		} `json:"text"`
-	}
-	_ = json.Unmarshal(body, &req)
-
-	if len(req.Tools) > 0 {
-		if req.Stream {
-			writeResponsesToolCallStream(w)
-			return
-		}
-		writeResponsesToolCallResponse(w)
-		return
-	}
-
-	if req.Stream {
-		w.Header().Set("Content-Type", "text/event-stream")
-		w.WriteHeader(http.StatusOK)
-		seq := 0
-		writeResponseStreamEvent := func(payload map[string]any) {
-			payload["sequence_number"] = seq
-			seq++
-			data, _ := json.Marshal(payload)
-			_, _ = w.Write([]byte("data: " + string(data) + "\n\n"))
-		}
-
-		writeResponseStreamEvent(map[string]any{
-			"type": "response.created",
-			"response": map[string]any{
-				"id":         "resp-mock",
-				"object":     "response",
-				"status":     "in_progress",
-				"model":      "gpt-4o-mini",
-				"created_at": 1700000000,
-			},
-		})
-		writeResponseStreamEvent(map[string]any{
-			"type": "response.in_progress",
-			"response": map[string]any{
-				"id":         "resp-mock",
-				"object":     "response",
-				"status":     "in_progress",
-				"model":      "gpt-4o-mini",
-				"created_at": 1700000000,
-			},
-		})
-		writeResponseStreamEvent(map[string]any{
-			"type":          "response.output_item.added",
-			"output_index":  0,
-			"item": map[string]any{
-				"id":     "msg-mock",
-				"type":   "message",
-				"role":   "assistant",
-				"status": "in_progress",
-			},
-		})
-		writeResponseStreamEvent(map[string]any{
-			"type":          "response.content_part.added",
-			"item_id":       "msg-mock",
-			"output_index":  0,
-			"content_index": 0,
-			"part": map[string]any{
-				"type": "output_text",
-				"text": "",
-			},
-		})
-
-		chunks := []string{"one", " two", " three"}
-		for _, chunk := range chunks {
-			writeResponseStreamEvent(map[string]any{
-				"type":          "response.output_text.delta",
-				"content_index": 0,
-				"item_id":       "msg-mock",
-				"output_index":  0,
-				"logprobs":      []any{},
-				"delta":         chunk,
-			})
-		}
-		writeResponseStreamEvent(map[string]any{
-			"type": "response.completed",
-			"response": map[string]any{
-				"id":         "resp-mock",
-				"object":     "response",
-				"status":     "completed",
-				"model":      "gpt-4o-mini",
-				"created_at": 1700000000,
-			},
-		})
-		_, _ = w.Write([]byte("data: [DONE]\n\n"))
-		return
-	}
-
-	outputText := "pong"
-	if req.Text != nil && req.Text.Format != nil && req.Text.Format.Type == "json_schema" {
-		if req.Text.Format.Strict != nil && *req.Text.Format.Strict {
-			outputText = `{"answer":"pong"}`
-		}
-	}
-
+func writeChatCompletionToolCallResponse(w http.ResponseWriter) {
 	writeJSON(w, map[string]any{
-		"id":         "resp-mock",
-		"object":     "response",
-		"status":     "completed",
-		"model":      "gpt-4o-mini",
-		"created_at": 1700000000,
-		"output": []map[string]any{
+		"id":      "chatcmpl-mock-tools",
+		"object":  "chat.completion",
+		"created": 1700000000,
+		"model":   "gpt-4o-mini",
+		"choices": []map[string]any{
 			{
-				"id":     "msg-mock",
-				"type":   "message",
-				"role":   "assistant",
-				"status": "completed",
-				"content": []map[string]any{
-					{
-						"type": "output_text",
-						"text": outputText,
+				"index": 0,
+				"message": map[string]any{
+					"role": "assistant",
+					"tool_calls": []map[string]any{
+						{
+							"id":   "call_mock_weather",
+							"type": "function",
+							"function": map[string]any{
+								"name":      "get_weather",
+								"arguments": `{"location":"San Francisco, CA"}`,
+							},
+						},
+					},
+				},
+				"finish_reason": "tool_calls",
+			},
+		},
+		"usage": map[string]any{
+			"prompt_tokens":     12,
+			"completion_tokens": 18,
+			"total_tokens":      30,
+		},
+	})
+}
+
+func writeChatCompletionToolCallStream(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.WriteHeader(http.StatusOK)
+
+	chunks := []map[string]any{
+		{
+			"id":      "chatcmpl-mock-tools",
+			"object":  "chat.completion.chunk",
+			"created": 1700000000,
+			"model":   "gpt-4o-mini",
+			"choices": []map[string]any{
+				{
+					"index": 0,
+					"delta": map[string]any{
+						"role": "assistant",
+						"tool_calls": []map[string]any{
+							{
+								"index": 0,
+								"id":    "call_mock_weather",
+								"type":  "function",
+								"function": map[string]any{
+									"name": "get_weather",
+								},
+							},
+						},
 					},
 				},
 			},
 		},
-	})
+		{
+			"id":      "chatcmpl-mock-tools",
+			"object":  "chat.completion.chunk",
+			"created": 1700000000,
+			"model":   "gpt-4o-mini",
+			"choices": []map[string]any{
+				{
+					"index": 0,
+					"delta": map[string]any{
+						"tool_calls": []map[string]any{
+							{
+								"index": 0,
+								"function": map[string]any{
+									"arguments": `{"location":"San Francisco, CA"}`,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			"id":      "chatcmpl-mock-tools",
+			"object":  "chat.completion.chunk",
+			"created": 1700000000,
+			"model":   "gpt-4o-mini",
+			"choices": []map[string]any{
+				{
+					"index":         0,
+					"delta":         map[string]any{},
+					"finish_reason": "tool_calls",
+				},
+			},
+		},
+	}
+
+	for _, payload := range chunks {
+		data, _ := json.Marshal(payload)
+		_, _ = w.Write([]byte("data: " + string(data) + "\n\n"))
+	}
+	_, _ = w.Write([]byte("data: [DONE]\n\n"))
 }
 
 func writeResponsesToolCallResponse(w http.ResponseWriter) {
@@ -444,8 +418,8 @@ func writeResponsesToolCallStream(w http.ResponseWriter) {
 	}
 
 	writeEvent(map[string]any{
-		"type":          "response.output_item.added",
-		"output_index":  0,
+		"type":         "response.output_item.added",
+		"output_index": 0,
 		"item": map[string]any{
 			"id":        "fc-mock",
 			"type":      "function_call",
@@ -459,18 +433,18 @@ func writeResponsesToolCallStream(w http.ResponseWriter) {
 	argChunks := []string{`{"location"`, `:"San Francisco, CA"`, `}`}
 	for _, chunk := range argChunks {
 		writeEvent(map[string]any{
-			"type":          "response.function_call_arguments.delta",
-			"item_id":       "fc-mock",
-			"output_index":  0,
-			"delta":         chunk,
+			"type":         "response.function_call_arguments.delta",
+			"item_id":      "fc-mock",
+			"output_index": 0,
+			"delta":        chunk,
 		})
 	}
 	writeEvent(map[string]any{
-		"type":          "response.function_call_arguments.done",
-		"item_id":       "fc-mock",
-		"output_index":  0,
-		"name":          "get_weather",
-		"arguments":     `{"location":"San Francisco, CA"}`,
+		"type":         "response.function_call_arguments.done",
+		"item_id":      "fc-mock",
+		"output_index": 0,
+		"name":         "get_weather",
+		"arguments":    `{"location":"San Francisco, CA"}`,
 	})
 	writeEvent(map[string]any{
 		"type":         "response.output_item.done",
@@ -497,7 +471,28 @@ func writeResponsesToolCallStream(w http.ResponseWriter) {
 	_, _ = w.Write([]byte("data: [DONE]\n\n"))
 }
 
-func writeChatCompletionToolCallResponse(w http.ResponseWriter) {
+func writeJSON(w http.ResponseWriter, payload any) {
+	w.Header().Set("Content-Type", "application/json")
+	enc := json.NewEncoder(w)
+	enc.SetEscapeHTML(false)
+	_ = enc.Encode(payload)
+}
+
+// BrokenServer returns a server that responds with invalid payloads.
+func BrokenServer() *Server {
+	mux := http.NewServeMux()
+	s := &Server{}
+
+	mux.HandleFunc("GET /v1/models", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, strings.TrimSpace(`{"object":"list","data":[]}`))
+	})
+	mux.HandleFunc("POST /v1/chat/completions", func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, `{"error":{"message":"incompatible"}}`, http.StatusBadRequest)
+	})
+
+	s.Server = httptest.NewServer(mux)
+	return s
+}func writeChatCompletionToolCallResponse(w http.ResponseWriter) {
 	writeJSON(w, map[string]any{
 		"id":      "chatcmpl-mock-tools",
 		"object":  "chat.completion",
