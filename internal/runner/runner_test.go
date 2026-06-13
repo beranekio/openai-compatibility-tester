@@ -16,17 +16,19 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 	t.Cleanup(server.Close)
 
 	cfg := &config.Config{
-		BaseURL:        server.BaseURL(),
-		APIKey:         "test-key",
-		Model:          "gpt-4o-mini",
-		EmbeddingModel: "text-embedding-3-small",
-		RequestTimeout: 30 * time.Second,
+		BaseURL:          server.BaseURL(),
+		APIKey:           "test-key",
+		Model:            "gpt-4o-mini",
+		CompletionModel:  config.DefaultCompletionModel,
+		EmbeddingModel:   "text-embedding-3-small",
+		RequestTimeout:   30 * time.Second,
 		Suites: []string{
 			"models",
 			"models_get",
 			"chat_completions",
 			"chat_completions_stream",
 			"completions",
+			"completions_stream",
 			"embeddings",
 			"embeddings_batch",
 			"responses",

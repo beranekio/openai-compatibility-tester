@@ -22,7 +22,7 @@ docker run --rm \
 | `OPENAI_API_KEY` | `--api-key` | yes | — | Bearer token sent to the endpoint |
 | `OPENAI_MODEL` | `--model` | no | `gpt-4o-mini` | Model for chat completion suites and the model ID fetched by `models_get` |
 | `OPENAI_RESPONSES_MODEL` | `--responses-model` | no | same as `OPENAI_MODEL` | Model used for Responses API suites |
-| `OPENAI_COMPLETION_MODEL` | `--completion-model` | no | `gpt-3.5-turbo-instruct` when `completions` is selected, otherwise same as `OPENAI_MODEL` | Model used for the legacy completions suite |
+| `OPENAI_COMPLETION_MODEL` | `--completion-model` | no | `gpt-3.5-turbo-instruct` when `completions` or `completions_stream` is selected, otherwise same as `OPENAI_MODEL` | Model used for legacy completions suites |
 | `OPENAI_EMBEDDING_MODEL` | `--embedding-model` | when `embeddings` or `embeddings_batch` is selected | — | Model used for embedding suites |
 | `OPENAI_VISION_MODEL` | `--vision-model` | when `chat_completions_vision` is selected | same as `OPENAI_MODEL` | Model used for vision chat suites |
 | `OPENAI_IMAGE_MODEL` | `--image-model` | when image suites are selected | — | Model used for image generation suites |
@@ -47,6 +47,7 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `chat_completions` | `client.Chat.Completions.New` | `POST /v1/chat/completions` |
 | `chat_completions_stream` | `client.Chat.Completions.NewStreaming` | `POST /v1/chat/completions` (stream) |
 | `completions` | `client.Completions.New` | `POST /v1/completions` |
+| `completions_stream` | `client.Completions.NewStreaming` | `POST /v1/completions` (stream) |
 | `embeddings` | `client.Embeddings.New` | `POST /v1/embeddings` |
 | `embeddings_batch` | `client.Embeddings.New` (array input) | `POST /v1/embeddings` |
 | `responses` | `client.Responses.New` | `POST /v1/responses` |
@@ -54,9 +55,20 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
-Extended preset (`extended`): default suites plus `completions`, `embeddings`, and `embeddings_batch`.
+Extended preset (`extended`): default suites plus `completions`, `completions_stream`, `embeddings`, and `embeddings_batch`.
 
 Full preset (`full`): every registered suite (see `--list-suites`).
+
+Add `completions` and `completions_stream` only when your endpoint exposes legacy `/v1/completions`:
+
+```bash
+docker run --rm \
+  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
+  -e OPENAI_API_KEY=your-api-key \
+  -e OPENAI_COMPLETION_MODEL=your-instruct-model \
+  -e TEST_SUITES=models,completions,completions_stream \
+  ghcr.io/beranekio/openai-compatibility-tester:latest
+```
 
 Add `embeddings` and `embeddings_batch` only when your endpoint exposes embedding models:
 

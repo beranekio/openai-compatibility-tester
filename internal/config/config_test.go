@@ -457,6 +457,20 @@ func TestLoadCompletionModelOverride(t *testing.T) {
 	}
 }
 
+func TestLoadCompletionsStreamSuiteUsesInstructDefault(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvCompletionModel, "")
+
+	cfg, err := Load([]string{"--suites", "completions_stream"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.CompletionModel != DefaultCompletionModel {
+		t.Fatalf("CompletionModel = %q, want %q", cfg.CompletionModel, DefaultCompletionModel)
+	}
+}
+
 func TestLoadSuitePresets(t *testing.T) {
 	tests := []struct {
 		name       string
