@@ -22,6 +22,7 @@ func All() []Suite {
 		ModelsGet{},
 		ChatCompletions{},
 		ChatCompletionsStream{},
+		ChatCompletionsJSON{},
 		Completions{},
 		CompletionsStream{},
 		Embeddings{},
@@ -56,7 +57,7 @@ func RequiredModels(names []string) ModelRequirements {
 	var req ModelRequirements
 	for _, name := range names {
 		switch name {
-		case "chat_completions", "chat_completions_stream", "models_get", "responses", "responses_stream":
+		case "chat_completions", "chat_completions_stream", "chat_completions_json", "models_get", "responses", "responses_stream":
 			req.Chat = true
 		case "completions", "completions_stream":
 			req.Completion = true

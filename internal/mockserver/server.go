@@ -62,7 +62,10 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Stream bool `json:"stream"`
+		Stream         bool `json:"stream"`
+		ResponseFormat *struct {
+			Type string `json:"type"`
+		} `json:"response_format"`
 	}
 	_ = json.Unmarshal(body, &req)
 
@@ -104,6 +107,11 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	content := "pong"
+	if req.ResponseFormat != nil && req.ResponseFormat.Type == "json_schema" {
+		content = `{"answer":"pong"}`
+	}
+
 	writeJSON(w, map[string]any{
 		"id":      "chatcmpl-mock",
 		"object":  "chat.completion",
@@ -114,7 +122,7 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 				"index": 0,
 				"message": map[string]any{
 					"role":    "assistant",
-					"content": "pong",
+					"content": content,
 				},
 				"finish_reason": "stop",
 			},

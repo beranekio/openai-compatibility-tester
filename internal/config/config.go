@@ -48,6 +48,7 @@ var ExtendedSuites = []string{
 	"models_get",
 	"chat_completions",
 	"chat_completions_stream",
+	"chat_completions_json",
 	"responses",
 	"responses_stream",
 	"completions",
@@ -62,6 +63,7 @@ var FullSuites = []string{
 	"models_get",
 	"chat_completions",
 	"chat_completions_stream",
+	"chat_completions_json",
 	"completions",
 	"completions_stream",
 	"embeddings",
@@ -75,6 +77,7 @@ var knownSuites = map[string]struct{}{
 	"models_get":               {},
 	"chat_completions":         {},
 	"chat_completions_stream":  {},
+	"chat_completions_json":    {},
 	"completions":              {},
 	"completions_stream":       {},
 	"embeddings":               {},
@@ -264,7 +267,7 @@ func validateModelsForSuites(cfg *Config) error {
 	var needsVision, needsImage, needsTTS, needsWhisper bool
 	for _, name := range cfg.Suites {
 		switch name {
-		case "chat_completions", "chat_completions_stream", "models_get":
+		case "chat_completions", "chat_completions_stream", "chat_completions_json", "models_get":
 			needsChat = true
 		case "responses", "responses_stream":
 			needsResponses = true
