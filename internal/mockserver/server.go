@@ -291,23 +291,68 @@ func handleResponses(w http.ResponseWriter, r *http.Request) {
 	if req.Stream {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.WriteHeader(http.StatusOK)
-		chunks := []string{"one", " two", " three"}
-		for i, chunk := range chunks {
-			payload := map[string]any{
-				"type":            "response.output_text.delta",
-				"sequence_number": i,
-				"content_index":   0,
-				"item_id":         "msg-mock",
-				"output_index":    0,
-				"logprobs":        []any{},
-				"delta":           chunk,
-			}
+		seq := 0
+		writeResponseStreamEvent := func(payload map[string]any) {
+			payload["sequence_number"] = seq
+			seq++
 			data, _ := json.Marshal(payload)
 			_, _ = w.Write([]byte("data: " + string(data) + "\n\n"))
 		}
-		completed, _ := json.Marshal(map[string]any{
-			"type":            "response.completed",
-			"sequence_number": len(chunks),
+
+		writeResponseStreamEvent(map[string]any{
+			"type": "response.created",
+			"response": map[string]any{
+				"id":         "resp-mock",
+				"object":     "response",
+				"status":     "in_progress",
+				"model":      "gpt-4o-mini",
+				"created_at": 1700000000,
+			},
+		})
+		writeResponseStreamEvent(map[string]any{
+			"type": "response.in_progress",
+			"response": map[string]any{
+				"id":         "resp-mock",
+				"object":     "response",
+				"status":     "in_progress",
+				"model":      "gpt-4o-mini",
+				"created_at": 1700000000,
+			},
+		})
+		writeResponseStreamEvent(map[string]any{
+			"type":          "response.output_item.added",
+			"output_index":  0,
+			"item": map[string]any{
+				"id":     "msg-mock",
+				"type":   "message",
+				"role":   "assistant",
+				"status": "in_progress",
+			},
+		})
+		writeResponseStreamEvent(map[string]any{
+			"type":          "response.content_part.added",
+			"item_id":       "msg-mock",
+			"output_index":  0,
+			"content_index": 0,
+			"part": map[string]any{
+				"type": "output_text",
+				"text": "",
+			},
+		})
+
+		chunks := []string{"one", " two", " three"}
+		for _, chunk := range chunks {
+			writeResponseStreamEvent(map[string]any{
+				"type":          "response.output_text.delta",
+				"content_index": 0,
+				"item_id":       "msg-mock",
+				"output_index":  0,
+				"logprobs":      []any{},
+				"delta":         chunk,
+			})
+		}
+		writeResponseStreamEvent(map[string]any{
+			"type": "response.completed",
 			"response": map[string]any{
 				"id":         "resp-mock",
 				"object":     "response",
@@ -316,7 +361,6 @@ func handleResponses(w http.ResponseWriter, r *http.Request) {
 				"created_at": 1700000000,
 			},
 		})
-		_, _ = w.Write([]byte("data: " + string(completed) + "\n\n"))
 		_, _ = w.Write([]byte("data: [DONE]\n\n"))
 		return
 	}
