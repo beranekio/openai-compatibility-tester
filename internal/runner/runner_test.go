@@ -19,6 +19,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 		BaseURL:          server.BaseURL(),
 		APIKey:           "test-key",
 		Model:            "gpt-4o-mini",
+		ResponsesModel:   "gpt-4o-mini",
 		CompletionModel:  config.DefaultCompletionModel,
 		VisionModel:      "gpt-4o-mini",
 		EmbeddingModel:   "text-embedding-3-small",
