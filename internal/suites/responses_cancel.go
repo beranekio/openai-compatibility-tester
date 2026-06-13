@@ -45,6 +45,9 @@ func (ResponsesCancel) Run(ctx context.Context, client openai.Client, cfg *confi
 	if cancelled == nil {
 		return fail("responses_cancel", "cancel response is nil")
 	}
+	if err := validateResponseEnvelope("responses_cancel", cancelled); err != nil {
+		return err
+	}
 	if cancelled.ID != created.ID {
 		return fail("responses_cancel", fmt.Sprintf("cancel id is %q, want %q", cancelled.ID, created.ID))
 	}
