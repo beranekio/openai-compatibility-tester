@@ -213,6 +213,20 @@ func (s *Server) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 
 	includeUsage := req.StreamOptions != nil && req.StreamOptions.IncludeUsage
 
+	if req.Model == "oct-invalid-model" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]any{
+			"error": map[string]any{
+				"message": "The model `oct-invalid-model` does not exist",
+				"type":    "invalid_request_error",
+				"param":   "model",
+				"code":    "model_not_found",
+			},
+		})
+		return
+	}
+
 	if len(req.Tools) > 0 && !chatCompletionRequestIsMultiTurn(req.Messages) {
 		if req.Stream {
 			writeChatCompletionToolCallStream(w)
