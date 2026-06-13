@@ -102,7 +102,7 @@ func Load(args []string) (*Config, error) {
 
 	baseURL := fs.String("base-url", envOrDefault(EnvBaseURL, ""), "OpenAI-compatible API base URL")
 	apiKey := fs.String("api-key", "", "API key for the endpoint (or set "+EnvAPIKey+")")
-	model := fs.String("model", envOrDefault(EnvModel, "gpt-4o-mini"), "Model for chat completion suites")
+	model := fs.String("model", envOrDefault(EnvModel, "gpt-4o-mini"), "Model for chat completion and models_get suites")
 	completionModel := fs.String("completion-model", envOrDefault(EnvCompletionModel, ""), "Model for legacy completions suite (defaults to "+DefaultCompletionModel+" when completions is selected)")
 	embeddingModel := fs.String("embedding-model", envOrDefault(EnvEmbeddingModel, ""), "Model for embedding tests (required when embeddings suite is selected)")
 	responsesModel := fs.String("responses-model", envOrDefault(EnvResponsesModel, ""), "Model for Responses API suites (defaults to --model)")

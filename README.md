@@ -20,7 +20,7 @@ docker run --rm \
 |----------|------|----------|---------|-------------|
 | `OPENAI_BASE_URL` | `--base-url` | yes | — | API base URL including `/v1` (e.g. `https://api.openai.com/v1`). Query parameters are not supported. |
 | `OPENAI_API_KEY` | `--api-key` | yes | — | Bearer token sent to the endpoint |
-| `OPENAI_MODEL` | `--model` | no | `gpt-4o-mini` | Model used for chat completion suites |
+| `OPENAI_MODEL` | `--model` | no | `gpt-4o-mini` | Model for chat completion suites and the model ID fetched by `models_get` |
 | `OPENAI_RESPONSES_MODEL` | `--responses-model` | no | same as `OPENAI_MODEL` | Model used for Responses API suites |
 | `OPENAI_COMPLETION_MODEL` | `--completion-model` | no | `gpt-3.5-turbo-instruct` when `completions` is selected, otherwise same as `OPENAI_MODEL` | Model used for the legacy completions suite |
 | `OPENAI_EMBEDDING_MODEL` | `--embedding-model` | when `embeddings` is selected | — | Model used for the embeddings suite |
