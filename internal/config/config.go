@@ -18,6 +18,10 @@ const (
 	EnvEmbeddingModel  = "OPENAI_EMBEDDING_MODEL"
 	EnvTestSuites      = "TEST_SUITES"
 	EnvRequestTimeout  = "REQUEST_TIMEOUT"
+
+	// DefaultCompletionModel is used when the completions suite is selected without
+	// an explicit completion model. Legacy /v1/completions expects instruct models.
+	DefaultCompletionModel = "gpt-3.5-turbo-instruct"
 )
 
 // DefaultSuites are run when TEST_SUITES is unset or set to "all".
@@ -89,10 +93,6 @@ func Load(args []string) (*Config, error) {
 		return cfg, nil
 	}
 
-	if cfg.CompletionModel == "" {
-		cfg.CompletionModel = cfg.Model
-	}
-
 	if *suiteList == "all" {
 		cfg.Suites = append([]string(nil), DefaultSuites...)
 	} else {
@@ -107,6 +107,14 @@ func Load(args []string) (*Config, error) {
 			}
 			seen[name] = struct{}{}
 			cfg.Suites = append(cfg.Suites, name)
+		}
+	}
+
+	if cfg.CompletionModel == "" {
+		if suiteNeedsCompletion(cfg.Suites) {
+			cfg.CompletionModel = DefaultCompletionModel
+		} else {
+			cfg.CompletionModel = cfg.Model
 		}
 	}
 
@@ -141,6 +149,15 @@ func Load(args []string) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func suiteNeedsCompletion(names []string) bool {
+	for _, name := range names {
+		if name == "completions" {
+			return true
+		}
+	}
+	return false
 }
 
 func validateSuiteNames(names []string) error {

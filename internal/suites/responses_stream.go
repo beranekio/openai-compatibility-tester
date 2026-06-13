@@ -24,18 +24,17 @@ func (ResponsesStream) Run(ctx context.Context, client openai.Client, cfg *confi
 		Input: responses.ResponseNewParamsInputUnion{
 			OfString: openai.String("Count from one to three."),
 		},
-		MaxOutputTokens: openai.Int(32),
 	})
 	defer stream.Close()
 
-	var text string
+	var output string
 	var completed bool
 	var terminalFailure bool
 	for stream.Next() {
 		event := stream.Current()
 		switch event.Type {
-		case "response.output_text.delta":
-			text += event.Delta
+		case "response.output_text.delta", "response.refusal.delta":
+			output += event.Delta
 		case "response.completed":
 			completed = true
 		case "response.failed", "response.incomplete", "error":
@@ -51,8 +50,8 @@ func (ResponsesStream) Run(ctx context.Context, client openai.Client, cfg *confi
 	if !completed {
 		return fail("responses_stream", "stream missing response.completed event")
 	}
-	if text == "" {
-		return fail("responses_stream", "stream produced no text content")
+	if output == "" {
+		return fail("responses_stream", "stream produced no output text or refusal")
 	}
 	return nil
 }

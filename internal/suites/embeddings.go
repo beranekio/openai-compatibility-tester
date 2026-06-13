@@ -25,6 +25,9 @@ func (Embeddings) Run(ctx context.Context, client openai.Client, cfg *config.Con
 	if err != nil {
 		return fmt.Errorf("embedding request failed: %w", err)
 	}
+	if resp == nil {
+		return fail("embeddings", "response is nil")
+	}
 	if len(resp.Data) == 0 {
 		return fail("embeddings", "response missing data")
 	}

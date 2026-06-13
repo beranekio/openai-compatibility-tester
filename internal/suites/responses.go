@@ -22,10 +22,12 @@ func (Responses) Run(ctx context.Context, client openai.Client, cfg *config.Conf
 		Input: responses.ResponseNewParamsInputUnion{
 			OfString: openai.String("Reply with exactly the word: pong"),
 		},
-		MaxOutputTokens: openai.Int(16),
 	})
 	if err != nil {
 		return fmt.Errorf("responses request failed: %w", err)
+	}
+	if resp == nil {
+		return fail("responses", "response is nil")
 	}
 	if resp.ID == "" {
 		return fail("responses", "response missing id")
@@ -33,8 +35,8 @@ func (Responses) Run(ctx context.Context, client openai.Client, cfg *config.Conf
 	if string(resp.Status) != "completed" {
 		return fail("responses", fmt.Sprintf("response status is %q, want completed", resp.Status))
 	}
-	if resp.OutputText() == "" {
-		return fail("responses", "response produced no output text")
+	if !hasResponseOutput(resp) {
+		return fail("responses", "response produced no output text or refusal")
 	}
 	return nil
 }

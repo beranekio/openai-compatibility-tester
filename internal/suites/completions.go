@@ -26,6 +26,9 @@ func (Completions) Run(ctx context.Context, client openai.Client, cfg *config.Co
 	if err != nil {
 		return fmt.Errorf("completion request failed: %w", err)
 	}
+	if resp == nil {
+		return fail("completions", "response is nil")
+	}
 	if resp.ID == "" {
 		return fail("completions", "response missing id")
 	}

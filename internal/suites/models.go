@@ -19,6 +19,9 @@ func (Models) Run(ctx context.Context, client openai.Client, cfg *config.Config)
 	if err != nil {
 		return fmt.Errorf("models list request failed: %w", err)
 	}
+	if page == nil {
+		return fail("models", "response is nil")
+	}
 	if len(page.Data) == 0 {
 		return fail("models", "expected at least one model in list response")
 	}
