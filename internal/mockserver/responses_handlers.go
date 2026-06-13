@@ -219,3 +219,38 @@ func (s *Server) handleResponseCancel(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, payload)
 }
+
+func (s *Server) handleResponseInputItems(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	items, ok := s.store.inputItemsFor(id)
+	if !ok {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		writeJSON(w, map[string]any{
+			"error": map[string]any{
+				"message": "Response not found",
+				"type":    "invalid_request_error",
+				"param":   "id",
+				"code":    "not_found",
+			},
+		})
+		return
+	}
+	firstID := ""
+	lastID := ""
+	if len(items) > 0 {
+		if idVal, ok := items[0]["id"].(string); ok {
+			firstID = idVal
+		}
+		if idVal, ok := items[len(items)-1]["id"].(string); ok {
+			lastID = idVal
+		}
+	}
+	writeJSON(w, map[string]any{
+		"object":   "list",
+		"data":     items,
+		"first_id": firstID,
+		"last_id":  lastID,
+		"has_more": false,
+	})
+}

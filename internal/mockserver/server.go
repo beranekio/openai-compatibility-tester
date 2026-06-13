@@ -28,6 +28,7 @@ func New() *Server {
 	mux.HandleFunc("GET /v1/responses/{id}", s.handleResponseGet)
 	mux.HandleFunc("DELETE /v1/responses/{id}", s.handleResponseDelete)
 	mux.HandleFunc("POST /v1/responses/{id}/cancel", s.handleResponseCancel)
+	mux.HandleFunc("GET /v1/responses/{id}/input_items", s.handleResponseInputItems)
 
 	s.Server = httptest.NewServer(mux)
 	return s

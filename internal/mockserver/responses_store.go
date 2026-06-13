@@ -67,18 +67,18 @@ func (s *responseStore) updateStatus(id, status string) (map[string]any, bool) {
 	return cloneMap(updated), true
 }
 
-func (s *responseStore) inputItemsFor(id string) []map[string]any {
+func (s *responseStore) inputItemsFor(id string) ([]map[string]any, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	items := s.inputItems[id]
-	if len(items) == 0 {
-		return nil
+	if _, ok := s.responses[id]; !ok {
+		return nil, false
 	}
+	items := s.inputItems[id]
 	out := make([]map[string]any, len(items))
 	for i, item := range items {
 		out[i] = cloneMap(item)
 	}
-	return out
+	return out, true
 }
 
 func inputItemsFromRequest(input json.RawMessage) []map[string]any {
