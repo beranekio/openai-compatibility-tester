@@ -119,6 +119,16 @@ func (Files) Run(ctx context.Context, client openai.Client, cfg *config.Config) 
 }
 
 func validateFileObject(suite string, file *openai.FileObject) error {
+	if err := validateFileEnvelope(suite, file); err != nil {
+		return err
+	}
+	if !file.JSON.Status.Valid() {
+		return fail(suite, "file missing status")
+	}
+	return nil
+}
+
+func validateFileEnvelope(suite string, file *openai.FileObject) error {
 	if file == nil {
 		return fail(suite, "file is nil")
 	}

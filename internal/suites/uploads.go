@@ -84,8 +84,15 @@ func (Uploads) Run(ctx context.Context, client openai.Client, cfg *config.Config
 	if !completed.JSON.File.Valid() {
 		return fail("uploads", "complete response missing file")
 	}
-	if err := validateFileObject("uploads", &completed.File); err != nil {
+	if completed.File.ID == "" {
+		return fail("uploads", "complete file missing id")
+	}
+	fileID = completed.File.ID
+	if err := validateFileEnvelope("uploads", &completed.File); err != nil {
 		return err
+	}
+	if completed.File.Bytes != int64(len(content)) {
+		return fail("uploads", fmt.Sprintf("file bytes is %d, want %d", completed.File.Bytes, len(content)))
 	}
 	if completed.File.Filename != "test.txt" {
 		return fail("uploads", fmt.Sprintf("file filename is %q, want test.txt", completed.File.Filename))
@@ -93,7 +100,6 @@ func (Uploads) Run(ctx context.Context, client openai.Client, cfg *config.Config
 	if string(completed.File.Purpose) != string(openai.FilePurposeUserData) {
 		return fail("uploads", fmt.Sprintf("file purpose is %q, want user_data", completed.File.Purpose))
 	}
-	fileID = completed.File.ID
 	if deletedResp, err := client.Files.Delete(ctx, fileID); err == nil && deletedResp != nil && deletedResp.Deleted {
 		deleted = true
 	}
