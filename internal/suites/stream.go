@@ -95,5 +95,8 @@ func validateChatCompletionStreamUsage(suite string, chunk openai.ChatCompletion
 	if usage.TotalTokens <= 0 {
 		return fail(suite, "stream usage total_tokens must be greater than zero")
 	}
+	if usage.TotalTokens != usage.PromptTokens+usage.CompletionTokens {
+		return fail(suite, "stream usage total_tokens does not equal prompt_tokens + completion_tokens")
+	}
 	return nil
 }

@@ -110,5 +110,23 @@ func validateChatCompletionTokenLogprob(suite string, entry openai.ChatCompletio
 	if !entry.JSON.TopLogprobs.Valid() {
 		return fail(suite, "logprob entry missing top_logprobs")
 	}
+	for _, alt := range entry.TopLogprobs {
+		if err := validateChatCompletionTokenLogprobTopLogprob(suite, alt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateChatCompletionTokenLogprobTopLogprob(suite string, alt openai.ChatCompletionTokenLogprobTopLogprob) error {
+	if !alt.JSON.Token.Valid() {
+		return fail(suite, "top_logprob entry missing token")
+	}
+	if alt.JSON.Bytes.Raw() == "" {
+		return fail(suite, "top_logprob entry missing bytes")
+	}
+	if !alt.JSON.Logprob.Valid() {
+		return fail(suite, "top_logprob entry missing logprob")
+	}
 	return nil
 }
