@@ -31,6 +31,7 @@ func transcriptionRequestWantsStream(r *http.Request) bool {
 	contentType := r.Header.Get("Content-Type")
 	if strings.HasPrefix(contentType, "multipart/form-data") {
 		if err := r.ParseMultipartForm(1 << 20); err == nil {
+			defer r.MultipartForm.RemoveAll()
 			if values, ok := r.MultipartForm.Value["stream"]; ok {
 				for _, value := range values {
 					if value == "true" {

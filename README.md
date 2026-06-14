@@ -27,7 +27,8 @@ docker run --rm \
 | `OPENAI_VISION_MODEL` | `--vision-model` | when `chat_completions_vision` is selected | same as `OPENAI_MODEL` | Model used for vision chat suites |
 | `OPENAI_IMAGE_MODEL` | `--image-model` | when `images_generations` or `images_edits` is selected | — | Model used for image generation and edit suites |
 | `OPENAI_TTS_MODEL` | `--tts-model` | when `audio_speech` is selected | — | Model used for text-to-speech suites |
-| `OPENAI_WHISPER_MODEL` | `--whisper-model` | when audio transcription suites are selected | — | Model used for speech-to-text suites |
+| `OPENAI_WHISPER_MODEL` | `--whisper-model` | when `audio_transcriptions` or `audio_translations` is selected | — | Model for non-streaming transcription and translation (e.g. `whisper-1`) |
+| `OPENAI_TRANSCRIPTION_MODEL` | `--transcription-model` | when `audio_transcriptions_stream` is selected | — | Model for streaming transcription (e.g. `gpt-4o-mini-transcribe`) |
 | `TEST_SUITES` | `--suites` | no | `all` | Comma-separated suite names, or preset: `all`/`default`, `extended`, `full` |
 | `REQUEST_TIMEOUT` | `--timeout` | no | `2m` | Per-suite request timeout |
 | `ALLOW_INSECURE_HTTP` | `--allow-insecure-http` | no | `false` | Allow plaintext `http://` to non-loopback hosts (loopback HTTP is always permitted) |
@@ -102,6 +103,7 @@ docker run --rm \
   -e OPENAI_IMAGE_MODEL=your-image-model \
   -e OPENAI_TTS_MODEL=tts-1 \
   -e OPENAI_WHISPER_MODEL=whisper-1 \
+  -e OPENAI_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe \
   -e TEST_SUITES=extended \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
@@ -174,13 +176,14 @@ docker run --rm \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 
-**Speech-to-text** — requires a Whisper model (`OPENAI_WHISPER_MODEL`):
+**Speech-to-text** — non-streaming transcription and translation use `OPENAI_WHISPER_MODEL` (typically `whisper-1`). Streaming transcription uses `OPENAI_TRANSCRIPTION_MODEL` (e.g. `gpt-4o-mini-transcribe`):
 
 ```bash
 docker run --rm \
   -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
   -e OPENAI_API_KEY=your-api-key \
   -e OPENAI_WHISPER_MODEL=whisper-1 \
+  -e OPENAI_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe \
   -e TEST_SUITES=audio_transcriptions,audio_transcriptions_stream,audio_translations \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```

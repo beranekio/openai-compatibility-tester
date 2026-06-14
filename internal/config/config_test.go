@@ -410,6 +410,32 @@ func TestLoadRejectsImagesEditsSuiteWithoutImageModel(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsAudioTranscriptionsStreamWithoutTranscriptionModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvTranscriptionModel, "")
+
+	_, err := Load([]string{"--suites", "audio_transcriptions_stream"})
+	if err == nil || !strings.Contains(err.Error(), EnvTranscriptionModel) {
+		t.Fatalf("expected missing transcription model error, got %v", err)
+	}
+}
+
+func TestLoadAllowsAudioTranscriptionsWithoutTranscriptionModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvWhisperModel, "whisper-1")
+	t.Setenv(EnvTranscriptionModel, "")
+
+	cfg, err := Load([]string{"--suites", "audio_transcriptions"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if len(cfg.Suites) != 1 || cfg.Suites[0] != "audio_transcriptions" {
+		t.Fatalf("Suites = %v, want [audio_transcriptions]", cfg.Suites)
+	}
+}
+
 func TestLoadAllowsLoopbackHTTP(t *testing.T) {
 	t.Setenv(EnvBaseURL, "http://127.0.0.1:4010/v1")
 	t.Setenv(EnvAPIKey, "test-key")
@@ -489,6 +515,7 @@ func TestLoadResponsesToolsSuitesInExtendedAndFullPresets(t *testing.T) {
 	t.Setenv(EnvImageModel, "dall-e-2")
 	t.Setenv(EnvTTSModel, "tts-1")
 	t.Setenv(EnvWhisperModel, "whisper-1")
+	t.Setenv(EnvTranscriptionModel, "gpt-4o-mini-transcribe")
 
 	for _, preset := range []string{"extended", "full"} {
 		cfg, err := Load([]string{"--suites", preset})
@@ -555,6 +582,7 @@ func TestLoadSuitePresets(t *testing.T) {
 				t.Setenv(EnvImageModel, "dall-e-2")
 				t.Setenv(EnvTTSModel, "tts-1")
 				t.Setenv(EnvWhisperModel, "whisper-1")
+				t.Setenv(EnvTranscriptionModel, "gpt-4o-mini-transcribe")
 			},
 		},
 		{
@@ -566,6 +594,7 @@ func TestLoadSuitePresets(t *testing.T) {
 				t.Setenv(EnvImageModel, "dall-e-2")
 				t.Setenv(EnvTTSModel, "tts-1")
 				t.Setenv(EnvWhisperModel, "whisper-1")
+				t.Setenv(EnvTranscriptionModel, "gpt-4o-mini-transcribe")
 			},
 		},
 		{

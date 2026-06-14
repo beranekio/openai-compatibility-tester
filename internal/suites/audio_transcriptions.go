@@ -1,7 +1,6 @@
 package suites
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -18,7 +17,7 @@ func (AudioTranscriptions) Description() string { return "Audio transcriptions (
 
 func (AudioTranscriptions) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
 	resp, err := client.Audio.Transcriptions.New(ctx, openai.AudioTranscriptionNewParams{
-		File:           bytes.NewReader(smallWAVBytes()),
+		File:           smallWAVReader(),
 		Model:          openai.AudioModel(cfg.WhisperModel),
 		ResponseFormat: openai.AudioResponseFormatJSON,
 	})

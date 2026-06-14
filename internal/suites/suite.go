@@ -68,8 +68,9 @@ type ModelRequirements struct {
 	Embedding  bool
 	Vision     bool
 	Image      bool
-	TTS        bool
-	Whisper    bool
+	TTS           bool
+	Whisper       bool
+	Transcription bool
 }
 
 // RequiredModels returns which model settings must be configured for the suites.
@@ -89,8 +90,10 @@ func RequiredModels(names []string) ModelRequirements {
 			req.Image = true
 		case "audio_speech":
 			req.TTS = true
-		case "audio_transcriptions", "audio_transcriptions_stream", "audio_translations":
+		case "audio_transcriptions", "audio_translations":
 			req.Whisper = true
+		case "audio_transcriptions_stream":
+			req.Transcription = true
 		}
 	}
 	return req
