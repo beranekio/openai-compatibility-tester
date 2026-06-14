@@ -47,14 +47,67 @@ func (ChatCompletionsLogprobs) Run(ctx context.Context, client openai.Client, cf
 	if string(choice.Message.Role) != "assistant" {
 		return fail("chat_completions_logprobs", fmt.Sprintf("choice message role is %q, want assistant", choice.Message.Role))
 	}
-	if !hasChatMessageOutput(choice.Message) && !isContentFilterFinishReason(choice.FinishReason) {
+	if isContentFilterFinishReason(choice.FinishReason) {
+		return nil
+	}
+	if !hasChatMessageOutput(choice.Message) {
 		return fail("chat_completions_logprobs", "choice message has no content or refusal")
 	}
 	if !choice.JSON.Logprobs.Valid() {
 		return fail("chat_completions_logprobs", "choice missing logprobs")
 	}
-	if !choice.Logprobs.JSON.Content.Valid() {
-		return fail("chat_completions_logprobs", "choice logprobs missing content field")
+	if choice.Message.Content != "" {
+		if err := validateChatCompletionLogprobsContent("chat_completions_logprobs", choice.Logprobs); err != nil {
+			return err
+		}
+	}
+	if choice.Message.Refusal != "" {
+		if err := validateChatCompletionLogprobsRefusal("chat_completions_logprobs", choice.Logprobs); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateChatCompletionLogprobsContent(suite string, logprobs openai.ChatCompletionChoiceLogprobs) error {
+	if !logprobs.JSON.Content.Valid() {
+		return fail(suite, "choice logprobs missing content field")
+	}
+	if len(logprobs.Content) == 0 {
+		return fail(suite, "choice logprobs content field is empty")
+	}
+	for _, entry := range logprobs.Content {
+		if err := validateChatCompletionTokenLogprob(suite, entry); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateChatCompletionLogprobsRefusal(suite string, logprobs openai.ChatCompletionChoiceLogprobs) error {
+	if !logprobs.JSON.Refusal.Valid() {
+		return fail(suite, "choice logprobs missing refusal field")
+	}
+	if len(logprobs.Refusal) == 0 {
+		return fail(suite, "choice logprobs refusal field is empty")
+	}
+	for _, entry := range logprobs.Refusal {
+		if err := validateChatCompletionTokenLogprob(suite, entry); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateChatCompletionTokenLogprob(suite string, entry openai.ChatCompletionTokenLogprob) error {
+	if !entry.JSON.Token.Valid() {
+		return fail(suite, "logprob entry missing token")
+	}
+	if !entry.JSON.Logprob.Valid() {
+		return fail(suite, "logprob entry missing logprob")
+	}
+	if !entry.JSON.TopLogprobs.Valid() {
+		return fail(suite, "logprob entry missing top_logprobs")
 	}
 	return nil
 }

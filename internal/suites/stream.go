@@ -44,7 +44,7 @@ func validateCompletionChunk(suite string, chunk openai.Completion) error {
 	return nil
 }
 
-func validateChatCompletionChunk(suite string, chunk openai.ChatCompletionChunk) error {
+func validateChatCompletionChunkEnvelope(suite string, chunk openai.ChatCompletionChunk) error {
 	if !chunk.JSON.Created.Valid() {
 		return fail(suite, "stream chunk missing created")
 	}
@@ -54,6 +54,10 @@ func validateChatCompletionChunk(suite string, chunk openai.ChatCompletionChunk)
 	if string(chunk.Object) != "chat.completion.chunk" {
 		return fail(suite, fmt.Sprintf("stream chunk object is %q, want chat.completion.chunk", chunk.Object))
 	}
+	return nil
+}
+
+func validateChatCompletionChunkChoice(suite string, chunk openai.ChatCompletionChunk) error {
 	if len(chunk.Choices) == 0 {
 		return fail(suite, "stream chunk missing choices")
 	}
@@ -63,6 +67,33 @@ func validateChatCompletionChunk(suite string, chunk openai.ChatCompletionChunk)
 	}
 	if !choice.JSON.Delta.Valid() {
 		return fail(suite, "stream chunk choice missing delta")
+	}
+	return nil
+}
+
+func validateChatCompletionChunk(suite string, chunk openai.ChatCompletionChunk) error {
+	if err := validateChatCompletionChunkEnvelope(suite, chunk); err != nil {
+		return err
+	}
+	return validateChatCompletionChunkChoice(suite, chunk)
+}
+
+func validateChatCompletionStreamUsage(suite string, chunk openai.ChatCompletionChunk) error {
+	if !chunk.JSON.Usage.Valid() {
+		return fail(suite, "stream chunk missing usage")
+	}
+	usage := chunk.Usage
+	if !usage.JSON.PromptTokens.Valid() {
+		return fail(suite, "stream usage missing prompt_tokens")
+	}
+	if !usage.JSON.CompletionTokens.Valid() {
+		return fail(suite, "stream usage missing completion_tokens")
+	}
+	if !usage.JSON.TotalTokens.Valid() {
+		return fail(suite, "stream usage missing total_tokens")
+	}
+	if usage.TotalTokens <= 0 {
+		return fail(suite, "stream usage total_tokens must be greater than zero")
 	}
 	return nil
 }

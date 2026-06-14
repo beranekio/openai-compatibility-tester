@@ -44,6 +44,7 @@ func (ChatCompletionsStreamUsage) Run(ctx context.Context, client openai.Client,
 	var hasOutput bool
 	var finished bool
 	var finishReason string
+	var expectUsageOnlyChunk bool
 	var usageOnTerminalChunk bool
 	var usageOnFinalChunk bool
 	for stream.Next() {
@@ -52,22 +53,43 @@ func (ChatCompletionsStreamUsage) Run(ctx context.Context, client openai.Client,
 		if chunk.ID == "" {
 			return fail("chat_completions_stream_usage", "stream chunk missing id")
 		}
-		if err := validateChatCompletionChunk("chat_completions_stream_usage", chunk); err != nil {
-			// Usage-only chunks have empty choices; skip choice validation for them.
-			if len(chunk.Choices) == 0 {
-				if chunk.JSON.Usage.Valid() && chunk.Usage.TotalTokens > 0 {
-					usageOnFinalChunk = true
-				}
-				continue
+		if err := validateChatCompletionChunkEnvelope("chat_completions_stream_usage", chunk); err != nil {
+			return err
+		}
+
+		if len(chunk.Choices) == 0 {
+			if !finished {
+				return fail("chat_completions_stream_usage", "stream emitted usage-only chunk before finish_reason")
 			}
+			if !expectUsageOnlyChunk {
+				return fail("chat_completions_stream_usage", "stream emitted unexpected usage-only chunk after finish_reason")
+			}
+			if err := validateChatCompletionStreamUsage("chat_completions_stream_usage", chunk); err != nil {
+				return err
+			}
+			usageOnFinalChunk = true
+			expectUsageOnlyChunk = false
+			continue
+		}
+
+		if finished {
+			return fail("chat_completions_stream_usage", "stream emitted choice chunk after finish_reason")
+		}
+
+		if err := validateChatCompletionChunkChoice("chat_completions_stream_usage", chunk); err != nil {
 			return err
 		}
 		choice := chunk.Choices[0]
 		if choice.FinishReason != "" {
 			finished = true
 			finishReason = choice.FinishReason
-			if chunk.JSON.Usage.Valid() && chunk.Usage.TotalTokens > 0 {
+			if chunk.JSON.Usage.Valid() {
+				if err := validateChatCompletionStreamUsage("chat_completions_stream_usage", chunk); err != nil {
+					return err
+				}
 				usageOnTerminalChunk = true
+			} else {
+				expectUsageOnlyChunk = true
 			}
 		}
 		if choice.Delta.Content != "" || choice.Delta.Refusal != "" {
@@ -83,11 +105,14 @@ func (ChatCompletionsStreamUsage) Run(ctx context.Context, client openai.Client,
 	if !finished {
 		return fail("chat_completions_stream_usage", "stream missing terminal finish_reason")
 	}
+	if expectUsageOnlyChunk {
+		return fail("chat_completions_stream_usage", "stream missing usage-only chunk after finish_reason")
+	}
 	if !hasOutput && !isContentFilterFinishReason(finishReason) {
 		return fail("chat_completions_stream_usage", "stream produced no text content or refusal")
 	}
 	if !usageOnFinalChunk && !usageOnTerminalChunk {
-		return fail("chat_completions_stream_usage", "stream missing usage with total_tokens > 0 on final or terminal chunk")
+		return fail("chat_completions_stream_usage", "stream missing usage on terminal or final chunk")
 	}
 	return nil
 }
