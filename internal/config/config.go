@@ -70,6 +70,7 @@ var ExtendedSuites = []string{
 	"moderations",
 	"images_generations",
 	"images_edits",
+	"audio_speech",
 }
 
 // FullSuites lists every registered suite name. Keep in sync with suites.All().
@@ -101,6 +102,7 @@ var FullSuites = []string{
 	"images_generations",
 	"images_edits",
 	"images_variations",
+	"audio_speech",
 }
 
 var knownSuites = map[string]struct{}{
@@ -131,6 +133,7 @@ var knownSuites = map[string]struct{}{
 	"images_generations":            {},
 	"images_edits":                  {},
 	"images_variations":             {},
+	"audio_speech":                  {},
 }
 
 // Config holds runtime settings for compatibility testing.
