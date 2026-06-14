@@ -87,15 +87,21 @@ func (s *Server) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 		Model           string `json:"model"`
 		Stream          bool   `json:"stream"`
 		Store           *bool  `json:"store"`
+		Logprobs        bool   `json:"logprobs"`
 		ReasoningEffort string `json:"reasoning_effort"`
 		ResponseFormat  *struct {
 			Type string `json:"type"`
 		} `json:"response_format"`
+		StreamOptions *struct {
+			IncludeUsage bool `json:"include_usage"`
+		} `json:"stream_options"`
 		Modalities []string                       `json:"modalities"`
 		Messages   []chatCompletionRequestMessage `json:"messages"`
-		Tools []json.RawMessage `json:"tools"`
+		Tools      []json.RawMessage              `json:"tools"`
 	}
 	_ = json.Unmarshal(body, &req)
+
+	includeUsage := req.StreamOptions != nil && req.StreamOptions.IncludeUsage
 
 	if len(req.Tools) > 0 && !chatCompletionRequestIsMultiTurn(req.Messages) {
 		if req.Stream {
@@ -145,6 +151,21 @@ func (s *Server) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 			},
 		})
 		_, _ = w.Write([]byte("data: " + string(final) + "\n\n"))
+		if includeUsage {
+			usageChunk, _ := json.Marshal(map[string]any{
+				"id":      "chatcmpl-mock",
+				"object":  "chat.completion.chunk",
+				"created": 1700000000,
+				"model":   "gpt-4o-mini",
+				"choices": []map[string]any{},
+				"usage": map[string]any{
+					"prompt_tokens":     10,
+					"completion_tokens": 5,
+					"total_tokens":      15,
+				},
+			})
+			_, _ = w.Write([]byte("data: " + string(usageChunk) + "\n\n"))
+		}
 		_, _ = w.Write([]byte("data: [DONE]\n\n"))
 		return
 	}
@@ -156,6 +177,28 @@ func (s *Server) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 		content = `{"answer":"pong"}`
 	} else if chatCompletionRequestHasImageURL(req.Messages) {
 		content = "I see an image"
+	}
+
+	choice := map[string]any{
+		"index": 0,
+		"message": map[string]any{
+			"role":    "assistant",
+			"content": content,
+		},
+		"finish_reason": "stop",
+	}
+	if req.Logprobs {
+		choice["logprobs"] = map[string]any{
+			"content": []map[string]any{
+				{
+					"token":        "pong",
+					"bytes":        []int{112, 111, 110, 103},
+					"logprob":      -0.1,
+					"top_logprobs": []any{},
+				},
+			},
+			"refusal": []any{},
+		}
 	}
 
 	usage := map[string]any{
@@ -179,17 +222,8 @@ func (s *Server) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 		"object":  "chat.completion",
 		"created": 1700000000,
 		"model":   "gpt-4o-mini",
-		"choices": []map[string]any{
-			{
-				"index": 0,
-				"message": map[string]any{
-					"role":    "assistant",
-					"content": content,
-				},
-				"finish_reason": "stop",
-			},
-		},
-		"usage": usage,
+		"choices": []map[string]any{choice},
+		"usage":   usage,
 	}
 	if req.Store != nil && *req.Store {
 		s.chatStore.save(id, payload, chatMessagesFromRequest(req.Messages, content, id))

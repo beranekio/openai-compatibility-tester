@@ -69,6 +69,9 @@ func validateChatCompletionEnvelope(suite string, resp *openai.ChatCompletion) e
 }
 
 func validateChatCompletionChoice(suite string, choice openai.ChatCompletionChoice) error {
+	if !choice.JSON.Index.Valid() {
+		return fail(suite, "choice missing index")
+	}
 	if choice.FinishReason == "" {
 		return fail(suite, "choice missing finish_reason")
 	}
