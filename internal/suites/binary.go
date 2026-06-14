@@ -12,6 +12,9 @@ func validateBinaryHTTPResponse(suite string, resp *http.Response, minBytes int)
 	if resp == nil {
 		return fail(suite, "response is nil")
 	}
+	if resp.Body == nil {
+		return fail(suite, "response body is nil")
+	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
@@ -30,8 +33,8 @@ func validateBinaryHTTPResponse(suite string, resp *http.Response, minBytes int)
 	if err != nil {
 		return fail(suite, fmt.Sprintf("Content-Type %q is invalid: %v", contentType, err))
 	}
-	if mediaType == "application/json" {
-		return fail(suite, fmt.Sprintf("Content-Type is %q, want binary audio", mediaType))
+	if !strings.HasPrefix(mediaType, "audio/") && mediaType != "application/octet-stream" {
+		return fail(suite, fmt.Sprintf("Content-Type is %q, want audio/* or application/octet-stream", mediaType))
 	}
 	return nil
 }
