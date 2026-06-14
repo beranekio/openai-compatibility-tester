@@ -45,6 +45,9 @@ func (Uploads) Run(ctx context.Context, client openai.Client, cfg *config.Config
 	if err != nil {
 		return fmt.Errorf("upload create failed: %w", err)
 	}
+	if created.ID != "" {
+		uploadID = created.ID
+	}
 	if err := validateUploadObject("uploads", created); err != nil {
 		return err
 	}
@@ -60,7 +63,6 @@ func (Uploads) Run(ctx context.Context, client openai.Client, cfg *config.Config
 	if created.Purpose != string(openai.FilePurposeUserData) {
 		return fail("uploads", fmt.Sprintf("create purpose is %q, want user_data", created.Purpose))
 	}
-	uploadID = created.ID
 
 	part, err := client.Uploads.Parts.New(ctx, created.ID, openai.UploadPartNewParams{
 		Data: bytes.NewReader(content),
@@ -80,6 +82,9 @@ func (Uploads) Run(ctx context.Context, client openai.Client, cfg *config.Config
 	})
 	if err != nil {
 		return fmt.Errorf("upload complete failed: %w", err)
+	}
+	if completed.JSON.File.Valid() && completed.File.ID != "" {
+		fileID = completed.File.ID
 	}
 	if err := validateUploadObject("uploads", completed); err != nil {
 		return err
@@ -105,7 +110,6 @@ func (Uploads) Run(ctx context.Context, client openai.Client, cfg *config.Config
 	if completed.File.ID == "" {
 		return fail("uploads", "complete file missing id")
 	}
-	fileID = completed.File.ID
 	if err := validateFileEnvelope("uploads", &completed.File); err != nil {
 		return err
 	}
@@ -118,7 +122,14 @@ func (Uploads) Run(ctx context.Context, client openai.Client, cfg *config.Config
 	if string(completed.File.Purpose) != string(openai.FilePurposeUserData) {
 		return fail("uploads", fmt.Sprintf("file purpose is %q, want user_data", completed.File.Purpose))
 	}
-	if deletedResp, err := client.Files.Delete(ctx, fileID); err == nil && deletedResp != nil && deletedResp.Deleted {
+	contentResp, err := client.Files.Content(ctx, fileID)
+	if err != nil {
+		return fmt.Errorf("uploaded file content failed: %w", err)
+	}
+	if err := validateFileContentResponse("uploads", contentResp, content); err != nil {
+		return err
+	}
+	if deletedResp, err := client.Files.Delete(ctx, fileID); err == nil && deletedResp != nil && deletedResp.ID == fileID && deletedResp.Deleted {
 		deleted = true
 	}
 	lifecycleOK = true
