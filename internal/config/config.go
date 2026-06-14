@@ -69,6 +69,7 @@ var ExtendedSuites = []string{
 	"embeddings",
 	"embeddings_batch",
 	"chat_completions_vision",
+	"chat_completions_reasoning",
 	"moderations",
 	"images_generations",
 	"images_edits",
@@ -181,7 +182,7 @@ func Load(args []string) (*Config, error) {
 	embeddingModel := fs.String("embedding-model", envOrDefault(EnvEmbeddingModel, ""), "Model for embedding tests (required when embeddings or embeddings_batch suite is selected)")
 	responsesModel := fs.String("responses-model", envOrDefault(EnvResponsesModel, ""), "Model for Responses API suites (defaults to --model)")
 	visionModel := fs.String("vision-model", envOrDefault(EnvVisionModel, ""), "Model for vision chat suites (defaults to --model)")
-	reasoningModel := fs.String("reasoning-model", envOrDefault(EnvReasoningModel, ""), "Model for reasoning chat suites (defaults to --model)")
+	reasoningModel := fs.String("reasoning-model", envOrDefault(EnvReasoningModel, ""), "Model for reasoning chat suites (required when chat_completions_reasoning is selected)")
 	imageModel := fs.String("image-model", envOrDefault(EnvImageModel, ""), "Model for image generation suites")
 	ttsModel := fs.String("tts-model", envOrDefault(EnvTTSModel, ""), "Model for text-to-speech suites")
 	whisperModel := fs.String("whisper-model", envOrDefault(EnvWhisperModel, ""), "Model for audio transcription and translation suites")
@@ -252,9 +253,6 @@ func Load(args []string) (*Config, error) {
 	}
 	if cfg.VisionModel == "" {
 		cfg.VisionModel = cfg.Model
-	}
-	if cfg.ReasoningModel == "" {
-		cfg.ReasoningModel = cfg.Model
 	}
 
 	if !timeoutFlagExplicit(args) {

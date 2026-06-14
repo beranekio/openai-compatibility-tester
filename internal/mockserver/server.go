@@ -76,6 +76,7 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
+		Model           string `json:"model"`
 		Stream          bool   `json:"stream"`
 		ReasoningEffort string `json:"reasoning_effort"`
 		ResponseFormat  *struct {
@@ -147,7 +148,7 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 		"completion_tokens": 1,
 		"total_tokens":      6,
 	}
-	if req.ReasoningEffort != "" {
+	if req.ReasoningEffort != "" || isReasoningChatModel(req.Model) {
 		usage["completion_tokens_details"] = map[string]any{
 			"reasoning_tokens": 3,
 		}
@@ -189,6 +190,11 @@ func chatCompletionRequestHasImageURL(messages []struct {
 		}
 	}
 	return false
+}
+
+func isReasoningChatModel(model string) bool {
+	model = strings.ToLower(strings.TrimSpace(model))
+	return strings.HasPrefix(model, "o1") || strings.HasPrefix(model, "o3") || strings.HasPrefix(model, "o4")
 }
 
 func handleCompletions(w http.ResponseWriter, r *http.Request) {

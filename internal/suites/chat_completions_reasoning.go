@@ -2,12 +2,13 @@ package suites
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
 
 	"github.com/openai/openai-go/v3"
-	"github.com/openai/openai-go/v3/shared"
 )
 
 // ChatCompletionsReasoning verifies POST /v1/chat/completions for reasoning models.
@@ -15,7 +16,7 @@ type ChatCompletionsReasoning struct{}
 
 func (ChatCompletionsReasoning) Name() string { return "chat_completions_reasoning" }
 func (ChatCompletionsReasoning) Description() string {
-	return "Chat completion with reasoning model output (POST /v1/chat/completions, reasoning_effort)"
+	return "Chat completion with reasoning model output (POST /v1/chat/completions)"
 }
 
 func (ChatCompletionsReasoning) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
@@ -24,8 +25,7 @@ func (ChatCompletionsReasoning) Run(ctx context.Context, client openai.Client, c
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.UserMessage("Reply with exactly the word: pong"),
 		},
-		ReasoningEffort: shared.ReasoningEffortLow,
-		Store:           openai.Bool(false),
+		Store: openai.Bool(false),
 	})
 	if err != nil {
 		return fmt.Errorf("chat completion reasoning request failed: %w", err)
@@ -68,5 +68,12 @@ func hasChatReasoningOutput(msg openai.ChatCompletionMessage, finishReason strin
 
 func hasChatMessageReasoningContent(msg openai.ChatCompletionMessage) bool {
 	field, ok := msg.JSON.ExtraFields["reasoning_content"]
-	return ok && field.Valid()
+	if !ok || !field.Valid() {
+		return false
+	}
+	var content string
+	if err := json.Unmarshal([]byte(field.Raw()), &content); err != nil {
+		return false
+	}
+	return strings.TrimSpace(content) != ""
 }

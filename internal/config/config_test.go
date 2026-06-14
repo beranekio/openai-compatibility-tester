@@ -516,6 +516,7 @@ func TestLoadResponsesToolsSuitesInExtendedAndFullPresets(t *testing.T) {
 	t.Setenv(EnvTTSModel, "tts-1")
 	t.Setenv(EnvWhisperModel, "whisper-1")
 	t.Setenv(EnvTranscriptionModel, "gpt-4o-mini-transcribe")
+	t.Setenv(EnvReasoningModel, "o3-mini")
 
 	for _, preset := range []string{"extended", "full"} {
 		cfg, err := Load([]string{"--suites", preset})
@@ -583,6 +584,7 @@ func TestLoadSuitePresets(t *testing.T) {
 				t.Setenv(EnvTTSModel, "tts-1")
 				t.Setenv(EnvWhisperModel, "whisper-1")
 				t.Setenv(EnvTranscriptionModel, "gpt-4o-mini-transcribe")
+				t.Setenv(EnvReasoningModel, "o3-mini")
 			},
 		},
 		{
@@ -595,6 +597,7 @@ func TestLoadSuitePresets(t *testing.T) {
 				t.Setenv(EnvTTSModel, "tts-1")
 				t.Setenv(EnvWhisperModel, "whisper-1")
 				t.Setenv(EnvTranscriptionModel, "gpt-4o-mini-transcribe")
+				t.Setenv(EnvReasoningModel, "o3-mini")
 			},
 		},
 		{
@@ -652,16 +655,27 @@ func TestLoadVisionModelDefaultsToChatModel(t *testing.T) {
 	}
 }
 
-func TestLoadReasoningModelDefaultsToChatModel(t *testing.T) {
+func TestLoadRejectsReasoningSuiteWithoutReasoningModel(t *testing.T) {
 	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
-	t.Setenv(EnvModel, "gpt-4o")
+	t.Setenv(EnvReasoningModel, "")
 
-	cfg, err := Load([]string{})
+	_, err := Load([]string{"--suites", "chat_completions_reasoning"})
+	if err == nil || !strings.Contains(err.Error(), EnvReasoningModel) {
+		t.Fatalf("expected missing reasoning model error, got %v", err)
+	}
+}
+
+func TestLoadAllowsReasoningSuiteWithExplicitReasoningModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvReasoningModel, "o3-mini")
+
+	cfg, err := Load([]string{"--suites", "chat_completions_reasoning"})
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if cfg.ReasoningModel != "gpt-4o" {
-		t.Fatalf("ReasoningModel = %q, want gpt-4o", cfg.ReasoningModel)
+	if cfg.ReasoningModel != "o3-mini" {
+		t.Fatalf("ReasoningModel = %q, want o3-mini", cfg.ReasoningModel)
 	}
 }
