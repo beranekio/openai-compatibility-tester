@@ -80,14 +80,12 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 		ResponseFormat *struct {
 			Type string `json:"type"`
 		} `json:"response_format"`
-		Messages []struct {
-			Content json.RawMessage `json:"content"`
-		} `json:"messages"`
+		Messages []chatCompletionRequestMessage `json:"messages"`
 		Tools []json.RawMessage `json:"tools"`
 	}
 	_ = json.Unmarshal(body, &req)
 
-	if len(req.Tools) > 0 {
+	if len(req.Tools) > 0 && !chatCompletionRequestIsMultiTurn(req.Messages) {
 		if req.Stream {
 			writeChatCompletionToolCallStream(w)
 			return
@@ -164,9 +162,21 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func chatCompletionRequestHasImageURL(messages []struct {
+type chatCompletionRequestMessage struct {
+	Role    string          `json:"role"`
 	Content json.RawMessage `json:"content"`
-}) bool {
+}
+
+func chatCompletionRequestIsMultiTurn(messages []chatCompletionRequestMessage) bool {
+	for _, msg := range messages {
+		if msg.Role == "developer" || msg.Role == "tool" {
+			return true
+		}
+	}
+	return false
+}
+
+func chatCompletionRequestHasImageURL(messages []chatCompletionRequestMessage) bool {
 	for _, msg := range messages {
 		var parts []struct {
 			Type string `json:"type"`

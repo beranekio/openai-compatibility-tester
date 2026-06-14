@@ -36,6 +36,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"chat_completions_vision",
 			"chat_completions_tools",
 			"chat_completions_tools_stream",
+			"chat_completions_multi_turn",
 			"completions",
 			"completions_stream",
 			"embeddings",
