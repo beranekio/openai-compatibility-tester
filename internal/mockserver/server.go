@@ -76,8 +76,10 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Stream         bool `json:"stream"`
-		ResponseFormat *struct {
+		Model           string `json:"model"`
+		Stream          bool   `json:"stream"`
+		ReasoningEffort string `json:"reasoning_effort"`
+		ResponseFormat  *struct {
 			Type string `json:"type"`
 		} `json:"response_format"`
 		Messages []chatCompletionRequestMessage `json:"messages"`
@@ -141,6 +143,17 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 		content = "I see an image"
 	}
 
+	usage := map[string]any{
+		"prompt_tokens":     5,
+		"completion_tokens": 1,
+		"total_tokens":      6,
+	}
+	if req.ReasoningEffort != "" || isReasoningChatModel(req.Model) {
+		usage["completion_tokens_details"] = map[string]any{
+			"reasoning_tokens": 3,
+		}
+	}
+
 	writeJSON(w, map[string]any{
 		"id":      "chatcmpl-mock",
 		"object":  "chat.completion",
@@ -156,11 +169,7 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 				"finish_reason": "stop",
 			},
 		},
-		"usage": map[string]any{
-			"prompt_tokens":     5,
-			"completion_tokens": 1,
-			"total_tokens":      6,
-		},
+		"usage": usage,
 	})
 }
 
@@ -193,6 +202,11 @@ func chatCompletionRequestHasImageURL(messages []chatCompletionRequestMessage) b
 		}
 	}
 	return false
+}
+
+func isReasoningChatModel(model string) bool {
+	model = strings.ToLower(strings.TrimSpace(model))
+	return strings.HasPrefix(model, "o1") || strings.HasPrefix(model, "o3") || strings.HasPrefix(model, "o4")
 }
 
 func handleCompletions(w http.ResponseWriter, r *http.Request) {

@@ -24,6 +24,7 @@ func All() []Suite {
 		ChatCompletionsStream{},
 		ChatCompletionsJSON{},
 		ChatCompletionsVision{},
+		ChatCompletionsReasoning{},
 		ChatCompletionsTools{},
 		ChatCompletionsToolsStream{},
 		ChatCompletionsMultiTurn{},
@@ -68,6 +69,7 @@ type ModelRequirements struct {
 	Completion bool
 	Embedding  bool
 	Vision     bool
+	Reasoning  bool
 	Image      bool
 	TTS           bool
 	Whisper       bool
@@ -87,6 +89,8 @@ func RequiredModels(names []string) ModelRequirements {
 			req.Embedding = true
 		case "chat_completions_vision":
 			req.Vision = true
+		case "chat_completions_reasoning":
+			req.Reasoning = true
 		case "images_generations", "images_edits":
 			req.Image = true
 		case "audio_speech":
