@@ -59,6 +59,7 @@ func All() []Suite {
 		AudioTranscriptionsStream{},
 		AudioTranslations{},
 		Files{},
+		Uploads{},
 	}
 }
 

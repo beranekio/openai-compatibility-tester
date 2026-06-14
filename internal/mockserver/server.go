@@ -11,18 +11,20 @@ import (
 // Server provides a minimal OpenAI-compatible HTTP API for CI tests.
 type Server struct {
 	*httptest.Server
-	store     *responseStore
-	chatStore *chatCompletionStore
-	fileStore *fileStore
+	store       *responseStore
+	chatStore   *chatCompletionStore
+	fileStore   *fileStore
+	uploadStore *uploadStore
 }
 
 // New starts a mock OpenAI API server.
 func New() *Server {
 	mux := http.NewServeMux()
 	s := &Server{
-		store:     newResponseStore(),
-		chatStore: newChatCompletionStore(),
-		fileStore: newFileStore(),
+		store:       newResponseStore(),
+		chatStore:   newChatCompletionStore(),
+		fileStore:   newFileStore(),
+		uploadStore: newUploadStore(),
 	}
 
 	mux.HandleFunc("GET /v1/models", handleModels)
@@ -53,6 +55,10 @@ func New() *Server {
 	mux.HandleFunc("GET /v1/files/{id}", s.handleFileGet)
 	mux.HandleFunc("DELETE /v1/files/{id}", s.handleFileDelete)
 	mux.HandleFunc("GET /v1/files/{id}/content", s.handleFileContent)
+	mux.HandleFunc("POST /v1/uploads", s.handleUploadCreate)
+	mux.HandleFunc("POST /v1/uploads/{id}/parts", s.handleUploadPartCreate)
+	mux.HandleFunc("POST /v1/uploads/{id}/complete", s.handleUploadComplete)
+	mux.HandleFunc("POST /v1/uploads/{id}/cancel", s.handleUploadCancel)
 
 	s.Server = httptest.NewServer(mux)
 	return s
