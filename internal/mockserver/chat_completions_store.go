@@ -2,7 +2,9 @@ package mockserver
 
 import (
 	"encoding/json"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -64,6 +66,13 @@ func (s *chatCompletionStore) listAll() []map[string]any {
 	for _, payload := range s.completions {
 		out = append(out, cloneMap(payload))
 	}
+	sort.Slice(out, func(i, j int) bool {
+		idI, _ := out[i]["id"].(string)
+		idJ, _ := out[j]["id"].(string)
+		numI, _ := strconv.Atoi(strings.TrimPrefix(idI, "chatcmpl-mock-"))
+		numJ, _ := strconv.Atoi(strings.TrimPrefix(idJ, "chatcmpl-mock-"))
+		return numI < numJ
+	})
 	return out
 }
 

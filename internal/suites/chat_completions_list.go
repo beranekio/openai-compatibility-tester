@@ -2,7 +2,6 @@ package suites
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
@@ -29,23 +28,15 @@ func (ChatCompletionsList) Run(ctx context.Context, client openai.Client, cfg *c
 		_, _ = client.Chat.Completions.Delete(cleanupCtx, created.ID)
 	}()
 
-	page, err := client.Chat.Completions.List(ctx, openai.ChatCompletionListParams{})
+	item, err := findStoredChatCompletionInList(ctx, client, "chat_completions_list", created.ID)
 	if err != nil {
-		return fmt.Errorf("chat completion list failed: %w", err)
+		return err
 	}
-	if page == nil {
-		return fail("chat_completions_list", "list page is nil")
+	if err := validateChatCompletionEnvelope("chat_completions_list", item); err != nil {
+		return err
 	}
-	if !page.JSON.HasMore.Valid() {
-		return fail("chat_completions_list", "list missing has_more")
+	if len(item.Choices) == 0 {
+		return fail("chat_completions_list", "listed completion missing choices")
 	}
-	for _, item := range page.Data {
-		if item.ID == created.ID {
-			if err := validateChatCompletionEnvelope("chat_completions_list", &item); err != nil {
-				return err
-			}
-			return nil
-		}
-	}
-	return fail("chat_completions_list", fmt.Sprintf("list missing stored completion id %q", created.ID))
+	return validateChatCompletionChoice("chat_completions_list", item.Choices[0])
 }

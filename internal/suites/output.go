@@ -68,6 +68,19 @@ func validateChatCompletionEnvelope(suite string, resp *openai.ChatCompletion) e
 	return nil
 }
 
+func validateChatCompletionChoice(suite string, choice openai.ChatCompletionChoice) error {
+	if choice.FinishReason == "" {
+		return fail(suite, "choice missing finish_reason")
+	}
+	if string(choice.Message.Role) != "assistant" {
+		return fail(suite, fmt.Sprintf("choice message role is %q, want assistant", choice.Message.Role))
+	}
+	if !hasChatMessageOutput(choice.Message) && !isContentFilterFinishReason(choice.FinishReason) {
+		return fail(suite, "choice message has no content or refusal")
+	}
+	return nil
+}
+
 func hasChatMessageOutput(msg openai.ChatCompletionMessage) bool {
 	return msg.Content != "" || msg.Refusal != ""
 }

@@ -3,6 +3,7 @@ package suites
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
 
@@ -22,6 +23,11 @@ func (ChatCompletionsGet) Run(ctx context.Context, client openai.Client, cfg *co
 	if err != nil {
 		return err
 	}
+	defer func() {
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_, _ = client.Chat.Completions.Delete(cleanupCtx, created.ID)
+	}()
 
 	got, err := client.Chat.Completions.Get(ctx, created.ID)
 	if err != nil {
@@ -36,9 +42,5 @@ func (ChatCompletionsGet) Run(ctx context.Context, client openai.Client, cfg *co
 	if len(got.Choices) == 0 {
 		return fail("chat_completions_get", "get response missing choices")
 	}
-	choice := got.Choices[0]
-	if !hasChatMessageOutput(choice.Message) && !isContentFilterFinishReason(choice.FinishReason) {
-		return fail("chat_completions_get", "get choice message has no content or refusal")
-	}
-	return nil
+	return validateChatCompletionChoice("chat_completions_get", got.Choices[0])
 }

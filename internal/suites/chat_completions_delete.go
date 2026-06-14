@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
 
@@ -24,6 +25,14 @@ func (ChatCompletionsDelete) Run(ctx context.Context, client openai.Client, cfg 
 	if err != nil {
 		return err
 	}
+	deleted := false
+	defer func() {
+		if !deleted {
+			cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			_, _ = client.Chat.Completions.Delete(cleanupCtx, created.ID)
+		}
+	}()
 
 	got, err := client.Chat.Completions.Get(ctx, created.ID)
 	if err != nil {
@@ -33,9 +42,23 @@ func (ChatCompletionsDelete) Run(ctx context.Context, client openai.Client, cfg 
 		return err
 	}
 
-	if _, err := client.Chat.Completions.Delete(ctx, created.ID); err != nil {
+	resp, err := client.Chat.Completions.Delete(ctx, created.ID)
+	if err != nil {
 		return fmt.Errorf("chat completion delete failed: %w", err)
 	}
+	if resp == nil {
+		return fail("chat_completions_delete", "delete response is nil")
+	}
+	if resp.ID != created.ID {
+		return fail("chat_completions_delete", fmt.Sprintf("delete id is %q, want %q", resp.ID, created.ID))
+	}
+	if !resp.Deleted {
+		return fail("chat_completions_delete", "delete response deleted is false")
+	}
+	if string(resp.Object) != "chat.completion.deleted" {
+		return fail("chat_completions_delete", fmt.Sprintf("delete object is %q, want chat.completion.deleted", resp.Object))
+	}
+	deleted = true
 
 	_, getErr := client.Chat.Completions.Get(ctx, created.ID)
 	if getErr == nil {
