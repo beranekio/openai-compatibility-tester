@@ -58,10 +58,14 @@ func (ChatCompletionsAudio) Run(ctx context.Context, client openai.Client, cfg *
 	if choice.Message.Refusal != "" && choice.Message.Content == "" {
 		return nil
 	}
-	if !hasChatMessageOutput(choice.Message) {
-		return fail("chat_completions_audio", "choice message has no content or refusal")
+	if !hasChatMessageOutput(choice.Message) && !hasChatCompletionAudioOutput(choice.Message) {
+		return fail("chat_completions_audio", "choice message has no content, refusal, or audio")
 	}
 	return validateChatCompletionAudio("chat_completions_audio", choice.Message.Audio)
+}
+
+func hasChatCompletionAudioOutput(msg openai.ChatCompletionMessage) bool {
+	return msg.JSON.Audio.Valid()
 }
 
 func validateChatCompletionAudio(suite string, audio openai.ChatCompletionAudio) error {

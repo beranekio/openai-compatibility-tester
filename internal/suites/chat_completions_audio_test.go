@@ -96,6 +96,38 @@ func TestValidateChatCompletionAudio(t *testing.T) {
 	}
 }
 
+func TestHasChatCompletionAudioOutput(t *testing.T) {
+	audio := unmarshalChatCompletionMessage(t, map[string]any{
+		"role":    "assistant",
+		"content": nil,
+		"audio": map[string]any{
+			"id":          "audio-1",
+			"data":        base64.StdEncoding.EncodeToString(smallWAVBytes()),
+			"expires_at":  1700003600,
+			"transcript":  "pong",
+		},
+	})
+	if !hasChatCompletionAudioOutput(audio) {
+		t.Fatal("expected audio-only message to count as output")
+	}
+	if hasChatMessageOutput(audio) {
+		t.Fatal("expected audio-only message to have no text output")
+	}
+}
+
+func unmarshalChatCompletionMessage(t *testing.T, fields map[string]any) openai.ChatCompletionMessage {
+	t.Helper()
+	payload, err := json.Marshal(fields)
+	if err != nil {
+		t.Fatalf("marshal message fields: %v", err)
+	}
+	var msg openai.ChatCompletionMessage
+	if err := json.Unmarshal(payload, &msg); err != nil {
+		t.Fatalf("unmarshal message: %v", err)
+	}
+	return msg
+}
+
 func unmarshalChatCompletionAudio(t *testing.T, fields map[string]any) openai.ChatCompletionAudio {
 	t.Helper()
 	payload, err := json.Marshal(fields)

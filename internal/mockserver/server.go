@@ -199,7 +199,7 @@ func writeChatCompletionAudioResponse(w http.ResponseWriter) {
 				"index": 0,
 				"message": map[string]any{
 					"role":    "assistant",
-					"content": "pong",
+					"content": nil,
 					"audio": map[string]any{
 						"id":         "audio-mock",
 						"data":       mockChatCompletionWAVBase64(),
