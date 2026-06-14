@@ -128,6 +128,7 @@ var FullSuites = []string{
 	"audio_transcriptions",
 	"audio_transcriptions_stream",
 	"audio_translations",
+	"files",
 }
 
 var knownSuites = map[string]struct{}{
@@ -171,6 +172,7 @@ var knownSuites = map[string]struct{}{
 	"audio_transcriptions":          {},
 	"audio_transcriptions_stream":   {},
 	"audio_translations":            {},
+	"files":                         {},
 }
 
 // Config holds runtime settings for compatibility testing.

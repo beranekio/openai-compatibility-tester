@@ -68,6 +68,36 @@ func smallWAVReader() io.Reader {
 	return &namedWAVReader{r: bytes.NewReader(smallWAVBytes())}
 }
 
+const smallTextFileContent = "compatibility test file\n"
+
+type namedTextReader struct {
+	r        *bytes.Reader
+	filename string
+}
+
+func (r *namedTextReader) Read(p []byte) (int, error) {
+	return r.r.Read(p)
+}
+
+func (r *namedTextReader) Filename() string {
+	return r.filename
+}
+
+func (r *namedTextReader) ContentType() string {
+	return "text/plain"
+}
+
+func smallTextFileReader() io.Reader {
+	return &namedTextReader{
+		r:        bytes.NewReader([]byte(smallTextFileContent)),
+		filename: "test.txt",
+	}
+}
+
+func smallTextFileBytes() []byte {
+	return []byte(smallTextFileContent)
+}
+
 // smallWAVBytes returns a minimal mono 8-bit WAV file for multipart audio upload tests.
 func smallWAVBytes() []byte {
 	const (
