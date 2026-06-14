@@ -85,6 +85,7 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `audio_transcriptions_stream` | `client.Audio.Transcriptions.NewStreaming` | `POST /v1/audio/transcriptions` (stream) |
 | `audio_translations` | `client.Audio.Translations.New` | `POST /v1/audio/translations` |
 | `files` | `client.Files.New`, `List`, `Get`, `Content`, `Delete` | `POST/GET/DELETE /v1/files`, `GET /v1/files/{id}/content` |
+| `uploads` | `client.Uploads.New`, `Parts.New`, `Complete` | `POST /v1/uploads`, `POST /v1/uploads/{id}/parts`, `POST /v1/uploads/{id}/complete` |
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 

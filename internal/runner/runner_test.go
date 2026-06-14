@@ -70,6 +70,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"audio_transcriptions_stream",
 			"audio_translations",
 			"files",
+			"uploads",
 		},
 	}
 
