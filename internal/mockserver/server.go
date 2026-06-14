@@ -11,17 +11,25 @@ import (
 // Server provides a minimal OpenAI-compatible HTTP API for CI tests.
 type Server struct {
 	*httptest.Server
-	store *responseStore
+	store     *responseStore
+	chatStore *chatCompletionStore
 }
 
 // New starts a mock OpenAI API server.
 func New() *Server {
 	mux := http.NewServeMux()
-	s := &Server{store: newResponseStore()}
+	s := &Server{
+		store:     newResponseStore(),
+		chatStore: newChatCompletionStore(),
+	}
 
 	mux.HandleFunc("GET /v1/models", handleModels)
 	mux.HandleFunc("GET /v1/models/{id}", handleModelGet)
-	mux.HandleFunc("POST /v1/chat/completions", handleChatCompletions)
+	mux.HandleFunc("POST /v1/chat/completions", s.handleChatCompletions)
+	mux.HandleFunc("GET /v1/chat/completions", s.handleChatCompletionList)
+	mux.HandleFunc("GET /v1/chat/completions/{id}", s.handleChatCompletionGet)
+	mux.HandleFunc("DELETE /v1/chat/completions/{id}", s.handleChatCompletionDelete)
+	mux.HandleFunc("GET /v1/chat/completions/{id}/messages", s.handleChatCompletionMessages)
 	mux.HandleFunc("POST /v1/completions", handleCompletions)
 	mux.HandleFunc("POST /v1/embeddings", handleEmbeddings)
 	mux.HandleFunc("POST /v1/responses", s.handleResponses)
@@ -68,7 +76,7 @@ func handleModelGet(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, mockModel())
 }
 
-func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -78,6 +86,7 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Model           string `json:"model"`
 		Stream          bool   `json:"stream"`
+		Store           *bool  `json:"store"`
 		ReasoningEffort string `json:"reasoning_effort"`
 		ResponseFormat  *struct {
 			Type string `json:"type"`
@@ -160,8 +169,13 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	writeJSON(w, map[string]any{
-		"id":      "chatcmpl-mock",
+	id := "chatcmpl-mock"
+	if req.Store != nil && *req.Store {
+		id = s.chatStore.allocateID()
+	}
+
+	payload := map[string]any{
+		"id":      id,
 		"object":  "chat.completion",
 		"created": 1700000000,
 		"model":   "gpt-4o-mini",
@@ -176,7 +190,11 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 		"usage": usage,
-	})
+	}
+	if req.Store != nil && *req.Store {
+		s.chatStore.save(id, payload, chatMessagesFromRequest(req.Messages, content, id))
+	}
+	writeJSON(w, payload)
 }
 
 func chatCompletionRequestHasAudioModalities(modalities []string) bool {

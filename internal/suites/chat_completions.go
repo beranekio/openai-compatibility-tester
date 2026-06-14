@@ -38,15 +38,8 @@ func (ChatCompletions) Run(ctx context.Context, client openai.Client, cfg *confi
 		return fail("chat_completions", "response missing choices")
 	}
 
-	choice := resp.Choices[0]
-	if choice.FinishReason == "" {
-		return fail("chat_completions", "choice missing finish_reason")
+	if len(resp.Choices) == 0 {
+		return fail("chat_completions", "response missing choices")
 	}
-	if string(choice.Message.Role) != "assistant" {
-		return fail("chat_completions", fmt.Sprintf("choice message role is %q, want assistant", choice.Message.Role))
-	}
-	if !hasChatMessageOutput(choice.Message) && !isContentFilterFinishReason(choice.FinishReason) {
-		return fail("chat_completions", "choice message has no content or refusal")
-	}
-	return nil
+	return validateChatCompletionChoice("chat_completions", resp.Choices[0])
 }

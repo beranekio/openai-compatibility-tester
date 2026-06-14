@@ -49,6 +49,38 @@ func validateResponseEnvelope(suite string, resp *responses.Response) error {
 	return nil
 }
 
+func validateChatCompletionEnvelope(suite string, resp *openai.ChatCompletion) error {
+	if resp == nil {
+		return fail(suite, "response is nil")
+	}
+	if resp.ID == "" {
+		return fail(suite, "response missing id")
+	}
+	if !resp.JSON.Created.Valid() {
+		return fail(suite, "response missing created")
+	}
+	if resp.Model == "" {
+		return fail(suite, "response missing model")
+	}
+	if string(resp.Object) != "chat.completion" {
+		return fail(suite, fmt.Sprintf("response object is %q, want chat.completion", resp.Object))
+	}
+	return nil
+}
+
+func validateChatCompletionChoice(suite string, choice openai.ChatCompletionChoice) error {
+	if choice.FinishReason == "" {
+		return fail(suite, "choice missing finish_reason")
+	}
+	if string(choice.Message.Role) != "assistant" {
+		return fail(suite, fmt.Sprintf("choice message role is %q, want assistant", choice.Message.Role))
+	}
+	if !hasChatMessageOutput(choice.Message) && !isContentFilterFinishReason(choice.FinishReason) {
+		return fail(suite, "choice message has no content or refusal")
+	}
+	return nil
+}
+
 func hasChatMessageOutput(msg openai.ChatCompletionMessage) bool {
 	return msg.Content != "" || msg.Refusal != ""
 }
