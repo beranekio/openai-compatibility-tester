@@ -22,11 +22,16 @@ func (Uploads) Description() string {
 func (Uploads) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
 	content := smallTextFileBytes()
 	deleted := false
+	var uploadID string
 	var fileID string
+	lifecycleOK := false
 	defer func() {
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if !lifecycleOK && uploadID != "" {
+			_, _ = client.Uploads.Cancel(cleanupCtx, uploadID)
+		}
 		if fileID != "" && !deleted {
-			cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
 			_, _ = client.Files.Delete(cleanupCtx, fileID)
 		}
 	}()
@@ -55,6 +60,7 @@ func (Uploads) Run(ctx context.Context, client openai.Client, cfg *config.Config
 	if created.Purpose != string(openai.FilePurposeUserData) {
 		return fail("uploads", fmt.Sprintf("create purpose is %q, want user_data", created.Purpose))
 	}
+	uploadID = created.ID
 
 	part, err := client.Uploads.Parts.New(ctx, created.ID, openai.UploadPartNewParams{
 		Data: bytes.NewReader(content),
@@ -81,6 +87,18 @@ func (Uploads) Run(ctx context.Context, client openai.Client, cfg *config.Config
 	if completed.Status != openai.UploadStatusCompleted {
 		return fail("uploads", fmt.Sprintf("complete status is %q, want completed", completed.Status))
 	}
+	if completed.ID != created.ID {
+		return fail("uploads", fmt.Sprintf("complete id is %q, want %q", completed.ID, created.ID))
+	}
+	if completed.Bytes != int64(len(content)) {
+		return fail("uploads", fmt.Sprintf("complete bytes is %d, want %d", completed.Bytes, len(content)))
+	}
+	if completed.Filename != "test.txt" {
+		return fail("uploads", fmt.Sprintf("complete filename is %q, want test.txt", completed.Filename))
+	}
+	if completed.Purpose != string(openai.FilePurposeUserData) {
+		return fail("uploads", fmt.Sprintf("complete purpose is %q, want user_data", completed.Purpose))
+	}
 	if !completed.JSON.File.Valid() {
 		return fail("uploads", "complete response missing file")
 	}
@@ -103,6 +121,7 @@ func (Uploads) Run(ctx context.Context, client openai.Client, cfg *config.Config
 	if deletedResp, err := client.Files.Delete(ctx, fileID); err == nil && deletedResp != nil && deletedResp.Deleted {
 		deleted = true
 	}
+	lifecycleOK = true
 	return nil
 }
 
