@@ -25,6 +25,7 @@ docker run --rm \
 | `OPENAI_COMPLETION_MODEL` | `--completion-model` | no | `gpt-3.5-turbo-instruct` when `completions` or `completions_stream` is selected, otherwise same as `OPENAI_MODEL` | Model used for legacy completions suites |
 | `OPENAI_EMBEDDING_MODEL` | `--embedding-model` | when `embeddings` or `embeddings_batch` is selected | — | Model used for embedding suites |
 | `OPENAI_VISION_MODEL` | `--vision-model` | when `chat_completions_vision` is selected | same as `OPENAI_MODEL` | Model used for vision chat suites |
+| `OPENAI_REASONING_MODEL` | `--reasoning-model` | when `chat_completions_reasoning` is selected | same as `OPENAI_MODEL` | Model used for reasoning chat suites (e.g. `o3-mini`, `o4-mini`) |
 | `OPENAI_IMAGE_MODEL` | `--image-model` | when `images_generations` or `images_edits` is selected | — | Model used for image generation and edit suites |
 | `OPENAI_TTS_MODEL` | `--tts-model` | when `audio_speech` is selected | — | Model used for text-to-speech suites |
 | `OPENAI_WHISPER_MODEL` | `--whisper-model` | when `audio_transcriptions` or `audio_translations` is selected | — | Model for non-streaming transcription and translation (e.g. `whisper-1`) |
@@ -49,6 +50,7 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `chat_completions_stream` | `client.Chat.Completions.NewStreaming` | `POST /v1/chat/completions` (stream) |
 | `chat_completions_json` | `client.Chat.Completions.New` (`response_format` json_schema) | `POST /v1/chat/completions` |
 | `chat_completions_vision` | `client.Chat.Completions.New` (with image input) | `POST /v1/chat/completions` |
+| `chat_completions_reasoning` | `client.Chat.Completions.New` (`reasoning_effort`) | `POST /v1/chat/completions` |
 | `chat_completions_tools` | `client.Chat.Completions.New` (with `tools`) | `POST /v1/chat/completions` |
 | `chat_completions_tools_stream` | `client.Chat.Completions.NewStreaming` (with `tools`) | `POST /v1/chat/completions` (stream) |
 | `completions` | `client.Completions.New` | `POST /v1/completions` |
@@ -196,6 +198,17 @@ docker run --rm \
   -e OPENAI_API_KEY=your-api-key \
   -e OPENAI_MODEL=your-vision-model \
   -e TEST_SUITES=chat_completions_vision \
+  ghcr.io/beranekio/openai-compatibility-tester:latest
+```
+
+**Reasoning models** — requires a reasoning-capable model (`OPENAI_REASONING_MODEL` defaults to `OPENAI_MODEL`). Included in `full` but not in `extended`. Validation is lenient: the suite passes when the response has assistant content or refusal, reports `reasoning_tokens` in usage, exposes a `reasoning_content` field, or returns a `content_filter` finish reason — so proxies that strip reasoning fields can still pass if they return normal chat output:
+
+```bash
+docker run --rm \
+  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
+  -e OPENAI_API_KEY=your-api-key \
+  -e OPENAI_REASONING_MODEL=o3-mini \
+  -e TEST_SUITES=chat_completions_reasoning \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 

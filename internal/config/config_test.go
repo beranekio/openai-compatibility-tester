@@ -651,3 +651,17 @@ func TestLoadVisionModelDefaultsToChatModel(t *testing.T) {
 		t.Fatalf("VisionModel = %q, want gpt-4o", cfg.VisionModel)
 	}
 }
+
+func TestLoadReasoningModelDefaultsToChatModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvModel, "gpt-4o")
+
+	cfg, err := Load([]string{})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.ReasoningModel != "gpt-4o" {
+		t.Fatalf("ReasoningModel = %q, want gpt-4o", cfg.ReasoningModel)
+	}
+}

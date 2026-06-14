@@ -18,7 +18,8 @@ const (
 	EnvCompletionModel = "OPENAI_COMPLETION_MODEL"
 	EnvEmbeddingModel  = "OPENAI_EMBEDDING_MODEL"
 	EnvResponsesModel  = "OPENAI_RESPONSES_MODEL"
-	EnvVisionModel     = "OPENAI_VISION_MODEL"
+	EnvVisionModel      = "OPENAI_VISION_MODEL"
+	EnvReasoningModel   = "OPENAI_REASONING_MODEL"
 	EnvImageModel      = "OPENAI_IMAGE_MODEL"
 	EnvTTSModel            = "OPENAI_TTS_MODEL"
 	EnvWhisperModel        = "OPENAI_WHISPER_MODEL"
@@ -85,6 +86,7 @@ var FullSuites = []string{
 	"chat_completions_stream",
 	"chat_completions_json",
 	"chat_completions_vision",
+	"chat_completions_reasoning",
 	"chat_completions_tools",
 	"chat_completions_tools_stream",
 	"completions",
@@ -118,8 +120,9 @@ var knownSuites = map[string]struct{}{
 	"chat_completions":              {},
 	"chat_completions_stream":       {},
 	"chat_completions_json":         {},
-	"chat_completions_vision":       {},
-	"chat_completions_tools":        {},
+	"chat_completions_vision":        {},
+	"chat_completions_reasoning":     {},
+	"chat_completions_tools":         {},
 	"chat_completions_tools_stream": {},
 	"completions":                   {},
 	"completions_stream":            {},
@@ -154,8 +157,9 @@ type Config struct {
 	CompletionModel string
 	EmbeddingModel  string
 	ResponsesModel  string
-	VisionModel     string
-	ImageModel      string
+	VisionModel      string
+	ReasoningModel   string
+	ImageModel       string
 	TTSModel            string
 	WhisperModel        string
 	TranscriptionModel  string
@@ -177,6 +181,7 @@ func Load(args []string) (*Config, error) {
 	embeddingModel := fs.String("embedding-model", envOrDefault(EnvEmbeddingModel, ""), "Model for embedding tests (required when embeddings or embeddings_batch suite is selected)")
 	responsesModel := fs.String("responses-model", envOrDefault(EnvResponsesModel, ""), "Model for Responses API suites (defaults to --model)")
 	visionModel := fs.String("vision-model", envOrDefault(EnvVisionModel, ""), "Model for vision chat suites (defaults to --model)")
+	reasoningModel := fs.String("reasoning-model", envOrDefault(EnvReasoningModel, ""), "Model for reasoning chat suites (defaults to --model)")
 	imageModel := fs.String("image-model", envOrDefault(EnvImageModel, ""), "Model for image generation suites")
 	ttsModel := fs.String("tts-model", envOrDefault(EnvTTSModel, ""), "Model for text-to-speech suites")
 	whisperModel := fs.String("whisper-model", envOrDefault(EnvWhisperModel, ""), "Model for audio transcription and translation suites")
@@ -205,6 +210,7 @@ func Load(args []string) (*Config, error) {
 		EmbeddingModel:    strings.TrimSpace(*embeddingModel),
 		ResponsesModel:    strings.TrimSpace(*responsesModel),
 		VisionModel:       strings.TrimSpace(*visionModel),
+		ReasoningModel:    strings.TrimSpace(*reasoningModel),
 		ImageModel:        strings.TrimSpace(*imageModel),
 		TTSModel:          strings.TrimSpace(*ttsModel),
 		WhisperModel:        strings.TrimSpace(*whisperModel),
@@ -246,6 +252,9 @@ func Load(args []string) (*Config, error) {
 	}
 	if cfg.VisionModel == "" {
 		cfg.VisionModel = cfg.Model
+	}
+	if cfg.ReasoningModel == "" {
+		cfg.ReasoningModel = cfg.Model
 	}
 
 	if !timeoutFlagExplicit(args) {
@@ -327,7 +336,7 @@ func validateSuiteNames(names []string) error {
 
 func validateModelsForSuites(cfg *Config) error {
 	var needsChat, needsResponses, needsCompletion, needsEmbedding bool
-	var needsVision, needsImage, needsTTS, needsWhisper, needsTranscription bool
+	var needsVision, needsReasoning, needsImage, needsTTS, needsWhisper, needsTranscription bool
 	for _, name := range cfg.Suites {
 		switch name {
 		case "chat_completions", "chat_completions_stream", "chat_completions_json", "chat_completions_tools", "chat_completions_tools_stream", "models_get":
@@ -340,6 +349,8 @@ func validateModelsForSuites(cfg *Config) error {
 			needsEmbedding = true
 		case "chat_completions_vision":
 			needsVision = true
+		case "chat_completions_reasoning":
+			needsReasoning = true
 		case "images_generations", "images_edits":
 			needsImage = true
 		case "audio_speech":
@@ -364,6 +375,9 @@ func validateModelsForSuites(cfg *Config) error {
 	}
 	if needsVision && cfg.VisionModel == "" {
 		return fmt.Errorf("%s or --vision-model is required for selected suites", EnvVisionModel)
+	}
+	if needsReasoning && cfg.ReasoningModel == "" {
+		return fmt.Errorf("%s or --reasoning-model is required for selected suites", EnvReasoningModel)
 	}
 	if needsImage && cfg.ImageModel == "" {
 		return fmt.Errorf("%s or --image-model is required for selected suites", EnvImageModel)
