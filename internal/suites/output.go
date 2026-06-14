@@ -49,6 +49,25 @@ func validateResponseEnvelope(suite string, resp *responses.Response) error {
 	return nil
 }
 
+func validateChatCompletionEnvelope(suite string, resp *openai.ChatCompletion) error {
+	if resp == nil {
+		return fail(suite, "response is nil")
+	}
+	if resp.ID == "" {
+		return fail(suite, "response missing id")
+	}
+	if !resp.JSON.Created.Valid() {
+		return fail(suite, "response missing created")
+	}
+	if resp.Model == "" {
+		return fail(suite, "response missing model")
+	}
+	if string(resp.Object) != "chat.completion" {
+		return fail(suite, fmt.Sprintf("response object is %q, want chat.completion", resp.Object))
+	}
+	return nil
+}
+
 func hasChatMessageOutput(msg openai.ChatCompletionMessage) bool {
 	return msg.Content != "" || msg.Refusal != ""
 }

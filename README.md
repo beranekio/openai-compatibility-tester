@@ -55,6 +55,10 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `chat_completions_tools` | `client.Chat.Completions.New` (with `tools`) | `POST /v1/chat/completions` |
 | `chat_completions_tools_stream` | `client.Chat.Completions.NewStreaming` (with `tools`) | `POST /v1/chat/completions` (stream) |
 | `chat_completions_multi_turn` | `client.Chat.Completions.New` (multi-turn history with developer and tool messages) | `POST /v1/chat/completions` |
+| `chat_completions_get` | `client.Chat.Completions.Get` | `GET /v1/chat/completions/{id}` |
+| `chat_completions_list` | `client.Chat.Completions.List` | `GET /v1/chat/completions` |
+| `chat_completions_delete` | `client.Chat.Completions.Delete` | `DELETE /v1/chat/completions/{id}` |
+| `chat_completions_messages` | `client.Chat.Completions.Messages.List` | `GET /v1/chat/completions/{id}/messages` |
 | `completions` | `client.Completions.New` | `POST /v1/completions` |
 | `completions_stream` | `client.Completions.NewStreaming` | `POST /v1/completions` (stream) |
 | `embeddings` | `client.Embeddings.New` | `POST /v1/embeddings` |
@@ -81,7 +85,7 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
-Extended preset (`extended`): default suites plus `chat_completions_json`, `chat_completions_tools`, `chat_completions_tools_stream`, `chat_completions_multi_turn`, `responses_tools`, `responses_tools_stream`, `responses_json`, `responses_get`, `responses_delete`, `responses_cancel`, `responses_input_items`, `responses_compact`, `responses_input_tokens`, `completions`, `completions_stream`, `embeddings`, `embeddings_batch`, `chat_completions_vision`, `moderations`, `images_generations`, `images_edits`, `audio_speech`, `audio_transcriptions`, `audio_transcriptions_stream`, and `audio_translations`.
+Extended preset (`extended`): default suites plus `chat_completions_json`, `chat_completions_tools`, `chat_completions_tools_stream`, `chat_completions_multi_turn`, `chat_completions_get`, `chat_completions_list`, `chat_completions_delete`, `chat_completions_messages`, `responses_tools`, `responses_tools_stream`, `responses_json`, `responses_get`, `responses_delete`, `responses_cancel`, `responses_input_items`, `responses_compact`, `responses_input_tokens`, `completions`, `completions_stream`, `embeddings`, `embeddings_batch`, `chat_completions_vision`, `moderations`, `images_generations`, `images_edits`, `audio_speech`, `audio_transcriptions`, `audio_transcriptions_stream`, and `audio_translations`.
 
 Full preset (`full`): every registered suite (see `--list-suites`).
 
