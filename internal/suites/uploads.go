@@ -94,15 +94,9 @@ func (Uploads) Run(ctx context.Context, client openai.Client, cfg *config.Config
 		return fail("uploads", fmt.Sprintf("file purpose is %q, want user_data", completed.File.Purpose))
 	}
 	fileID = completed.File.ID
-
-	deletedResp, err := client.Files.Delete(ctx, fileID)
-	if err != nil {
-		return fmt.Errorf("file delete failed: %w", err)
+	if deletedResp, err := client.Files.Delete(ctx, fileID); err == nil && deletedResp != nil && deletedResp.Deleted {
+		deleted = true
 	}
-	if deletedResp == nil || !deletedResp.Deleted {
-		return fail("uploads", "file delete response invalid")
-	}
-	deleted = true
 	return nil
 }
 

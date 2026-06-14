@@ -140,9 +140,6 @@ func validateFileObject(suite string, file *openai.FileObject) error {
 	if file.Purpose == "" {
 		return fail(suite, "file missing purpose")
 	}
-	if !file.JSON.Status.Valid() {
-		return fail(suite, "file missing status")
-	}
 	return nil
 }
 

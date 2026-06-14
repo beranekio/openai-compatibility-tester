@@ -65,6 +65,11 @@ func (s *uploadStore) get(id string) (storedUpload, bool) {
 	if !ok {
 		return storedUpload{}, false
 	}
+	copiedParts := make(map[string]storedUploadPart, len(upload.parts))
+	for k, v := range upload.parts {
+		copiedParts[k] = v
+	}
+	upload.parts = copiedParts
 	return upload, true
 }
 
