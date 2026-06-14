@@ -67,10 +67,12 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `responses_input_tokens` | `client.Responses.InputTokens.Count` | `POST /v1/responses/input_tokens` |
 | `moderations` | `client.Moderations.New` | `POST /v1/moderations` |
 | `images_generations` | `client.Images.Generate` | `POST /v1/images/generations` |
+| `images_edits` | `client.Images.Edit` | `POST /v1/images/edits` |
+| `images_variations` | `client.Images.NewVariation` | `POST /v1/images/variations` |
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
-Extended preset (`extended`): default suites plus `chat_completions_json`, `chat_completions_tools`, `chat_completions_tools_stream`, `responses_tools`, `responses_tools_stream`, `responses_json`, `responses_get`, `responses_delete`, `responses_cancel`, `responses_input_items`, `responses_compact`, `responses_input_tokens`, `completions`, `completions_stream`, `embeddings`, `embeddings_batch`, `chat_completions_vision`, `moderations`, and `images_generations`.
+Extended preset (`extended`): default suites plus `chat_completions_json`, `chat_completions_tools`, `chat_completions_tools_stream`, `responses_tools`, `responses_tools_stream`, `responses_json`, `responses_get`, `responses_delete`, `responses_cancel`, `responses_input_items`, `responses_compact`, `responses_input_tokens`, `completions`, `completions_stream`, `embeddings`, `embeddings_batch`, `chat_completions_vision`, `moderations`, `images_generations`, `images_edits`, and `images_variations`.
 
 Full preset (`full`): every registered suite (see `--list-suites`).
 

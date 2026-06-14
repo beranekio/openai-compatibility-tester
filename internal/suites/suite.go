@@ -43,6 +43,8 @@ func All() []Suite {
 		ResponsesInputTokens{},
 		Moderations{},
 		ImagesGenerations{},
+		ImagesEdits{},
+		ImagesVariations{},
 	}
 }
 
