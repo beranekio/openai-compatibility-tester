@@ -77,7 +77,7 @@ func waitForBatchStatus(ctx context.Context, client openai.Client, suite, batchI
 		if err != nil {
 			return nil, fmt.Errorf("batch get failed: %w", err)
 		}
-		if err := validateBatchObject(suite, got); err != nil {
+		if err := validateBatchEnvelope(suite, got); err != nil {
 			return nil, err
 		}
 		if got.ID != batchID {
@@ -110,6 +110,10 @@ func cleanupBatchArtifacts(client openai.Client, batchID, fileID string) {
 }
 
 func validateBatchObject(suite string, batch *openai.Batch) error {
+	return validateBatchEnvelope(suite, batch)
+}
+
+func validateBatchEnvelope(suite string, batch *openai.Batch) error {
 	if batch == nil {
 		return fail(suite, "batch is nil")
 	}
@@ -146,6 +150,10 @@ func validateBatchObject(suite string, batch *openai.Batch) error {
 	if !batch.JSON.Status.Valid() {
 		return fail(suite, "batch missing status")
 	}
+	return nil
+}
+
+func validateBatchRequestCounts(suite string, batch *openai.Batch) error {
 	if !batch.JSON.RequestCounts.Valid() {
 		return fail(suite, "batch missing request_counts")
 	}
@@ -159,4 +167,36 @@ func validateBatchObject(suite string, batch *openai.Batch) error {
 		return fail(suite, "batch request_counts missing failed")
 	}
 	return nil
+}
+
+// waitForBatchCancelable polls until the batch is in_progress (cancelable) or
+// completed (too fast to cancel). Returns skipCancel=true when cancel is unnecessary.
+func waitForBatchCancelable(ctx context.Context, client openai.Client, suite, batchID string) (skipCancel bool, err error) {
+	for {
+		got, err := client.Batches.Get(ctx, batchID)
+		if err != nil {
+			return false, fmt.Errorf("batch get failed: %w", err)
+		}
+		if err := validateBatchEnvelope(suite, got); err != nil {
+			return false, err
+		}
+		if got.ID != batchID {
+			return false, fail(suite, fmt.Sprintf("batch id is %q, want %q", got.ID, batchID))
+		}
+		status := string(got.Status)
+		switch status {
+		case "in_progress":
+			return false, nil
+		case "completed":
+			return true, nil
+		}
+		if isBatchTerminalFailure(status) {
+			return false, fail(suite, fmt.Sprintf("batch failed with terminal status %q", status))
+		}
+		select {
+		case <-ctx.Done():
+			return false, fmt.Errorf("timed out waiting for cancelable batch status: %w", ctx.Err())
+		case <-time.After(batchPollInterval):
+		}
+	}
 }

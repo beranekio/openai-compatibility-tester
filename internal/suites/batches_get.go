@@ -49,6 +49,9 @@ func (BatchesGet) Run(ctx context.Context, client openai.Client, cfg *config.Con
 	if err != nil {
 		return err
 	}
+	if err := validateBatchRequestCounts("batches_get", got); err != nil {
+		return err
+	}
 	if got.RequestCounts.Completed != 1 {
 		return fail("batches_get", fmt.Sprintf("batch request_counts.completed is %d, want 1", got.RequestCounts.Completed))
 	}

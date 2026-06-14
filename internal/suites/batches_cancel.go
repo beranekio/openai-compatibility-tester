@@ -43,18 +43,19 @@ func (BatchesCancel) Run(ctx context.Context, client openai.Client, cfg *config.
 	}
 	batchID = created.ID
 
-	_, err = waitForBatchStatus(ctx, client, "batches_cancel", created.ID, func(status string) bool {
-		return status == "in_progress" || status == "finalizing"
-	})
+	skipCancel, err := waitForBatchCancelable(ctx, client, "batches_cancel", created.ID)
 	if err != nil {
 		return err
+	}
+	if skipCancel {
+		return nil
 	}
 
 	cancelled, err := client.Batches.Cancel(ctx, created.ID)
 	if err != nil {
 		return fmt.Errorf("batch cancel failed: %w", err)
 	}
-	if err := validateBatchObject("batches_cancel", cancelled); err != nil {
+	if err := validateBatchEnvelope("batches_cancel", cancelled); err != nil {
 		return err
 	}
 	if cancelled.ID != created.ID {
