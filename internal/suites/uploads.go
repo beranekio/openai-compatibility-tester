@@ -45,12 +45,10 @@ func (Uploads) Run(ctx context.Context, client openai.Client, cfg *config.Config
 	if err != nil {
 		return fmt.Errorf("upload create failed: %w", err)
 	}
-	if created.ID != "" {
-		uploadID = created.ID
-	}
 	if err := validateUploadObject("uploads", created); err != nil {
 		return err
 	}
+	uploadID = created.ID
 	if created.Status != openai.UploadStatusPending {
 		return fail("uploads", fmt.Sprintf("create status is %q, want pending", created.Status))
 	}
@@ -83,11 +81,11 @@ func (Uploads) Run(ctx context.Context, client openai.Client, cfg *config.Config
 	if err != nil {
 		return fmt.Errorf("upload complete failed: %w", err)
 	}
-	if completed.JSON.File.Valid() && completed.File.ID != "" {
-		fileID = completed.File.ID
-	}
 	if err := validateUploadObject("uploads", completed); err != nil {
 		return err
+	}
+	if completed.JSON.File.Valid() && completed.File.ID != "" {
+		fileID = completed.File.ID
 	}
 	if completed.Status != openai.UploadStatusCompleted {
 		return fail("uploads", fmt.Sprintf("complete status is %q, want completed", completed.Status))
