@@ -50,6 +50,7 @@ var ExtendedSuites = []string{
 	"models_get",
 	"chat_completions",
 	"chat_completions_stream",
+	"chat_completions_stream_usage",
 	"chat_completions_json",
 	"chat_completions_tools",
 	"chat_completions_tools_stream",
@@ -90,6 +91,8 @@ var FullSuites = []string{
 	"models_get",
 	"chat_completions",
 	"chat_completions_stream",
+	"chat_completions_stream_usage",
+	"chat_completions_logprobs",
 	"chat_completions_json",
 	"chat_completions_vision",
 	"chat_completions_reasoning",
@@ -130,12 +133,14 @@ var knownSuites = map[string]struct{}{
 	"models":                        {},
 	"models_get":                    {},
 	"chat_completions":              {},
-	"chat_completions_stream":       {},
-	"chat_completions_json":         {},
-	"chat_completions_vision":       {},
-	"chat_completions_reasoning":    {},
-	"chat_completions_audio":        {},
-	"chat_completions_tools":        {},
+	"chat_completions_stream":        {},
+	"chat_completions_stream_usage":  {},
+	"chat_completions_logprobs":      {},
+	"chat_completions_json":          {},
+	"chat_completions_vision":        {},
+	"chat_completions_reasoning":     {},
+	"chat_completions_audio":         {},
+	"chat_completions_tools":         {},
 	"chat_completions_tools_stream": {},
 	"chat_completions_multi_turn":   {},
 	"chat_completions_get":          {},
@@ -354,7 +359,7 @@ func validateModelsForSuites(cfg *Config) error {
 	var needsVision, needsReasoning, needsImage, needsTTS, needsWhisper, needsTranscription bool
 	for _, name := range cfg.Suites {
 		switch name {
-		case "chat_completions", "chat_completions_stream", "chat_completions_json", "chat_completions_audio", "chat_completions_tools", "chat_completions_tools_stream", "chat_completions_multi_turn", "chat_completions_get", "chat_completions_list", "chat_completions_delete", "chat_completions_messages", "models_get":
+		case "chat_completions", "chat_completions_stream", "chat_completions_stream_usage", "chat_completions_logprobs", "chat_completions_json", "chat_completions_audio", "chat_completions_tools", "chat_completions_tools_stream", "chat_completions_multi_turn", "chat_completions_get", "chat_completions_list", "chat_completions_delete", "chat_completions_messages", "models_get":
 			needsChat = true
 		case "responses", "responses_stream", "responses_tools", "responses_tools_stream", "responses_json", "responses_get", "responses_delete", "responses_cancel", "responses_input_items", "responses_compact", "responses_input_tokens":
 			needsResponses = true
