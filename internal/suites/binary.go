@@ -53,3 +53,27 @@ func validateBase64Data(suite string, data string, minBytes int) error {
 	}
 	return nil
 }
+
+func validateWAVBytes(suite string, data []byte) error {
+	if len(data) < 12 {
+		return fail(suite, "audio data is too short to be WAV")
+	}
+	if string(data[0:4]) != "RIFF" || string(data[8:12]) != "WAVE" {
+		return fail(suite, "audio data is not a WAV file")
+	}
+	return nil
+}
+
+func validateBase64WAVData(suite string, data string, minBytes int) error {
+	if strings.TrimSpace(data) == "" {
+		return fail(suite, "audio data is empty")
+	}
+	decoded, err := base64.StdEncoding.DecodeString(data)
+	if err != nil {
+		return fail(suite, fmt.Sprintf("audio data is not valid base64: %v", err))
+	}
+	if len(decoded) < minBytes {
+		return fail(suite, fmt.Sprintf("audio data has %d bytes after decode, want at least %d", len(decoded), minBytes))
+	}
+	return validateWAVBytes(suite, decoded)
+}

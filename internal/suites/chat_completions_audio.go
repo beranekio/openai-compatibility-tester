@@ -52,6 +52,15 @@ func (ChatCompletionsAudio) Run(ctx context.Context, client openai.Client, cfg *
 	if string(choice.Message.Role) != "assistant" {
 		return fail("chat_completions_audio", fmt.Sprintf("choice message role is %q, want assistant", choice.Message.Role))
 	}
+	if isContentFilterFinishReason(choice.FinishReason) {
+		return nil
+	}
+	if choice.Message.Refusal != "" && choice.Message.Content == "" {
+		return nil
+	}
+	if !hasChatMessageOutput(choice.Message) {
+		return fail("chat_completions_audio", "choice message has no content or refusal")
+	}
 	return validateChatCompletionAudio("chat_completions_audio", choice.Message.Audio)
 }
 
@@ -62,5 +71,11 @@ func validateChatCompletionAudio(suite string, audio openai.ChatCompletionAudio)
 	if audio.Data == "" {
 		return fail(suite, "audio missing data field")
 	}
-	return validateBase64Data(suite, audio.Data, 1)
+	if !audio.JSON.ExpiresAt.Valid() {
+		return fail(suite, "audio missing expires_at field")
+	}
+	if !audio.JSON.Transcript.Valid() {
+		return fail(suite, "audio missing transcript field")
+	}
+	return validateBase64WAVData(suite, audio.Data, 12)
 }

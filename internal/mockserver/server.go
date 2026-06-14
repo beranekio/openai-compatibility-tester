@@ -202,7 +202,7 @@ func writeChatCompletionAudioResponse(w http.ResponseWriter) {
 					"content": "pong",
 					"audio": map[string]any{
 						"id":         "audio-mock",
-						"data":       "YQ==",
+						"data":       mockChatCompletionWAVBase64(),
 						"expires_at": 1700003600,
 						"transcript": "pong",
 					},

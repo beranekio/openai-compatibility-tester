@@ -1,45 +1,110 @@
 package suites
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"testing"
 
 	"github.com/openai/openai-go/v3"
 )
 
 func TestValidateChatCompletionAudio(t *testing.T) {
+	validData := base64.StdEncoding.EncodeToString(smallWAVBytes())
+
 	tests := []struct {
 		name    string
-		audio   openai.ChatCompletionAudio
+		fields  map[string]any
 		wantErr bool
 	}{
 		{
-			name:    "valid audio",
-			audio:   openai.ChatCompletionAudio{ID: "audio-1", Data: "YQ=="},
+			name: "valid audio",
+			fields: map[string]any{
+				"id":          "audio-1",
+				"data":        validData,
+				"expires_at":  1700003600,
+				"transcript":  "pong",
+			},
 			wantErr: false,
 		},
 		{
-			name:    "missing id",
-			audio:   openai.ChatCompletionAudio{Data: "YQ=="},
+			name: "missing id",
+			fields: map[string]any{
+				"data":       validData,
+				"expires_at": 1700003600,
+				"transcript": "pong",
+			},
 			wantErr: true,
 		},
 		{
-			name:    "empty data",
-			audio:   openai.ChatCompletionAudio{ID: "audio-1", Data: ""},
+			name: "empty data",
+			fields: map[string]any{
+				"id":          "audio-1",
+				"data":        "",
+				"expires_at":  1700003600,
+				"transcript":  "pong",
+			},
 			wantErr: true,
 		},
 		{
-			name:    "invalid base64",
-			audio:   openai.ChatCompletionAudio{ID: "audio-1", Data: "not-base64!!!"},
+			name: "missing expires_at",
+			fields: map[string]any{
+				"id":         "audio-1",
+				"data":       validData,
+				"transcript": "pong",
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing transcript",
+			fields: map[string]any{
+				"id":         "audio-1",
+				"data":       validData,
+				"expires_at": 1700003600,
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid base64",
+			fields: map[string]any{
+				"id":          "audio-1",
+				"data":        "not-base64!!!",
+				"expires_at":  1700003600,
+				"transcript":  "pong",
+			},
+			wantErr: true,
+		},
+		{
+			name: "non-wav payload",
+			fields: map[string]any{
+				"id":          "audio-1",
+				"data":        "YQ==",
+				"expires_at":  1700003600,
+				"transcript":  "pong",
+			},
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateChatCompletionAudio("chat_completions_audio", tt.audio)
+			audio := unmarshalChatCompletionAudio(t, tt.fields)
+			err := validateChatCompletionAudio("chat_completions_audio", audio)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("validateChatCompletionAudio() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
+}
+
+func unmarshalChatCompletionAudio(t *testing.T, fields map[string]any) openai.ChatCompletionAudio {
+	t.Helper()
+	payload, err := json.Marshal(fields)
+	if err != nil {
+		t.Fatalf("marshal audio fields: %v", err)
+	}
+	var audio openai.ChatCompletionAudio
+	if err := json.Unmarshal(payload, &audio); err != nil {
+		t.Fatalf("unmarshal audio: %v", err)
+	}
+	return audio
 }
