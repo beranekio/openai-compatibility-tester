@@ -13,6 +13,7 @@ type Server struct {
 	*httptest.Server
 	store     *responseStore
 	chatStore *chatCompletionStore
+	fileStore *fileStore
 }
 
 // New starts a mock OpenAI API server.
@@ -21,6 +22,7 @@ func New() *Server {
 	s := &Server{
 		store:     newResponseStore(),
 		chatStore: newChatCompletionStore(),
+		fileStore: newFileStore(),
 	}
 
 	mux.HandleFunc("GET /v1/models", handleModels)
@@ -46,6 +48,11 @@ func New() *Server {
 	mux.HandleFunc("POST /v1/audio/speech", handleAudioSpeech)
 	mux.HandleFunc("POST /v1/audio/transcriptions", handleAudioTranscriptions)
 	mux.HandleFunc("POST /v1/audio/translations", handleAudioTranslations)
+	mux.HandleFunc("POST /v1/files", s.handleFileCreate)
+	mux.HandleFunc("GET /v1/files", s.handleFileList)
+	mux.HandleFunc("GET /v1/files/{id}", s.handleFileGet)
+	mux.HandleFunc("DELETE /v1/files/{id}", s.handleFileDelete)
+	mux.HandleFunc("GET /v1/files/{id}/content", s.handleFileContent)
 
 	s.Server = httptest.NewServer(mux)
 	return s
