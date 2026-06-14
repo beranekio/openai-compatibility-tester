@@ -58,5 +58,11 @@ func (BatchesGet) Run(ctx context.Context, client openai.Client, cfg *config.Con
 	if got.RequestCounts.Total != 1 {
 		return fail("batches_get", fmt.Sprintf("batch request_counts.total is %d, want 1", got.RequestCounts.Total))
 	}
+	if got.RequestCounts.Failed != 0 {
+		return fail("batches_get", fmt.Sprintf("batch request_counts.failed is %d, want 0", got.RequestCounts.Failed))
+	}
+	if !got.JSON.OutputFileID.Valid() || got.OutputFileID == "" {
+		return fail("batches_get", "completed batch missing output_file_id")
+	}
 	return nil
 }

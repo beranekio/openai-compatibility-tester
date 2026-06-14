@@ -108,16 +108,20 @@ func waitForBatchStatus(ctx context.Context, client openai.Client, suite, batchI
 }
 
 func cleanupBatchArtifacts(client openai.Client, batchID, fileID string) {
-	cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
 	if batchID != "" {
-		skipCancel, err := waitForBatchCancelable(cleanupCtx, client, "batches", batchID)
+		pollCtx, pollCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		skipCancel, err := waitForBatchCancelable(pollCtx, client, "batches", batchID)
+		pollCancel()
 		if err != nil || !skipCancel {
-			_, _ = client.Batches.Cancel(cleanupCtx, batchID)
+			cancelCtx, cancelCancel := context.WithTimeout(context.Background(), 10*time.Second)
+			_, _ = client.Batches.Cancel(cancelCtx, batchID)
+			cancelCancel()
 		}
 	}
 	if fileID != "" {
-		_, _ = client.Files.Delete(cleanupCtx, fileID)
+		deleteCtx, deleteCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		_, _ = client.Files.Delete(deleteCtx, fileID)
+		deleteCancel()
 	}
 }
 
