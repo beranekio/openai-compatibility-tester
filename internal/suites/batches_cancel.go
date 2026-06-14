@@ -2,6 +2,7 @@ package suites
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
@@ -53,6 +54,10 @@ func (BatchesCancel) Run(ctx context.Context, client openai.Client, cfg *config.
 
 	cancelled, err := client.Batches.Cancel(ctx, created.ID)
 	if err != nil {
+		var apiErr *openai.Error
+		if errors.As(err, &apiErr) && isBatchCancelAlreadyTerminalError(apiErr) {
+			return exerciseBatchCancelEndpoint(ctx, client, "batches_cancel", created.ID)
+		}
 		return fmt.Errorf("batch cancel failed: %w", err)
 	}
 	if err := validateBatchEnvelope("batches_cancel", cancelled); err != nil {
