@@ -22,6 +22,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 		ResponsesModel:   "gpt-4o-mini",
 		CompletionModel:  config.DefaultCompletionModel,
 		VisionModel:      "gpt-4o-mini",
+		ImageModel:       "dall-e-2",
 		EmbeddingModel:   "text-embedding-3-small",
 		RequestTimeout:   30 * time.Second,
 		Suites: []string{
@@ -48,6 +49,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"responses_compact",
 			"responses_input_tokens",
 			"moderations",
+			"images_generations",
 		},
 	}
 
