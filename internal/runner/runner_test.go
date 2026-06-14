@@ -23,6 +23,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 		CompletionModel:  config.DefaultCompletionModel,
 		VisionModel:      "gpt-4o-mini",
 		ImageModel:       "dall-e-2",
+		TTSModel:         "tts-1",
 		EmbeddingModel:   "text-embedding-3-small",
 		RequestTimeout:   30 * time.Second,
 		Suites: []string{
@@ -52,6 +53,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"images_generations",
 			"images_edits",
 			"images_variations",
+			"audio_speech",
 		},
 	}
 

@@ -69,10 +69,11 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `images_generations` | `client.Images.Generate` | `POST /v1/images/generations` |
 | `images_edits` | `client.Images.Edit` | `POST /v1/images/edits` |
 | `images_variations` | `client.Images.NewVariation` | `POST /v1/images/variations` |
+| `audio_speech` | `client.Audio.Speech.New` | `POST /v1/audio/speech` |
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
-Extended preset (`extended`): default suites plus `chat_completions_json`, `chat_completions_tools`, `chat_completions_tools_stream`, `responses_tools`, `responses_tools_stream`, `responses_json`, `responses_get`, `responses_delete`, `responses_cancel`, `responses_input_items`, `responses_compact`, `responses_input_tokens`, `completions`, `completions_stream`, `embeddings`, `embeddings_batch`, `chat_completions_vision`, `moderations`, `images_generations`, and `images_edits`.
+Extended preset (`extended`): default suites plus `chat_completions_json`, `chat_completions_tools`, `chat_completions_tools_stream`, `responses_tools`, `responses_tools_stream`, `responses_json`, `responses_get`, `responses_delete`, `responses_cancel`, `responses_input_items`, `responses_compact`, `responses_input_tokens`, `completions`, `completions_stream`, `embeddings`, `embeddings_batch`, `chat_completions_vision`, `moderations`, `images_generations`, `images_edits`, and `audio_speech`.
 
 Full preset (`full`): every registered suite (see `--list-suites`).
 
@@ -96,6 +97,7 @@ docker run --rm \
   -e OPENAI_MODEL=your-chat-model \
   -e OPENAI_EMBEDDING_MODEL=your-embedding-model \
   -e OPENAI_IMAGE_MODEL=your-image-model \
+  -e OPENAI_TTS_MODEL=tts-1 \
   -e TEST_SUITES=extended \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
@@ -154,6 +156,17 @@ docker run --rm \
   -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
   -e OPENAI_API_KEY=your-api-key \
   -e TEST_SUITES=images_variations \
+  ghcr.io/beranekio/openai-compatibility-tester:latest
+```
+
+**Text-to-speech** — requires a TTS model (`OPENAI_TTS_MODEL`):
+
+```bash
+docker run --rm \
+  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
+  -e OPENAI_API_KEY=your-api-key \
+  -e OPENAI_TTS_MODEL=tts-1 \
+  -e TEST_SUITES=audio_speech \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 

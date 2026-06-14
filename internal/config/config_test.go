@@ -487,6 +487,7 @@ func TestLoadResponsesToolsSuitesInExtendedAndFullPresets(t *testing.T) {
 	t.Setenv(EnvAPIKey, "test-key")
 	t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
 	t.Setenv(EnvImageModel, "dall-e-2")
+	t.Setenv(EnvTTSModel, "tts-1")
 
 	for _, preset := range []string{"extended", "full"} {
 		cfg, err := Load([]string{"--suites", preset})
@@ -551,6 +552,7 @@ func TestLoadSuitePresets(t *testing.T) {
 			setup: func(t *testing.T) {
 				t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
 				t.Setenv(EnvImageModel, "dall-e-2")
+				t.Setenv(EnvTTSModel, "tts-1")
 			},
 		},
 		{
@@ -560,6 +562,7 @@ func TestLoadSuitePresets(t *testing.T) {
 			setup: func(t *testing.T) {
 				t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
 				t.Setenv(EnvImageModel, "dall-e-2")
+				t.Setenv(EnvTTSModel, "tts-1")
 			},
 		},
 		{

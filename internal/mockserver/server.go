@@ -35,6 +35,7 @@ func New() *Server {
 	mux.HandleFunc("POST /v1/images/generations", handleImagesGenerations)
 	mux.HandleFunc("POST /v1/images/edits", handleImagesEdits)
 	mux.HandleFunc("POST /v1/images/variations", handleImagesVariations)
+	mux.HandleFunc("POST /v1/audio/speech", handleAudioSpeech)
 
 	s.Server = httptest.NewServer(mux)
 	return s
