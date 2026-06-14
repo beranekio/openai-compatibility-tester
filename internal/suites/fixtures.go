@@ -3,6 +3,8 @@ package suites
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
@@ -96,6 +98,45 @@ func smallTextFileReader() io.Reader {
 
 func smallTextFileBytes() []byte {
 	return []byte(smallTextFileContent)
+}
+
+type namedJSONLReader struct {
+	r        *bytes.Reader
+	filename string
+}
+
+func (r *namedJSONLReader) Read(p []byte) (int, error) {
+	return r.r.Read(p)
+}
+
+func (r *namedJSONLReader) Filename() string {
+	return r.filename
+}
+
+func (r *namedJSONLReader) ContentType() string {
+	return "application/jsonl"
+}
+
+// smallBatchJSONLReader returns a minimal JSONL input file for chat completion batch jobs.
+func smallBatchJSONLReader(model string) io.Reader {
+	line, err := json.Marshal(map[string]any{
+		"custom_id": "batch-request-1",
+		"method":    "POST",
+		"url":       "/v1/chat/completions",
+		"body": map[string]any{
+			"model": model,
+			"messages": []map[string]string{
+				{"role": "user", "content": "Reply with exactly the word: pong"},
+			},
+		},
+	})
+	if err != nil {
+		panic(fmt.Sprintf("marshal batch jsonl: %v", err))
+	}
+	return &namedJSONLReader{
+		r:        bytes.NewReader(append(line, '\n')),
+		filename: "batch-input.jsonl",
+	}
 }
 
 // smallWAVBytes returns a minimal mono 8-bit WAV file for multipart audio upload tests.
