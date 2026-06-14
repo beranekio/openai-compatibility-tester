@@ -30,31 +30,25 @@ func (ChatCompletionsLogprobs) Run(ctx context.Context, client openai.Client, cf
 	if err != nil {
 		return fmt.Errorf("chat completion request failed: %w", err)
 	}
-	if resp == nil {
-		return fail("chat_completions_logprobs", "response is nil")
-	}
-	if resp.ID == "" {
-		return fail("chat_completions_logprobs", "response missing id")
+	if err := validateChatCompletionEnvelope("chat_completions_logprobs", resp); err != nil {
+		return err
 	}
 	if len(resp.Choices) == 0 {
 		return fail("chat_completions_logprobs", "response missing choices")
 	}
 
 	choice := resp.Choices[0]
-	if choice.FinishReason == "" {
-		return fail("chat_completions_logprobs", "choice missing finish_reason")
-	}
-	if string(choice.Message.Role) != "assistant" {
-		return fail("chat_completions_logprobs", fmt.Sprintf("choice message role is %q, want assistant", choice.Message.Role))
-	}
 	if isContentFilterFinishReason(choice.FinishReason) {
 		return nil
 	}
-	if !hasChatMessageOutput(choice.Message) {
-		return fail("chat_completions_logprobs", "choice message has no content or refusal")
+	if err := validateChatCompletionChoice("chat_completions_logprobs", choice); err != nil {
+		return err
 	}
 	if !choice.JSON.Logprobs.Valid() {
 		return fail("chat_completions_logprobs", "choice missing logprobs")
+	}
+	if err := validateChatCompletionLogprobsFields("chat_completions_logprobs", choice.Logprobs); err != nil {
+		return err
 	}
 	if choice.Message.Content != "" {
 		if err := validateChatCompletionLogprobsContent("chat_completions_logprobs", choice.Logprobs); err != nil {
@@ -69,10 +63,17 @@ func (ChatCompletionsLogprobs) Run(ctx context.Context, client openai.Client, cf
 	return nil
 }
 
-func validateChatCompletionLogprobsContent(suite string, logprobs openai.ChatCompletionChoiceLogprobs) error {
+func validateChatCompletionLogprobsFields(suite string, logprobs openai.ChatCompletionChoiceLogprobs) error {
 	if !logprobs.JSON.Content.Valid() {
 		return fail(suite, "choice logprobs missing content field")
 	}
+	if !logprobs.JSON.Refusal.Valid() {
+		return fail(suite, "choice logprobs missing refusal field")
+	}
+	return nil
+}
+
+func validateChatCompletionLogprobsContent(suite string, logprobs openai.ChatCompletionChoiceLogprobs) error {
 	if len(logprobs.Content) == 0 {
 		return fail(suite, "choice logprobs content field is empty")
 	}
@@ -85,9 +86,6 @@ func validateChatCompletionLogprobsContent(suite string, logprobs openai.ChatCom
 }
 
 func validateChatCompletionLogprobsRefusal(suite string, logprobs openai.ChatCompletionChoiceLogprobs) error {
-	if !logprobs.JSON.Refusal.Valid() {
-		return fail(suite, "choice logprobs missing refusal field")
-	}
 	if len(logprobs.Refusal) == 0 {
 		return fail(suite, "choice logprobs refusal field is empty")
 	}
@@ -102,6 +100,9 @@ func validateChatCompletionLogprobsRefusal(suite string, logprobs openai.ChatCom
 func validateChatCompletionTokenLogprob(suite string, entry openai.ChatCompletionTokenLogprob) error {
 	if !entry.JSON.Token.Valid() {
 		return fail(suite, "logprob entry missing token")
+	}
+	if !entry.JSON.Bytes.Valid() {
+		return fail(suite, "logprob entry missing bytes")
 	}
 	if !entry.JSON.Logprob.Valid() {
 		return fail(suite, "logprob entry missing logprob")

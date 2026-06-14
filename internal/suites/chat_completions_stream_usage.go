@@ -45,7 +45,6 @@ func (ChatCompletionsStreamUsage) Run(ctx context.Context, client openai.Client,
 	var finished bool
 	var finishReason string
 	var expectUsageOnlyChunk bool
-	var usageOnTerminalChunk bool
 	var usageOnFinalChunk bool
 	for stream.Next() {
 		chunk := stream.Current()
@@ -58,6 +57,9 @@ func (ChatCompletionsStreamUsage) Run(ctx context.Context, client openai.Client,
 		}
 
 		if len(chunk.Choices) == 0 {
+			if !chunk.JSON.Choices.Valid() {
+				return fail("chat_completions_stream_usage", "usage chunk missing choices field")
+			}
 			if !finished {
 				return fail("chat_completions_stream_usage", "stream emitted usage-only chunk before finish_reason")
 			}
@@ -84,13 +86,9 @@ func (ChatCompletionsStreamUsage) Run(ctx context.Context, client openai.Client,
 			finished = true
 			finishReason = choice.FinishReason
 			if chunk.JSON.Usage.Valid() {
-				if err := validateChatCompletionStreamUsage("chat_completions_stream_usage", chunk); err != nil {
-					return err
-				}
-				usageOnTerminalChunk = true
-			} else {
-				expectUsageOnlyChunk = true
+				return fail("chat_completions_stream_usage", "stream emitted usage on finish_reason chunk, want separate usage-only chunk")
 			}
+			expectUsageOnlyChunk = true
 		}
 		if choice.Delta.Content != "" || choice.Delta.Refusal != "" {
 			hasOutput = true
@@ -111,8 +109,8 @@ func (ChatCompletionsStreamUsage) Run(ctx context.Context, client openai.Client,
 	if !hasOutput && !isContentFilterFinishReason(finishReason) {
 		return fail("chat_completions_stream_usage", "stream produced no text content or refusal")
 	}
-	if !usageOnFinalChunk && !usageOnTerminalChunk {
-		return fail("chat_completions_stream_usage", "stream missing usage on terminal or final chunk")
+	if !usageOnFinalChunk {
+		return fail("chat_completions_stream_usage", "stream missing usage-only chunk after finish_reason")
 	}
 	return nil
 }
