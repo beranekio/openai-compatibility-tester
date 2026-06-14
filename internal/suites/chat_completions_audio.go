@@ -56,14 +56,11 @@ func (ChatCompletionsAudio) Run(ctx context.Context, client openai.Client, cfg *
 }
 
 func validateChatCompletionAudio(suite string, audio openai.ChatCompletionAudio) error {
-	if audio.Data != "" {
-		return validateBase64Data(suite, audio.Data, 1)
-	}
-	if !audio.JSON.ID.Valid() {
+	if audio.ID == "" {
 		return fail(suite, "audio missing id field")
 	}
-	if !audio.JSON.Data.Valid() {
+	if audio.Data == "" {
 		return fail(suite, "audio missing data field")
 	}
-	return nil
+	return validateBase64Data(suite, audio.Data, 1)
 }
