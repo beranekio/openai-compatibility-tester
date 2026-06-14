@@ -23,8 +23,7 @@ func (ImagesEdits) Run(ctx context.Context, client openai.Client, cfg *config.Co
 		Image: openai.ImageEditParamsImageUnion{
 			OfFile: bytes.NewReader(smallPNGBytes()),
 		},
-		N:              openai.Int(1),
-		ResponseFormat: openai.ImageEditParamsResponseFormatB64JSON,
+		N: openai.Int(1),
 	})
 	if err != nil {
 		return fmt.Errorf("image edit request failed: %w", err)

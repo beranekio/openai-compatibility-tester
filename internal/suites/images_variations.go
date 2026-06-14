@@ -20,8 +20,7 @@ func (ImagesVariations) Run(ctx context.Context, client openai.Client, cfg *conf
 	resp, err := client.Images.NewVariation(ctx, openai.ImageNewVariationParams{
 		Model:          openai.ImageModel(cfg.ImageModel),
 		Image:          bytes.NewReader(smallPNGBytes()),
-		N:              openai.Int(1),
-		ResponseFormat: openai.ImageNewVariationParamsResponseFormatB64JSON,
+		N: openai.Int(1),
 	})
 	if err != nil {
 		return fmt.Errorf("image variation request failed: %w", err)
