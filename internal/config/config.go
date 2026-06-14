@@ -89,6 +89,7 @@ var FullSuites = []string{
 	"chat_completions_json",
 	"chat_completions_vision",
 	"chat_completions_reasoning",
+	"chat_completions_audio",
 	"chat_completions_tools",
 	"chat_completions_tools_stream",
 	"chat_completions_multi_turn",
@@ -123,9 +124,10 @@ var knownSuites = map[string]struct{}{
 	"chat_completions":              {},
 	"chat_completions_stream":       {},
 	"chat_completions_json":         {},
-	"chat_completions_vision":        {},
-	"chat_completions_reasoning":     {},
-	"chat_completions_tools":         {},
+	"chat_completions_vision":       {},
+	"chat_completions_reasoning":    {},
+	"chat_completions_audio":        {},
+	"chat_completions_tools":        {},
 	"chat_completions_tools_stream": {},
 	"chat_completions_multi_turn":   {},
 	"completions":                   {},
@@ -340,7 +342,7 @@ func validateModelsForSuites(cfg *Config) error {
 	var needsVision, needsReasoning, needsImage, needsTTS, needsWhisper, needsTranscription bool
 	for _, name := range cfg.Suites {
 		switch name {
-		case "chat_completions", "chat_completions_stream", "chat_completions_json", "chat_completions_tools", "chat_completions_tools_stream", "chat_completions_multi_turn", "models_get":
+		case "chat_completions", "chat_completions_stream", "chat_completions_json", "chat_completions_audio", "chat_completions_tools", "chat_completions_tools_stream", "chat_completions_multi_turn", "models_get":
 			needsChat = true
 		case "responses", "responses_stream", "responses_tools", "responses_tools_stream", "responses_json", "responses_get", "responses_delete", "responses_cancel", "responses_input_items", "responses_compact", "responses_input_tokens":
 			needsResponses = true

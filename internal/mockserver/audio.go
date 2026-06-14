@@ -1,6 +1,9 @@
 package mockserver
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -8,6 +11,38 @@ import (
 
 // mockAudioBytes is a minimal non-empty audio payload for TTS mocks.
 var mockAudioBytes = []byte{0xff, 0xfb, 0x90, 0x00}
+
+func mockChatCompletionWAVBase64() string {
+	return base64.StdEncoding.EncodeToString(mockChatCompletionWAVBytes())
+}
+
+func mockChatCompletionWAVBytes() []byte {
+	const (
+		sampleRate    = uint32(8000)
+		numSamples    = uint32(1)
+		bitsPerSample = uint16(8)
+		numChannels   = uint16(1)
+	)
+	dataSize := numSamples
+	fileSize := uint32(36 + dataSize)
+
+	var b bytes.Buffer
+	b.WriteString("RIFF")
+	_ = binary.Write(&b, binary.LittleEndian, fileSize)
+	b.WriteString("WAVE")
+	b.WriteString("fmt ")
+	_ = binary.Write(&b, binary.LittleEndian, uint32(16))
+	_ = binary.Write(&b, binary.LittleEndian, uint16(1))
+	_ = binary.Write(&b, binary.LittleEndian, numChannels)
+	_ = binary.Write(&b, binary.LittleEndian, sampleRate)
+	_ = binary.Write(&b, binary.LittleEndian, sampleRate*uint32(numChannels)*uint32(bitsPerSample)/8)
+	_ = binary.Write(&b, binary.LittleEndian, uint16(numChannels*bitsPerSample/8))
+	_ = binary.Write(&b, binary.LittleEndian, bitsPerSample)
+	b.WriteString("data")
+	_ = binary.Write(&b, binary.LittleEndian, dataSize)
+	_, _ = b.Write(make([]byte, dataSize))
+	return b.Bytes()
+}
 
 func handleAudioSpeech(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "audio/mpeg")

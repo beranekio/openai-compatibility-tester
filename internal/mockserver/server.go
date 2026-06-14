@@ -82,7 +82,8 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 		ResponseFormat  *struct {
 			Type string `json:"type"`
 		} `json:"response_format"`
-		Messages []chatCompletionRequestMessage `json:"messages"`
+		Modalities []string                       `json:"modalities"`
+		Messages   []chatCompletionRequestMessage `json:"messages"`
 		Tools []json.RawMessage `json:"tools"`
 	}
 	_ = json.Unmarshal(body, &req)
@@ -93,6 +94,11 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeChatCompletionToolCallResponse(w)
+		return
+	}
+
+	if chatCompletionRequestHasAudioModalities(req.Modalities) {
+		writeChatCompletionAudioResponse(w)
 		return
 	}
 
@@ -170,6 +176,45 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 		"usage": usage,
+	})
+}
+
+func chatCompletionRequestHasAudioModalities(modalities []string) bool {
+	for _, modality := range modalities {
+		if modality == "audio" {
+			return true
+		}
+	}
+	return false
+}
+
+func writeChatCompletionAudioResponse(w http.ResponseWriter) {
+	writeJSON(w, map[string]any{
+		"id":      "chatcmpl-mock-audio",
+		"object":  "chat.completion",
+		"created": 1700000000,
+		"model":   "gpt-4o-mini",
+		"choices": []map[string]any{
+			{
+				"index": 0,
+				"message": map[string]any{
+					"role":    "assistant",
+					"content": nil,
+					"audio": map[string]any{
+						"id":         "audio-mock",
+						"data":       mockChatCompletionWAVBase64(),
+						"expires_at": 1700003600,
+						"transcript": "pong",
+					},
+				},
+				"finish_reason": "stop",
+			},
+		},
+		"usage": map[string]any{
+			"prompt_tokens":     5,
+			"completion_tokens": 1,
+			"total_tokens":      6,
+		},
 	})
 }
 

@@ -51,6 +51,7 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `chat_completions_json` | `client.Chat.Completions.New` (`response_format` json_schema) | `POST /v1/chat/completions` |
 | `chat_completions_vision` | `client.Chat.Completions.New` (with image input) | `POST /v1/chat/completions` |
 | `chat_completions_reasoning` | `client.Chat.Completions.New` (reasoning model) | `POST /v1/chat/completions` |
+| `chat_completions_audio` | `client.Chat.Completions.New` (with audio output) | `POST /v1/chat/completions` |
 | `chat_completions_tools` | `client.Chat.Completions.New` (with `tools`) | `POST /v1/chat/completions` |
 | `chat_completions_tools_stream` | `client.Chat.Completions.NewStreaming` (with `tools`) | `POST /v1/chat/completions` (stream) |
 | `chat_completions_multi_turn` | `client.Chat.Completions.New` (multi-turn history with developer and tool messages) | `POST /v1/chat/completions` |

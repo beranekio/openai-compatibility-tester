@@ -25,6 +25,7 @@ func All() []Suite {
 		ChatCompletionsJSON{},
 		ChatCompletionsVision{},
 		ChatCompletionsReasoning{},
+		ChatCompletionsAudio{},
 		ChatCompletionsTools{},
 		ChatCompletionsToolsStream{},
 		ChatCompletionsMultiTurn{},
@@ -81,7 +82,7 @@ func RequiredModels(names []string) ModelRequirements {
 	var req ModelRequirements
 	for _, name := range names {
 		switch name {
-		case "chat_completions", "chat_completions_stream", "chat_completions_json", "chat_completions_tools", "chat_completions_tools_stream", "chat_completions_multi_turn", "models_get", "responses", "responses_stream", "responses_tools", "responses_tools_stream", "responses_json", "responses_get", "responses_delete", "responses_cancel", "responses_input_items", "responses_compact", "responses_input_tokens":
+		case "chat_completions", "chat_completions_stream", "chat_completions_json", "chat_completions_audio", "chat_completions_tools", "chat_completions_tools_stream", "chat_completions_multi_turn", "models_get", "responses", "responses_stream", "responses_tools", "responses_tools_stream", "responses_json", "responses_get", "responses_delete", "responses_cancel", "responses_input_items", "responses_compact", "responses_input_tokens":
 			req.Chat = true
 		case "completions", "completions_stream":
 			req.Completion = true

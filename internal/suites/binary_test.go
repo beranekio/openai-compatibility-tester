@@ -53,3 +53,24 @@ func TestValidateBinaryHTTPResponse(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateBase64Data(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    string
+		wantErr bool
+	}{
+		{name: "valid base64", data: "YQ==", wantErr: false},
+		{name: "empty data", data: "", wantErr: true},
+		{name: "invalid base64", data: "not-base64!!!", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateBase64Data("chat_completions_audio", tt.data, 1)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("validateBase64Data() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
