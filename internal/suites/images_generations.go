@@ -17,10 +17,9 @@ func (ImagesGenerations) Description() string { return "Image generation (POST /
 
 func (ImagesGenerations) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
 	resp, err := client.Images.Generate(ctx, openai.ImageGenerateParams{
-		Model: openai.ImageModel(cfg.ImageModel),
+		Model:  openai.ImageModel(cfg.ImageModel),
 		Prompt: "A simple red circle on a white background.",
 		N:      openai.Int(1),
-		ResponseFormat: openai.ImageGenerateParamsResponseFormatB64JSON,
 	})
 	if err != nil {
 		return fmt.Errorf("image generation request failed: %w", err)
