@@ -20,8 +20,9 @@ const (
 	EnvResponsesModel  = "OPENAI_RESPONSES_MODEL"
 	EnvVisionModel     = "OPENAI_VISION_MODEL"
 	EnvImageModel      = "OPENAI_IMAGE_MODEL"
-	EnvTTSModel        = "OPENAI_TTS_MODEL"
-	EnvWhisperModel    = "OPENAI_WHISPER_MODEL"
+	EnvTTSModel            = "OPENAI_TTS_MODEL"
+	EnvWhisperModel        = "OPENAI_WHISPER_MODEL"
+	EnvTranscriptionModel  = "OPENAI_TRANSCRIPTION_MODEL"
 	EnvTestSuites      = "TEST_SUITES"
 	EnvRequestTimeout  = "REQUEST_TIMEOUT"
 	EnvAllowInsecureHTTP = "ALLOW_INSECURE_HTTP"
@@ -71,6 +72,9 @@ var ExtendedSuites = []string{
 	"images_generations",
 	"images_edits",
 	"audio_speech",
+	"audio_transcriptions",
+	"audio_transcriptions_stream",
+	"audio_translations",
 }
 
 // FullSuites lists every registered suite name. Keep in sync with suites.All().
@@ -103,6 +107,9 @@ var FullSuites = []string{
 	"images_edits",
 	"images_variations",
 	"audio_speech",
+	"audio_transcriptions",
+	"audio_transcriptions_stream",
+	"audio_translations",
 }
 
 var knownSuites = map[string]struct{}{
@@ -134,6 +141,9 @@ var knownSuites = map[string]struct{}{
 	"images_edits":                  {},
 	"images_variations":             {},
 	"audio_speech":                  {},
+	"audio_transcriptions":          {},
+	"audio_transcriptions_stream":   {},
+	"audio_translations":            {},
 }
 
 // Config holds runtime settings for compatibility testing.
@@ -146,8 +156,9 @@ type Config struct {
 	ResponsesModel  string
 	VisionModel     string
 	ImageModel      string
-	TTSModel        string
-	WhisperModel    string
+	TTSModel            string
+	WhisperModel        string
+	TranscriptionModel  string
 	Suites          []string
 	RequestTimeout  time.Duration
 	AllowInsecureHTTP bool
@@ -168,7 +179,8 @@ func Load(args []string) (*Config, error) {
 	visionModel := fs.String("vision-model", envOrDefault(EnvVisionModel, ""), "Model for vision chat suites (defaults to --model)")
 	imageModel := fs.String("image-model", envOrDefault(EnvImageModel, ""), "Model for image generation suites")
 	ttsModel := fs.String("tts-model", envOrDefault(EnvTTSModel, ""), "Model for text-to-speech suites")
-	whisperModel := fs.String("whisper-model", envOrDefault(EnvWhisperModel, ""), "Model for speech-to-text suites")
+	whisperModel := fs.String("whisper-model", envOrDefault(EnvWhisperModel, ""), "Model for audio transcription and translation suites")
+	transcriptionModel := fs.String("transcription-model", envOrDefault(EnvTranscriptionModel, ""), "Model for streaming audio transcription suite")
 	allowInsecureHTTP := fs.Bool("allow-insecure-http", envBoolOrDefault(EnvAllowInsecureHTTP, false), "Allow plaintext HTTP to non-loopback hosts")
 	suiteList := fs.String("suites", envOrDefault(EnvTestSuites, "all"), "Comma-separated suite names, or preset: all, default, extended, full")
 	timeout := fs.Duration("timeout", 2*time.Minute, "Per-request timeout")
@@ -195,7 +207,8 @@ func Load(args []string) (*Config, error) {
 		VisionModel:       strings.TrimSpace(*visionModel),
 		ImageModel:        strings.TrimSpace(*imageModel),
 		TTSModel:          strings.TrimSpace(*ttsModel),
-		WhisperModel:      strings.TrimSpace(*whisperModel),
+		WhisperModel:        strings.TrimSpace(*whisperModel),
+		TranscriptionModel:  strings.TrimSpace(*transcriptionModel),
 		RequestTimeout:    *timeout,
 		AllowInsecureHTTP: *allowInsecureHTTP,
 		ListSuites:        *listSuites,
@@ -314,7 +327,7 @@ func validateSuiteNames(names []string) error {
 
 func validateModelsForSuites(cfg *Config) error {
 	var needsChat, needsResponses, needsCompletion, needsEmbedding bool
-	var needsVision, needsImage, needsTTS, needsWhisper bool
+	var needsVision, needsImage, needsTTS, needsWhisper, needsTranscription bool
 	for _, name := range cfg.Suites {
 		switch name {
 		case "chat_completions", "chat_completions_stream", "chat_completions_json", "chat_completions_tools", "chat_completions_tools_stream", "models_get":
@@ -331,8 +344,10 @@ func validateModelsForSuites(cfg *Config) error {
 			needsImage = true
 		case "audio_speech":
 			needsTTS = true
-		case "audio_transcriptions", "audio_transcriptions_stream", "audio_translations":
+		case "audio_transcriptions", "audio_translations":
 			needsWhisper = true
+		case "audio_transcriptions_stream":
+			needsTranscription = true
 		}
 	}
 	if needsChat && cfg.Model == "" {
@@ -358,6 +373,9 @@ func validateModelsForSuites(cfg *Config) error {
 	}
 	if needsWhisper && cfg.WhisperModel == "" {
 		return fmt.Errorf("%s or --whisper-model is required for selected suites", EnvWhisperModel)
+	}
+	if needsTranscription && cfg.TranscriptionModel == "" {
+		return fmt.Errorf("%s or --transcription-model is required for selected suites", EnvTranscriptionModel)
 	}
 	return nil
 }

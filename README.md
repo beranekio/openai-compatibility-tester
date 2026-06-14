@@ -27,7 +27,8 @@ docker run --rm \
 | `OPENAI_VISION_MODEL` | `--vision-model` | when `chat_completions_vision` is selected | same as `OPENAI_MODEL` | Model used for vision chat suites |
 | `OPENAI_IMAGE_MODEL` | `--image-model` | when `images_generations` or `images_edits` is selected | — | Model used for image generation and edit suites |
 | `OPENAI_TTS_MODEL` | `--tts-model` | when `audio_speech` is selected | — | Model used for text-to-speech suites |
-| `OPENAI_WHISPER_MODEL` | `--whisper-model` | when audio transcription suites are selected | — | Model used for speech-to-text suites |
+| `OPENAI_WHISPER_MODEL` | `--whisper-model` | when `audio_transcriptions` or `audio_translations` is selected | — | Model for non-streaming transcription and translation (e.g. `whisper-1`) |
+| `OPENAI_TRANSCRIPTION_MODEL` | `--transcription-model` | when `audio_transcriptions_stream` is selected | — | Model for streaming transcription (e.g. `gpt-4o-mini-transcribe`) |
 | `TEST_SUITES` | `--suites` | no | `all` | Comma-separated suite names, or preset: `all`/`default`, `extended`, `full` |
 | `REQUEST_TIMEOUT` | `--timeout` | no | `2m` | Per-suite request timeout |
 | `ALLOW_INSECURE_HTTP` | `--allow-insecure-http` | no | `false` | Allow plaintext `http://` to non-loopback hosts (loopback HTTP is always permitted) |
@@ -70,10 +71,13 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `images_edits` | `client.Images.Edit` | `POST /v1/images/edits` |
 | `images_variations` | `client.Images.NewVariation` | `POST /v1/images/variations` |
 | `audio_speech` | `client.Audio.Speech.New` | `POST /v1/audio/speech` |
+| `audio_transcriptions` | `client.Audio.Transcriptions.New` | `POST /v1/audio/transcriptions` |
+| `audio_transcriptions_stream` | `client.Audio.Transcriptions.NewStreaming` | `POST /v1/audio/transcriptions` (stream) |
+| `audio_translations` | `client.Audio.Translations.New` | `POST /v1/audio/translations` |
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
-Extended preset (`extended`): default suites plus `chat_completions_json`, `chat_completions_tools`, `chat_completions_tools_stream`, `responses_tools`, `responses_tools_stream`, `responses_json`, `responses_get`, `responses_delete`, `responses_cancel`, `responses_input_items`, `responses_compact`, `responses_input_tokens`, `completions`, `completions_stream`, `embeddings`, `embeddings_batch`, `chat_completions_vision`, `moderations`, `images_generations`, `images_edits`, and `audio_speech`.
+Extended preset (`extended`): default suites plus `chat_completions_json`, `chat_completions_tools`, `chat_completions_tools_stream`, `responses_tools`, `responses_tools_stream`, `responses_json`, `responses_get`, `responses_delete`, `responses_cancel`, `responses_input_items`, `responses_compact`, `responses_input_tokens`, `completions`, `completions_stream`, `embeddings`, `embeddings_batch`, `chat_completions_vision`, `moderations`, `images_generations`, `images_edits`, `audio_speech`, `audio_transcriptions`, `audio_transcriptions_stream`, and `audio_translations`.
 
 Full preset (`full`): every registered suite (see `--list-suites`).
 
@@ -98,6 +102,8 @@ docker run --rm \
   -e OPENAI_EMBEDDING_MODEL=your-embedding-model \
   -e OPENAI_IMAGE_MODEL=your-image-model \
   -e OPENAI_TTS_MODEL=tts-1 \
+  -e OPENAI_WHISPER_MODEL=whisper-1 \
+  -e OPENAI_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe \
   -e TEST_SUITES=extended \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
@@ -167,6 +173,18 @@ docker run --rm \
   -e OPENAI_API_KEY=your-api-key \
   -e OPENAI_TTS_MODEL=tts-1 \
   -e TEST_SUITES=audio_speech \
+  ghcr.io/beranekio/openai-compatibility-tester:latest
+```
+
+**Speech-to-text** — non-streaming transcription and translation use `OPENAI_WHISPER_MODEL` (typically `whisper-1`). Streaming transcription uses `OPENAI_TRANSCRIPTION_MODEL` (e.g. `gpt-4o-mini-transcribe`):
+
+```bash
+docker run --rm \
+  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
+  -e OPENAI_API_KEY=your-api-key \
+  -e OPENAI_WHISPER_MODEL=whisper-1 \
+  -e OPENAI_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe \
+  -e TEST_SUITES=audio_transcriptions,audio_transcriptions_stream,audio_translations \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 

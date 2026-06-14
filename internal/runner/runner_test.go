@@ -24,6 +24,8 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 		VisionModel:      "gpt-4o-mini",
 		ImageModel:       "dall-e-2",
 		TTSModel:         "tts-1",
+		WhisperModel:         "whisper-1",
+		TranscriptionModel:   "gpt-4o-mini-transcribe",
 		EmbeddingModel:   "text-embedding-3-small",
 		RequestTimeout:   30 * time.Second,
 		Suites: []string{
@@ -54,6 +56,9 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"images_edits",
 			"images_variations",
 			"audio_speech",
+			"audio_transcriptions",
+			"audio_transcriptions_stream",
+			"audio_translations",
 		},
 	}
 
