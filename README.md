@@ -72,7 +72,7 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
-Extended preset (`extended`): default suites plus `chat_completions_json`, `chat_completions_tools`, `chat_completions_tools_stream`, `responses_tools`, `responses_tools_stream`, `responses_json`, `responses_get`, `responses_delete`, `responses_cancel`, `responses_input_items`, `responses_compact`, `responses_input_tokens`, `completions`, `completions_stream`, `embeddings`, `embeddings_batch`, `chat_completions_vision`, `moderations`, `images_generations`, `images_edits`, and `images_variations`.
+Extended preset (`extended`): default suites plus `chat_completions_json`, `chat_completions_tools`, `chat_completions_tools_stream`, `responses_tools`, `responses_tools_stream`, `responses_json`, `responses_get`, `responses_delete`, `responses_cancel`, `responses_input_items`, `responses_compact`, `responses_input_tokens`, `completions`, `completions_stream`, `embeddings`, `embeddings_batch`, `chat_completions_vision`, `moderations`, `images_generations`, and `images_edits`.
 
 Full preset (`full`): every registered suite (see `--list-suites`).
 
@@ -145,7 +145,17 @@ docker run --rm \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 
-`images_edits` uses `OPENAI_IMAGE_MODEL` (GPT Image models or `dall-e-2`; `dall-e-3` is not supported for edits). `images_variations` always requests `dall-e-2` and does not use `OPENAI_IMAGE_MODEL`.
+`images_edits` uses `OPENAI_IMAGE_MODEL` (GPT Image models or `dall-e-2`; `dall-e-3` is not supported for edits).
+
+Add `images_variations` only when your endpoint still exposes legacy DALL-E 2 `/v1/images/variations`. The suite always requests `dall-e-2` (the only model that endpoint supports) and does not use `OPENAI_IMAGE_MODEL`. Official OpenAI retired DALL-E models in May 2026; this suite is included in `full` but not in `extended`:
+
+```bash
+docker run --rm \
+  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
+  -e OPENAI_API_KEY=your-api-key \
+  -e TEST_SUITES=images_variations \
+  ghcr.io/beranekio/openai-compatibility-tester:latest
+```
 
 **Vision** — requires a vision-capable model (`OPENAI_VISION_MODEL` defaults to `OPENAI_MODEL`):
 

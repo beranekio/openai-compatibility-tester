@@ -70,7 +70,6 @@ var ExtendedSuites = []string{
 	"moderations",
 	"images_generations",
 	"images_edits",
-	"images_variations",
 }
 
 // FullSuites lists every registered suite name. Keep in sync with suites.All().
