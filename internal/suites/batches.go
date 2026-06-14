@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
@@ -120,13 +121,22 @@ func cleanupBatchArtifacts(client openai.Client, batchID, fileID string) {
 	}
 }
 
+func isBatchCancelAlreadyTerminalError(apiErr *openai.Error) bool {
+	switch apiErr.StatusCode {
+	case http.StatusConflict, http.StatusBadRequest:
+		return true
+	default:
+		return false
+	}
+}
+
 // exerciseBatchCancelEndpoint calls Cancel when the batch already completed before
-// becoming cancelable. A structured API error still proves the cancel route exists.
+// becoming cancelable. Only expected terminal-state errors prove the route exists.
 func exerciseBatchCancelEndpoint(ctx context.Context, client openai.Client, suite, batchID string) error {
 	cancelled, err := client.Batches.Cancel(ctx, batchID)
 	if err != nil {
 		var apiErr *openai.Error
-		if errors.As(err, &apiErr) {
+		if errors.As(err, &apiErr) && isBatchCancelAlreadyTerminalError(apiErr) {
 			return nil
 		}
 		return fmt.Errorf("batch cancel failed: %w", err)
