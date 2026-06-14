@@ -46,6 +46,9 @@ func All() []Suite {
 		ImagesEdits{},
 		ImagesVariations{},
 		AudioSpeech{},
+		AudioTranscriptions{},
+		AudioTranscriptionsStream{},
+		AudioTranslations{},
 	}
 }
 

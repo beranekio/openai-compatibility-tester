@@ -2,6 +2,7 @@ package suites
 
 import (
 	"bytes"
+	"encoding/binary"
 	"image"
 	"image/color"
 	"image/png"
@@ -45,4 +46,33 @@ func (r *namedPNGReader) ContentType() string {
 
 func smallPNGReader() io.Reader {
 	return &namedPNGReader{r: bytes.NewReader(smallPNG)}
+}
+
+// smallWAVBytes returns a minimal mono 8-bit WAV file for multipart audio upload tests.
+func smallWAVBytes() []byte {
+	const (
+		sampleRate    = uint32(8000)
+		numSamples    = uint32(8)
+		bitsPerSample = uint16(8)
+		numChannels   = uint16(1)
+	)
+	dataSize := numSamples
+	fileSize := uint32(36 + dataSize)
+
+	var b bytes.Buffer
+	b.WriteString("RIFF")
+	_ = binary.Write(&b, binary.LittleEndian, fileSize)
+	b.WriteString("WAVE")
+	b.WriteString("fmt ")
+	_ = binary.Write(&b, binary.LittleEndian, uint32(16))
+	_ = binary.Write(&b, binary.LittleEndian, uint16(1))
+	_ = binary.Write(&b, binary.LittleEndian, numChannels)
+	_ = binary.Write(&b, binary.LittleEndian, sampleRate)
+	_ = binary.Write(&b, binary.LittleEndian, sampleRate*uint32(numChannels)*uint32(bitsPerSample)/8)
+	_ = binary.Write(&b, binary.LittleEndian, uint16(numChannels*bitsPerSample/8))
+	_ = binary.Write(&b, binary.LittleEndian, bitsPerSample)
+	b.WriteString("data")
+	_ = binary.Write(&b, binary.LittleEndian, dataSize)
+	_, _ = b.Write(make([]byte, dataSize))
+	return b.Bytes()
 }
