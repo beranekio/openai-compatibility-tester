@@ -38,11 +38,11 @@ func (ChatCompletionsLogprobs) Run(ctx context.Context, client openai.Client, cf
 	}
 
 	choice := resp.Choices[0]
-	if isContentFilterFinishReason(choice.FinishReason) {
-		return nil
-	}
 	if err := validateChatCompletionChoice("chat_completions_logprobs", choice); err != nil {
 		return err
+	}
+	if isContentFilterFinishReason(choice.FinishReason) {
+		return nil
 	}
 	if !choice.JSON.Logprobs.Valid() {
 		return fail("chat_completions_logprobs", "choice missing logprobs")
@@ -101,7 +101,7 @@ func validateChatCompletionTokenLogprob(suite string, entry openai.ChatCompletio
 	if !entry.JSON.Token.Valid() {
 		return fail(suite, "logprob entry missing token")
 	}
-	if !entry.JSON.Bytes.Valid() {
+	if entry.JSON.Bytes.Raw() == "" {
 		return fail(suite, "logprob entry missing bytes")
 	}
 	if !entry.JSON.Logprob.Valid() {

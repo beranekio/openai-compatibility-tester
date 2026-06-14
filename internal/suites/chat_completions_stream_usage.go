@@ -81,13 +81,13 @@ func (ChatCompletionsStreamUsage) Run(ctx context.Context, client openai.Client,
 		if err := validateChatCompletionChunkChoice("chat_completions_stream_usage", chunk); err != nil {
 			return err
 		}
+		if chunk.JSON.Usage.Valid() {
+			return fail("chat_completions_stream_usage", "stream emitted usage on choice chunk, want separate usage-only chunk")
+		}
 		choice := chunk.Choices[0]
 		if choice.FinishReason != "" {
 			finished = true
 			finishReason = choice.FinishReason
-			if chunk.JSON.Usage.Valid() {
-				return fail("chat_completions_stream_usage", "stream emitted usage on finish_reason chunk, want separate usage-only chunk")
-			}
 			expectUsageOnlyChunk = true
 		}
 		if choice.Delta.Content != "" || choice.Delta.Refusal != "" {

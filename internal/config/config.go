@@ -51,6 +51,7 @@ var ExtendedSuites = []string{
 	"chat_completions",
 	"chat_completions_stream",
 	"chat_completions_stream_usage",
+	"chat_completions_logprobs",
 	"chat_completions_json",
 	"chat_completions_tools",
 	"chat_completions_tools_stream",
