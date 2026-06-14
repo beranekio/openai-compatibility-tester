@@ -2,6 +2,7 @@ package suites
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -27,9 +28,16 @@ func uploadBatchInputFile(ctx context.Context, client openai.Client, cfg *config
 		return nil, fail("batches", fmt.Sprintf("upload purpose is %q, want batch", uploaded.Purpose))
 	}
 	if err := waitForBatchInputFile(ctx, client, uploaded.ID); err != nil {
+		deleteBatchInputFile(client, uploaded.ID)
 		return nil, err
 	}
 	return uploaded, nil
+}
+
+func deleteBatchInputFile(client openai.Client, fileID string) {
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, _ = client.Files.Delete(cleanupCtx, fileID)
 }
 
 func waitForBatchInputFile(ctx context.Context, client openai.Client, fileID string) error {
@@ -102,11 +110,34 @@ func cleanupBatchArtifacts(client openai.Client, batchID, fileID string) {
 	cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if batchID != "" {
-		_, _ = client.Batches.Cancel(cleanupCtx, batchID)
+		skipCancel, err := waitForBatchCancelable(cleanupCtx, client, "batches", batchID)
+		if err != nil || !skipCancel {
+			_, _ = client.Batches.Cancel(cleanupCtx, batchID)
+		}
 	}
 	if fileID != "" {
 		_, _ = client.Files.Delete(cleanupCtx, fileID)
 	}
+}
+
+// exerciseBatchCancelEndpoint calls Cancel when the batch already completed before
+// becoming cancelable. A structured API error still proves the cancel route exists.
+func exerciseBatchCancelEndpoint(ctx context.Context, client openai.Client, suite, batchID string) error {
+	cancelled, err := client.Batches.Cancel(ctx, batchID)
+	if err != nil {
+		var apiErr *openai.Error
+		if errors.As(err, &apiErr) {
+			return nil
+		}
+		return fmt.Errorf("batch cancel failed: %w", err)
+	}
+	if err := validateBatchEnvelope(suite, cancelled); err != nil {
+		return err
+	}
+	if cancelled.ID != batchID {
+		return fail(suite, fmt.Sprintf("cancel id is %q, want %q", cancelled.ID, batchID))
+	}
+	return nil
 }
 
 func validateBatchObject(suite string, batch *openai.Batch) error {

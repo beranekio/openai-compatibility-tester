@@ -48,7 +48,7 @@ func (BatchesCancel) Run(ctx context.Context, client openai.Client, cfg *config.
 		return err
 	}
 	if skipCancel {
-		return nil
+		return exerciseBatchCancelEndpoint(ctx, client, "batches_cancel", created.ID)
 	}
 
 	cancelled, err := client.Batches.Cancel(ctx, created.ID)
