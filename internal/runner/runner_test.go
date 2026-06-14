@@ -50,6 +50,8 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"responses_input_tokens",
 			"moderations",
 			"images_generations",
+			"images_edits",
+			"images_variations",
 		},
 	}
 

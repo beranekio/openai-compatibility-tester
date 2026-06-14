@@ -69,6 +69,7 @@ var ExtendedSuites = []string{
 	"chat_completions_vision",
 	"moderations",
 	"images_generations",
+	"images_edits",
 }
 
 // FullSuites lists every registered suite name. Keep in sync with suites.All().
@@ -98,6 +99,8 @@ var FullSuites = []string{
 	"responses_input_tokens",
 	"moderations",
 	"images_generations",
+	"images_edits",
+	"images_variations",
 }
 
 var knownSuites = map[string]struct{}{
@@ -126,6 +129,8 @@ var knownSuites = map[string]struct{}{
 	"responses_input_tokens":        {},
 	"moderations":                   {},
 	"images_generations":            {},
+	"images_edits":                  {},
+	"images_variations":             {},
 }
 
 // Config holds runtime settings for compatibility testing.
@@ -319,7 +324,7 @@ func validateModelsForSuites(cfg *Config) error {
 			needsEmbedding = true
 		case "chat_completions_vision":
 			needsVision = true
-		case "images_generations", "images_edits", "images_variations":
+		case "images_generations", "images_edits":
 			needsImage = true
 		case "audio_speech":
 			needsTTS = true
