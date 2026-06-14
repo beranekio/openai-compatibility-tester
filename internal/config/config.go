@@ -68,6 +68,7 @@ var ExtendedSuites = []string{
 	"embeddings_batch",
 	"chat_completions_vision",
 	"moderations",
+	"images_generations",
 }
 
 // FullSuites lists every registered suite name. Keep in sync with suites.All().
@@ -96,6 +97,7 @@ var FullSuites = []string{
 	"responses_compact",
 	"responses_input_tokens",
 	"moderations",
+	"images_generations",
 }
 
 var knownSuites = map[string]struct{}{
@@ -123,6 +125,7 @@ var knownSuites = map[string]struct{}{
 	"responses_compact":             {},
 	"responses_input_tokens":        {},
 	"moderations":                   {},
+	"images_generations":            {},
 }
 
 // Config holds runtime settings for compatibility testing.
