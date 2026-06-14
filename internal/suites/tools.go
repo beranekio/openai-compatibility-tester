@@ -37,6 +37,12 @@ func requiredToolChoice() openai.ChatCompletionToolChoiceOptionUnionParam {
 	}
 }
 
+func noToolChoice() openai.ChatCompletionToolChoiceOptionUnionParam {
+	return openai.ChatCompletionToolChoiceOptionUnionParam{
+		OfAuto: openai.String(string(openai.ChatCompletionToolChoiceOptionAutoNone)),
+	}
+}
+
 func weatherResponseTools() []responses.ToolUnionParam {
 	return []responses.ToolUnionParam{{
 		OfFunction: &responses.FunctionToolParam{
