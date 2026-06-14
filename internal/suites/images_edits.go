@@ -1,7 +1,6 @@
 package suites
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -21,7 +20,7 @@ func (ImagesEdits) Run(ctx context.Context, client openai.Client, cfg *config.Co
 		Model:  openai.ImageModel(cfg.ImageModel),
 		Prompt: "Add a blue border.",
 		Image: openai.ImageEditParamsImageUnion{
-			OfFile: bytes.NewReader(smallPNGBytes()),
+			OfFile: smallPNGReader(),
 		},
 		N: openai.Int(1),
 	})

@@ -1,7 +1,6 @@
 package suites
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -16,11 +15,11 @@ type ImagesVariations struct{}
 func (ImagesVariations) Name() string        { return "images_variations" }
 func (ImagesVariations) Description() string { return "Image variations (POST /v1/images/variations)" }
 
-func (ImagesVariations) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
+func (ImagesVariations) Run(ctx context.Context, client openai.Client, _ *config.Config) error {
 	resp, err := client.Images.NewVariation(ctx, openai.ImageNewVariationParams{
-		Model:          openai.ImageModel(cfg.ImageModel),
-		Image:          bytes.NewReader(smallPNGBytes()),
-		N: openai.Int(1),
+		Model: openai.ImageModelDallE2,
+		Image: smallPNGReader(),
+		N:     openai.Int(1),
 	})
 	if err != nil {
 		return fmt.Errorf("image variation request failed: %w", err)

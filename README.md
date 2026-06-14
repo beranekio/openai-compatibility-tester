@@ -145,6 +145,8 @@ docker run --rm \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 
+`images_edits` uses `OPENAI_IMAGE_MODEL` (GPT Image models or `dall-e-2`; `dall-e-3` is not supported for edits). `images_variations` always requests `dall-e-2`, the only model that endpoint supports.
+
 **Vision** — requires a vision-capable model (`OPENAI_VISION_MODEL` defaults to `OPENAI_MODEL`):
 
 ```bash
