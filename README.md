@@ -25,7 +25,7 @@ docker run --rm \
 | `OPENAI_COMPLETION_MODEL` | `--completion-model` | no | `gpt-3.5-turbo-instruct` when `completions` or `completions_stream` is selected, otherwise same as `OPENAI_MODEL` | Model used for legacy completions suites |
 | `OPENAI_EMBEDDING_MODEL` | `--embedding-model` | when `embeddings` or `embeddings_batch` is selected | — | Model used for embedding suites |
 | `OPENAI_VISION_MODEL` | `--vision-model` | when `chat_completions_vision` is selected | same as `OPENAI_MODEL` | Model used for vision chat suites |
-| `OPENAI_IMAGE_MODEL` | `--image-model` | when image suites are selected | — | Model used for image generation suites |
+| `OPENAI_IMAGE_MODEL` | `--image-model` | when `images_generations` or `images_edits` is selected | — | Model used for image generation and edit suites |
 | `OPENAI_TTS_MODEL` | `--tts-model` | when `audio_speech` is selected | — | Model used for text-to-speech suites |
 | `OPENAI_WHISPER_MODEL` | `--whisper-model` | when audio transcription suites are selected | — | Model used for speech-to-text suites |
 | `TEST_SUITES` | `--suites` | no | `all` | Comma-separated suite names, or preset: `all`/`default`, `extended`, `full` |
@@ -145,7 +145,7 @@ docker run --rm \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 
-`images_edits` uses `OPENAI_IMAGE_MODEL` (GPT Image models or `dall-e-2`; `dall-e-3` is not supported for edits). `images_variations` always requests `dall-e-2`, the only model that endpoint supports.
+`images_edits` uses `OPENAI_IMAGE_MODEL` (GPT Image models or `dall-e-2`; `dall-e-3` is not supported for edits). `images_variations` always requests `dall-e-2` and does not use `OPENAI_IMAGE_MODEL`.
 
 **Vision** — requires a vision-capable model (`OPENAI_VISION_MODEL` defaults to `OPENAI_MODEL`):
 

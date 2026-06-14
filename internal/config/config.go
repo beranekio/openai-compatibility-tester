@@ -325,7 +325,7 @@ func validateModelsForSuites(cfg *Config) error {
 			needsEmbedding = true
 		case "chat_completions_vision":
 			needsVision = true
-		case "images_generations", "images_edits", "images_variations":
+		case "images_generations", "images_edits":
 			needsImage = true
 		case "audio_speech":
 			needsTTS = true

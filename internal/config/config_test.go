@@ -385,6 +385,31 @@ func TestLoadRejectsEmbeddingsBatchSuiteWithoutEmbeddingModel(t *testing.T) {
 	}
 }
 
+func TestLoadAllowsImagesVariationsSuiteWithoutImageModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvImageModel, "")
+
+	cfg, err := Load([]string{"--suites", "images_variations"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if len(cfg.Suites) != 1 || cfg.Suites[0] != "images_variations" {
+		t.Fatalf("Suites = %v, want [images_variations]", cfg.Suites)
+	}
+}
+
+func TestLoadRejectsImagesEditsSuiteWithoutImageModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvImageModel, "")
+
+	_, err := Load([]string{"--suites", "images_edits"})
+	if err == nil || !strings.Contains(err.Error(), EnvImageModel) {
+		t.Fatalf("expected missing image model error, got %v", err)
+	}
+}
+
 func TestLoadAllowsLoopbackHTTP(t *testing.T) {
 	t.Setenv(EnvBaseURL, "http://127.0.0.1:4010/v1")
 	t.Setenv(EnvAPIKey, "test-key")

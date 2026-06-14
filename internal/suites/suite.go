@@ -81,7 +81,7 @@ func RequiredModels(names []string) ModelRequirements {
 			req.Embedding = true
 		case "chat_completions_vision":
 			req.Vision = true
-		case "images_generations", "images_edits", "images_variations":
+		case "images_generations", "images_edits":
 			req.Image = true
 		case "audio_speech":
 			req.TTS = true
