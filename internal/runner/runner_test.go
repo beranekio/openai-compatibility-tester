@@ -71,6 +71,9 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"audio_translations",
 			"files",
 			"uploads",
+			"batches_create",
+			"batches_get",
+			"batches_cancel",
 		},
 	}
 

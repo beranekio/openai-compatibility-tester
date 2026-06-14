@@ -31,7 +31,7 @@ docker run --rm \
 | `OPENAI_WHISPER_MODEL` | `--whisper-model` | when `audio_transcriptions` or `audio_translations` is selected | — | Model for non-streaming transcription and translation (e.g. `whisper-1`) |
 | `OPENAI_TRANSCRIPTION_MODEL` | `--transcription-model` | when `audio_transcriptions_stream` is selected | — | Model for streaming transcription (e.g. `gpt-4o-mini-transcribe`) |
 | `TEST_SUITES` | `--suites` | no | `all` | Comma-separated suite names, or preset: `all`/`default`, `extended`, `full` |
-| `REQUEST_TIMEOUT` | `--timeout` | no | `2m` | Per-suite request timeout |
+| `REQUEST_TIMEOUT` | `--timeout` | no | `2m` | Per-suite request timeout (batch suites may need a longer value against real APIs while jobs finish) |
 | `ALLOW_INSECURE_HTTP` | `--allow-insecure-http` | no | `false` | Allow plaintext `http://` to non-loopback hosts (loopback HTTP is always permitted) |
 
 List available suites:
@@ -86,6 +86,9 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `audio_translations` | `client.Audio.Translations.New` | `POST /v1/audio/translations` |
 | `files` | `client.Files.New`, `List`, `Get`, `Content`, `Delete` | `POST/GET/DELETE /v1/files`, `GET /v1/files/{id}/content` |
 | `uploads` | `client.Uploads.New`, `Parts.New`, `Complete` | `POST /v1/uploads`, `POST /v1/uploads/{id}/parts`, `POST /v1/uploads/{id}/complete` |
+| `batches_create` | `client.Batches.New` | `POST /v1/batches` |
+| `batches_get` | `client.Batches.Get` | `GET /v1/batches/{id}` |
+| `batches_cancel` | `client.Batches.Cancel` | `POST /v1/batches/{id}/cancel` |
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
