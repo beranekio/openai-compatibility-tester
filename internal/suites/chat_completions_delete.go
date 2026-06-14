@@ -58,7 +58,6 @@ func (ChatCompletionsDelete) Run(ctx context.Context, client openai.Client, cfg 
 	if string(resp.Object) != "chat.completion.deleted" {
 		return fail("chat_completions_delete", fmt.Sprintf("delete object is %q, want chat.completion.deleted", resp.Object))
 	}
-	deleted = true
 
 	_, getErr := client.Chat.Completions.Get(ctx, created.ID)
 	if getErr == nil {
@@ -71,5 +70,6 @@ func (ChatCompletionsDelete) Run(ctx context.Context, client openai.Client, cfg 
 	if apiErr.StatusCode != http.StatusNotFound {
 		return fail("chat_completions_delete", fmt.Sprintf("get after delete returned status %d, want 404", apiErr.StatusCode))
 	}
+	deleted = true
 	return nil
 }
