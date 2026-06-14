@@ -18,10 +18,17 @@ func (BatchesGet) Description() string {
 }
 
 func (BatchesGet) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
+	var batchID string
+	var fileID string
+	defer func() {
+		cleanupBatchArtifacts(client, batchID, fileID)
+	}()
+
 	uploaded, err := uploadBatchInputFile(ctx, client, cfg)
 	if err != nil {
 		return err
 	}
+	fileID = uploaded.ID
 
 	created, err := client.Batches.New(ctx, openai.BatchNewParams{
 		CompletionWindow: openai.BatchNewParamsCompletionWindow24h,
@@ -34,19 +41,13 @@ func (BatchesGet) Run(ctx context.Context, client openai.Client, cfg *config.Con
 	if created == nil || created.ID == "" {
 		return fail("batches_get", "batch create missing id")
 	}
+	batchID = created.ID
 
-	got, err := client.Batches.Get(ctx, created.ID)
+	got, err := waitForBatchStatus(ctx, client, "batches_get", created.ID, func(status string) bool {
+		return status == "completed"
+	})
 	if err != nil {
-		return fmt.Errorf("batch get failed: %w", err)
-	}
-	if err := validateBatchObject("batches_get", got); err != nil {
 		return err
-	}
-	if got.ID != created.ID {
-		return fail("batches_get", fmt.Sprintf("batch id is %q, want %q", got.ID, created.ID))
-	}
-	if string(got.Status) != "completed" {
-		return fail("batches_get", fmt.Sprintf("batch status is %q, want completed", got.Status))
 	}
 	if got.RequestCounts.Completed != 1 {
 		return fail("batches_get", fmt.Sprintf("batch request_counts.completed is %d, want 1", got.RequestCounts.Completed))

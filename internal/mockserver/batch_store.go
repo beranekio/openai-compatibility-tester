@@ -15,8 +15,8 @@ type storedBatch struct {
 }
 
 type batchStore struct {
-	mu     sync.Mutex
-	next   int
+	mu      sync.Mutex
+	next    int
 	batches map[string]storedBatch
 }
 
@@ -49,16 +49,33 @@ func (s *batchStore) get(id string) (storedBatch, bool) {
 	return batch, true
 }
 
-func (s *batchStore) setStatus(id, status string) bool {
+func (s *batchStore) advanceStatus(id string) (storedBatch, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	batch, ok := s.batches[id]
 	if !ok {
-		return false
+		return storedBatch{}, false
 	}
-	batch.status = status
+	switch batch.status {
+	case "validating":
+		batch.status = "in_progress"
+	case "in_progress":
+		batch.status = "completed"
+	}
 	s.batches[id] = batch
-	return true
+	return batch, true
+}
+
+func (s *batchStore) cancel(id string) (storedBatch, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	batch, ok := s.batches[id]
+	if !ok {
+		return storedBatch{}, false
+	}
+	batch.status = "cancelled"
+	s.batches[id] = batch
+	return batch, true
 }
 
 func batchObjectPayload(batch storedBatch) map[string]any {

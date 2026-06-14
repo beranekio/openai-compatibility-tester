@@ -18,10 +18,17 @@ func (BatchesCreate) Description() string {
 }
 
 func (BatchesCreate) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
+	var batchID string
+	var fileID string
+	defer func() {
+		cleanupBatchArtifacts(client, batchID, fileID)
+	}()
+
 	uploaded, err := uploadBatchInputFile(ctx, client, cfg)
 	if err != nil {
 		return err
 	}
+	fileID = uploaded.ID
 
 	created, err := client.Batches.New(ctx, openai.BatchNewParams{
 		CompletionWindow: openai.BatchNewParamsCompletionWindow24h,
@@ -34,11 +41,12 @@ func (BatchesCreate) Run(ctx context.Context, client openai.Client, cfg *config.
 	if err := validateBatchObject("batches_create", created); err != nil {
 		return err
 	}
+	batchID = created.ID
 	if created.InputFileID != uploaded.ID {
 		return fail("batches_create", fmt.Sprintf("batch input_file_id is %q, want %q", created.InputFileID, uploaded.ID))
 	}
-	if string(created.Status) != "in_progress" {
-		return fail("batches_create", fmt.Sprintf("batch status is %q, want in_progress", created.Status))
+	if !isBatchCreateStatusOK(string(created.Status)) {
+		return fail("batches_create", fmt.Sprintf("batch status is %q, want validating or in_progress", created.Status))
 	}
 	return nil
 }

@@ -3,7 +3,6 @@ package suites
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
 
@@ -19,14 +18,10 @@ func (BatchesCancel) Description() string {
 }
 
 func (BatchesCancel) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
-	deleted := false
+	var batchID string
 	var fileID string
 	defer func() {
-		if fileID != "" && !deleted {
-			cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			_, _ = client.Files.Delete(cleanupCtx, fileID)
-		}
+		cleanupBatchArtifacts(client, batchID, fileID)
 	}()
 
 	uploaded, err := uploadBatchInputFile(ctx, client, cfg)
@@ -46,6 +41,14 @@ func (BatchesCancel) Run(ctx context.Context, client openai.Client, cfg *config.
 	if created == nil || created.ID == "" {
 		return fail("batches_cancel", "batch create missing id")
 	}
+	batchID = created.ID
+
+	_, err = waitForBatchStatus(ctx, client, "batches_cancel", created.ID, func(status string) bool {
+		return status == "in_progress" || status == "finalizing"
+	})
+	if err != nil {
+		return err
+	}
 
 	cancelled, err := client.Batches.Cancel(ctx, created.ID)
 	if err != nil {
@@ -57,17 +60,15 @@ func (BatchesCancel) Run(ctx context.Context, client openai.Client, cfg *config.
 	if cancelled.ID != created.ID {
 		return fail("batches_cancel", fmt.Sprintf("cancel id is %q, want %q", cancelled.ID, created.ID))
 	}
-	if string(cancelled.Status) != "cancelled" {
-		return fail("batches_cancel", fmt.Sprintf("cancel status is %q, want cancelled", cancelled.Status))
+	if !isBatchCancelStatusOK(string(cancelled.Status)) {
+		return fail("batches_cancel", fmt.Sprintf("cancel status is %q, want cancelling or cancelled", cancelled.Status))
 	}
 
-	deletedResp, err := client.Files.Delete(ctx, fileID)
+	_, err = waitForBatchStatus(ctx, client, "batches_cancel", created.ID, func(status string) bool {
+		return status == "cancelled"
+	})
 	if err != nil {
-		return fmt.Errorf("batch input file delete failed: %w", err)
+		return err
 	}
-	if deletedResp == nil || !deletedResp.Deleted {
-		return fail("batches_cancel", "batch input file delete response invalid")
-	}
-	deleted = true
 	return nil
 }

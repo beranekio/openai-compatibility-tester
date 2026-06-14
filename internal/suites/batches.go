@@ -3,11 +3,14 @@ package suites
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
 
 	"github.com/openai/openai-go/v3"
 )
+
+const batchPollInterval = 2 * time.Second
 
 func uploadBatchInputFile(ctx context.Context, client openai.Client, cfg *config.Config) (*openai.FileObject, error) {
 	uploaded, err := client.Files.New(ctx, openai.FileNewParams{
@@ -23,7 +26,87 @@ func uploadBatchInputFile(ctx context.Context, client openai.Client, cfg *config
 	if string(uploaded.Purpose) != string(openai.FilePurposeBatch) {
 		return nil, fail("batches", fmt.Sprintf("upload purpose is %q, want batch", uploaded.Purpose))
 	}
+	if err := waitForBatchInputFile(ctx, client, uploaded.ID); err != nil {
+		return nil, err
+	}
 	return uploaded, nil
+}
+
+func waitForBatchInputFile(ctx context.Context, client openai.Client, fileID string) error {
+	for {
+		file, err := client.Files.Get(ctx, fileID)
+		if err != nil {
+			return fmt.Errorf("batch input file get failed: %w", err)
+		}
+		if !file.JSON.Status.Valid() {
+			return nil
+		}
+		switch file.Status {
+		case openai.FileObjectStatusProcessed:
+			return nil
+		case openai.FileObjectStatusError:
+			return fail("batches", "batch input file processing failed")
+		case openai.FileObjectStatusUploaded:
+			// keep polling
+		default:
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timed out waiting for batch input file processing: %w", ctx.Err())
+		case <-time.After(batchPollInterval):
+		}
+	}
+}
+
+func isBatchCreateStatusOK(status string) bool {
+	return status == "validating" || status == "in_progress"
+}
+
+func isBatchTerminalFailure(status string) bool {
+	return status == "failed" || status == "expired" || status == "cancelled"
+}
+
+func isBatchCancelStatusOK(status string) bool {
+	return status == "cancelling" || status == "cancelled"
+}
+
+func waitForBatchStatus(ctx context.Context, client openai.Client, suite, batchID string, accept func(string) bool) (*openai.Batch, error) {
+	for {
+		got, err := client.Batches.Get(ctx, batchID)
+		if err != nil {
+			return nil, fmt.Errorf("batch get failed: %w", err)
+		}
+		if err := validateBatchObject(suite, got); err != nil {
+			return nil, err
+		}
+		if got.ID != batchID {
+			return nil, fail(suite, fmt.Sprintf("batch id is %q, want %q", got.ID, batchID))
+		}
+		status := string(got.Status)
+		if accept(status) {
+			return got, nil
+		}
+		if isBatchTerminalFailure(status) {
+			return nil, fail(suite, fmt.Sprintf("batch failed with terminal status %q", status))
+		}
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("timed out waiting for batch status: %w", ctx.Err())
+		case <-time.After(batchPollInterval):
+		}
+	}
+}
+
+func cleanupBatchArtifacts(client openai.Client, batchID, fileID string) {
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if batchID != "" {
+		_, _ = client.Batches.Cancel(cleanupCtx, batchID)
+	}
+	if fileID != "" {
+		_, _ = client.Files.Delete(cleanupCtx, fileID)
+	}
 }
 
 func validateBatchObject(suite string, batch *openai.Batch) error {

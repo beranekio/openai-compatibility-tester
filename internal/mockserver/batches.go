@@ -43,7 +43,7 @@ func (s *Server) handleBatchCreate(w http.ResponseWriter, r *http.Request) {
 		inputFileID:      req.InputFileID,
 		endpoint:         req.Endpoint,
 		completionWindow: req.CompletionWindow,
-		status:           "in_progress",
+		status:           "validating",
 		createdAt:        1700000000,
 	}
 	s.batchStore.save(id, batch)
@@ -52,26 +52,20 @@ func (s *Server) handleBatchCreate(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleBatchGet(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	batch, ok := s.batchStore.get(id)
+	batch, ok := s.batchStore.advanceStatus(id)
 	if !ok {
 		writeNotFound(w, "Batch not found", "id")
 		return
-	}
-	if batch.status == "in_progress" {
-		batch.status = "completed"
-		s.batchStore.save(id, batch)
 	}
 	writeJSON(w, batchObjectPayload(batch))
 }
 
 func (s *Server) handleBatchCancel(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	batch, ok := s.batchStore.get(id)
+	batch, ok := s.batchStore.cancel(id)
 	if !ok {
 		writeNotFound(w, "Batch not found", "id")
 		return
 	}
-	batch.status = "cancelled"
-	s.batchStore.save(id, batch)
 	writeJSON(w, batchObjectPayload(batch))
 }
