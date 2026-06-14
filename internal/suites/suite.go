@@ -41,6 +41,7 @@ func All() []Suite {
 		ResponsesInputItems{},
 		ResponsesCompact{},
 		ResponsesInputTokens{},
+		Moderations{},
 	}
 }
 
