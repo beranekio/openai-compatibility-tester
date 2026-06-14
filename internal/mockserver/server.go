@@ -133,7 +133,9 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	content := "pong"
-	if req.ResponseFormat != nil && req.ResponseFormat.Type == "json_schema" {
+	if chatCompletionRequestIsMultiTurn(req.Messages) {
+		content = "72"
+	} else if req.ResponseFormat != nil && req.ResponseFormat.Type == "json_schema" {
 		content = `{"answer":"pong"}`
 	} else if chatCompletionRequestHasImageURL(req.Messages) {
 		content = "I see an image"

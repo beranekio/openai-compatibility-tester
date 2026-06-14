@@ -3,13 +3,18 @@ package suites
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
 
 	"github.com/openai/openai-go/v3"
 )
 
-const multiTurnToolCallID = "call_mock_weather"
+const (
+	multiTurnToolCallID      = "call_mock_weather"
+	multiTurnToolResultJSON  = `{"temperature": 72, "unit": "fahrenheit", "condition": "sunny"}`
+	multiTurnExpectedTempF   = "72"
+)
 
 // ChatCompletionsMultiTurn verifies multi-turn POST /v1/chat/completions with
 // system, user, assistant history, developer, and tool messages.
@@ -25,14 +30,15 @@ func (ChatCompletionsMultiTurn) Run(ctx context.Context, client openai.Client, c
 		Model: cfg.Model,
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.SystemMessage("You are a helpful assistant."),
+			openai.DeveloperMessage("Use the weather tool result when answering follow-up questions."),
 			openai.UserMessage("What is the weather in San Francisco?"),
 			multiTurnAssistantToolCallMessage(),
-			openai.DeveloperMessage("Use the weather tool result when answering follow-up questions."),
-			openai.ToolMessage(`{"temperature": 72, "unit": "fahrenheit", "condition": "sunny"}`, multiTurnToolCallID),
-			openai.UserMessage("Reply with exactly the word: pong"),
+			openai.ToolMessage(multiTurnToolResultJSON, multiTurnToolCallID),
+			openai.UserMessage("What temperature did the weather tool report in Fahrenheit? Reply with the number only."),
 		},
-		Tools: weatherTools(),
-		Store: openai.Bool(false),
+		Tools:      weatherTools(),
+		ToolChoice: noToolChoice(),
+		Store:      openai.Bool(false),
 	})
 	if err != nil {
 		return fmt.Errorf("multi-turn chat completion request failed: %w", err)
@@ -54,8 +60,14 @@ func (ChatCompletionsMultiTurn) Run(ctx context.Context, client openai.Client, c
 	if string(choice.Message.Role) != "assistant" {
 		return fail("chat_completions_multi_turn", fmt.Sprintf("choice message role is %q, want assistant", choice.Message.Role))
 	}
-	if !hasChatMessageOutput(choice.Message) && !isContentFilterFinishReason(choice.FinishReason) {
-		return fail("chat_completions_multi_turn", "choice message has no content or refusal")
+	if isContentFilterFinishReason(choice.FinishReason) {
+		return nil
+	}
+	if choice.Message.Refusal != "" {
+		return nil
+	}
+	if !strings.Contains(choice.Message.Content, multiTurnExpectedTempF) {
+		return fail("chat_completions_multi_turn", fmt.Sprintf("choice content is %q, want response containing %q from tool context", choice.Message.Content, multiTurnExpectedTempF))
 	}
 	return nil
 }
