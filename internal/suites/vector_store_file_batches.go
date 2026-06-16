@@ -44,11 +44,8 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 	if err != nil {
 		return fmt.Errorf("vector store file batch create failed: %w", err)
 	}
-	if err := validateVectorStoreFileBatchObject("vector_store_file_batches", created); err != nil {
+	if err := validateVectorStoreFileBatchObject("vector_store_file_batches", created, store.ID); err != nil {
 		return err
-	}
-	if created.VectorStoreID != store.ID {
-		return fail("vector_store_file_batches", fmt.Sprintf("batch vector_store_id is %q, want %q", created.VectorStoreID, store.ID))
 	}
 	if created.FileCounts.Total != int64(len(fileIDs)) {
 		return fail("vector_store_file_batches", fmt.Sprintf("batch file_counts.total is %d, want %d", created.FileCounts.Total, len(fileIDs)))
@@ -61,7 +58,7 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 	if err != nil {
 		return fmt.Errorf("vector store file batch get failed: %w", err)
 	}
-	if err := validateVectorStoreFileBatchObject("vector_store_file_batches", got); err != nil {
+	if err := validateVectorStoreFileBatchObject("vector_store_file_batches", got, store.ID); err != nil {
 		return err
 	}
 	if got.ID != created.ID {
@@ -74,7 +71,7 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 	if err != nil {
 		return fmt.Errorf("vector store file batch list files failed: %w", err)
 	}
-	if err := validateVectorStoreFileListPage("vector_store_file_batches", listPage); err != nil {
+	if err := validateVectorStoreFileListPage("vector_store_file_batches", listPage, store.ID); err != nil {
 		return err
 	}
 	for _, fileID := range fileIDs {
@@ -91,7 +88,7 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 		}
 		return fmt.Errorf("vector store file batch cancel failed: %w", err)
 	}
-	if err := validateVectorStoreFileBatchObject("vector_store_file_batches", cancelled); err != nil {
+	if err := validateVectorStoreFileBatchObject("vector_store_file_batches", cancelled, store.ID); err != nil {
 		return err
 	}
 	if cancelled.ID != created.ID {
@@ -103,7 +100,7 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 	return nil
 }
 
-func validateVectorStoreFileBatchObject(suite string, batch *openai.VectorStoreFileBatch) error {
+func validateVectorStoreFileBatchObject(suite string, batch *openai.VectorStoreFileBatch, expectedVectorStoreID string) error {
 	if batch == nil {
 		return fail(suite, "vector store file batch is nil")
 	}
@@ -128,8 +125,8 @@ func validateVectorStoreFileBatchObject(suite string, batch *openai.VectorStoreF
 	if !batch.JSON.Status.Valid() {
 		return fail(suite, "vector store file batch missing status")
 	}
-	if batch.Status == openai.VectorStoreFileBatchStatusFailed {
-		return fail(suite, "vector store file batch status is failed")
+	if !isVectorStoreFileBatchStatusOK(batch.Status) {
+		return fail(suite, fmt.Sprintf("vector store file batch status is %q, want in_progress, completed, or cancelled", batch.Status))
 	}
 	if !batch.JSON.VectorStoreID.Valid() {
 		return fail(suite, "vector store file batch missing vector_store_id")
@@ -137,11 +134,23 @@ func validateVectorStoreFileBatchObject(suite string, batch *openai.VectorStoreF
 	if batch.VectorStoreID == "" {
 		return fail(suite, "vector store file batch vector_store_id is empty")
 	}
+	if expectedVectorStoreID != "" && batch.VectorStoreID != expectedVectorStoreID {
+		return fail(suite, fmt.Sprintf("vector store file batch vector_store_id is %q, want %q", batch.VectorStoreID, expectedVectorStoreID))
+	}
 	return nil
 }
 
 func isVectorStoreFileBatchObjectOK(object string) bool {
 	return object == "vector_store.files_batch" || object == "vector_store.file_batch"
+}
+
+func isVectorStoreFileBatchStatusOK(status openai.VectorStoreFileBatchStatus) bool {
+	switch status {
+	case openai.VectorStoreFileBatchStatusInProgress, openai.VectorStoreFileBatchStatusCompleted, openai.VectorStoreFileBatchStatusCancelled:
+		return true
+	default:
+		return false
+	}
 }
 
 func validateVectorStoreFileBatchFileCounts(suite string, counts openai.VectorStoreFileBatchFileCounts) error {
