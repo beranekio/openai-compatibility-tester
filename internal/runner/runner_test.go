@@ -16,19 +16,19 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 	t.Cleanup(server.Close)
 
 	cfg := &config.Config{
-		BaseURL:          server.BaseURL(),
-		APIKey:           "test-key",
-		Model:            "gpt-4o-mini",
-		ResponsesModel:   "gpt-4o-mini",
-		CompletionModel:  config.DefaultCompletionModel,
-		VisionModel:      "gpt-4o-mini",
-		ReasoningModel:   "o3-mini",
-		ImageModel:       "dall-e-2",
-		TTSModel:         "tts-1",
-		WhisperModel:         "whisper-1",
-		TranscriptionModel:   "gpt-4o-mini-transcribe",
-		EmbeddingModel:   "text-embedding-3-small",
-		RequestTimeout:   30 * time.Second,
+		BaseURL:            server.BaseURL(),
+		APIKey:             "test-key",
+		Model:              "gpt-4o-mini",
+		ResponsesModel:     "gpt-4o-mini",
+		CompletionModel:    config.DefaultCompletionModel,
+		VisionModel:        "gpt-4o-mini",
+		ReasoningModel:     "o3-mini",
+		ImageModel:         "dall-e-2",
+		TTSModel:           "tts-1",
+		WhisperModel:       "whisper-1",
+		TranscriptionModel: "gpt-4o-mini-transcribe",
+		EmbeddingModel:     "text-embedding-3-small",
+		RequestTimeout:     30 * time.Second,
 		Suites: []string{
 			"models",
 			"models_get",
@@ -75,6 +75,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"batches_get",
 			"batches_cancel",
 			"conversations",
+			"vector_stores",
 		},
 	}
 
