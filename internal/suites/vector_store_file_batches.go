@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
 
@@ -121,8 +122,8 @@ func validateVectorStoreFileBatchObject(suite string, batch *openai.VectorStoreF
 	if !batch.JSON.Object.Valid() {
 		return fail(suite, "vector store file batch missing object")
 	}
-	if string(batch.Object) != "vector_store.files_batch" {
-		return fail(suite, fmt.Sprintf("vector store file batch object is %q, want vector_store.files_batch", batch.Object))
+	if !isVectorStoreFileBatchObjectOK(string(batch.Object)) {
+		return fail(suite, fmt.Sprintf("vector store file batch object is %q, want vector_store.files_batch or vector_store.file_batch", batch.Object))
 	}
 	if !batch.JSON.Status.Valid() {
 		return fail(suite, "vector store file batch missing status")
@@ -137,6 +138,10 @@ func validateVectorStoreFileBatchObject(suite string, batch *openai.VectorStoreF
 		return fail(suite, "vector store file batch vector_store_id is empty")
 	}
 	return nil
+}
+
+func isVectorStoreFileBatchObjectOK(object string) bool {
+	return object == "vector_store.files_batch" || object == "vector_store.file_batch"
 }
 
 func validateVectorStoreFileBatchFileCounts(suite string, counts openai.VectorStoreFileBatchFileCounts) error {
@@ -170,9 +175,21 @@ func isVectorStoreFileBatchCancelStatusOK(status string) bool {
 }
 
 func isVectorStoreFileBatchCancelAlreadyTerminalError(apiErr *openai.Error) bool {
+	if apiErr == nil {
+		return false
+	}
 	switch apiErr.StatusCode {
 	case http.StatusConflict, http.StatusBadRequest:
-		return true
+		detail := strings.ToLower(strings.Join([]string{apiErr.Code, apiErr.Message, apiErr.Type}, " "))
+		alreadyTerminal := strings.Contains(detail, "already") && strings.Contains(detail, "terminal")
+		cancelBlockedByTerminal := strings.Contains(detail, "terminal") &&
+			(strings.Contains(detail, "cannot") || strings.Contains(detail, "can't") || strings.Contains(detail, "can not"))
+		alreadyStatus := strings.Contains(detail, "already") &&
+			(strings.Contains(detail, "complete") ||
+				strings.Contains(detail, "cancelled") ||
+				strings.Contains(detail, "canceled") ||
+				strings.Contains(detail, "failed"))
+		return alreadyTerminal || cancelBlockedByTerminal || alreadyStatus
 	default:
 		return false
 	}

@@ -128,12 +128,20 @@ func uploadVectorStoreSourceFile(ctx context.Context, client openai.Client, suit
 		return nil, fmt.Errorf("%s: source file upload failed: %w", suite, err)
 	}
 	if err := validateFileObject(suite, uploaded); err != nil {
+		cleanupVectorStoreUploadedFile(client, uploaded)
 		return nil, err
 	}
 	if string(uploaded.Purpose) != string(openai.FilePurposeAssistants) {
+		cleanupVectorStoreUploadedFile(client, uploaded)
 		return nil, fail(suite, fmt.Sprintf("upload purpose is %q, want assistants", uploaded.Purpose))
 	}
 	return uploaded, nil
+}
+
+func cleanupVectorStoreUploadedFile(client openai.Client, file *openai.FileObject) {
+	if file != nil {
+		cleanupVectorStoreArtifacts(client, "", file.ID)
+	}
 }
 
 func cleanupVectorStoreArtifacts(client openai.Client, vectorStoreID string, fileIDs ...string) {
@@ -168,8 +176,8 @@ func validateVectorStoreFileObject(suite string, file *openai.VectorStoreFile) e
 	if !file.JSON.Status.Valid() {
 		return fail(suite, "vector store file missing status")
 	}
-	if file.Status == openai.VectorStoreFileStatusFailed {
-		return fail(suite, "vector store file status is failed")
+	if !isVectorStoreFileStatusOK(file.Status) {
+		return fail(suite, fmt.Sprintf("vector store file status is %q, want in_progress, completed, or cancelled", file.Status))
 	}
 	if !file.JSON.UsageBytes.Valid() {
 		return fail(suite, "vector store file missing usage_bytes")
@@ -181,6 +189,15 @@ func validateVectorStoreFileObject(suite string, file *openai.VectorStoreFile) e
 		return fail(suite, "vector store file vector_store_id is empty")
 	}
 	return nil
+}
+
+func isVectorStoreFileStatusOK(status openai.VectorStoreFileStatus) bool {
+	switch status {
+	case openai.VectorStoreFileStatusInProgress, openai.VectorStoreFileStatusCompleted, openai.VectorStoreFileStatusCancelled:
+		return true
+	default:
+		return false
+	}
 }
 
 func validateVectorStoreFileListPage(suite string, page *pagination.CursorPage[openai.VectorStoreFile]) error {

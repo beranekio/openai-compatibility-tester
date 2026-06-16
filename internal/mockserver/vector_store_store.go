@@ -240,9 +240,10 @@ func (s *vectorStoreStore) cancelFileBatch(vectorStoreID, batchID string) (store
 	batch.status = "cancelled"
 	store.batches[batchID] = batch
 	for _, fileID := range batch.fileIDs {
-		file := store.files[fileID]
-		file.status = "cancelled"
-		store.files[fileID] = file
+		if file, ok := store.files[fileID]; ok {
+			file.status = "cancelled"
+			store.files[fileID] = file
+		}
 	}
 	s.stores[vectorStoreID] = store
 	return cloneVectorStoreFileBatch(batch), true
