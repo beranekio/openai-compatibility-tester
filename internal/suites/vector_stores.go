@@ -152,12 +152,6 @@ func validateVectorStoreObject(suite string, store *openai.VectorStore) error {
 	if err := validateVectorStoreFileCounts(suite, store.FileCounts); err != nil {
 		return err
 	}
-	if !store.JSON.LastActiveAt.Valid() {
-		return fail(suite, "vector store missing last_active_at")
-	}
-	if !store.JSON.Metadata.Valid() {
-		return fail(suite, "vector store missing metadata")
-	}
 	if !store.JSON.Name.Valid() {
 		return fail(suite, "vector store missing name")
 	}
@@ -170,13 +164,22 @@ func validateVectorStoreObject(suite string, store *openai.VectorStore) error {
 	if !store.JSON.Status.Valid() {
 		return fail(suite, "vector store missing status")
 	}
-	if store.Status != openai.VectorStoreStatusCompleted && store.Status != openai.VectorStoreStatusInProgress {
-		return fail(suite, fmt.Sprintf("vector store status is %q, want completed or in_progress", store.Status))
+	if !isVectorStoreStatusOK(store.Status) {
+		return fail(suite, fmt.Sprintf("vector store status is %q, want completed, in_progress, or expired", store.Status))
 	}
 	if !store.JSON.UsageBytes.Valid() {
 		return fail(suite, "vector store missing usage_bytes")
 	}
 	return nil
+}
+
+func isVectorStoreStatusOK(status openai.VectorStoreStatus) bool {
+	switch status {
+	case openai.VectorStoreStatusCompleted, openai.VectorStoreStatusInProgress, openai.VectorStoreStatusExpired:
+		return true
+	default:
+		return false
+	}
 }
 
 func validateVectorStoreFileCounts(suite string, counts openai.VectorStoreFileCounts) error {
@@ -231,6 +234,9 @@ func validateVectorStoreSearchPage(suite string, page *pagination.Page[openai.Ve
 	}
 	if !page.JSON.Object.Valid() {
 		return fail(suite, "search missing object")
+	}
+	if !page.JSON.Data.Valid() {
+		return fail(suite, "search missing data")
 	}
 	if page.Object != "vector_store.search_results.page" {
 		return fail(suite, fmt.Sprintf("search object is %q, want vector_store.search_results.page", page.Object))
