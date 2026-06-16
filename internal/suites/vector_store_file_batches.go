@@ -190,15 +190,13 @@ func isVectorStoreFileBatchCancelAlreadyTerminalError(apiErr *openai.Error) bool
 	switch apiErr.StatusCode {
 	case http.StatusConflict, http.StatusBadRequest:
 		detail := strings.ToLower(strings.Join([]string{apiErr.Code, apiErr.Message, apiErr.Type}, " "))
-		alreadyTerminal := strings.Contains(detail, "already") && strings.Contains(detail, "terminal")
-		cancelBlockedByTerminal := strings.Contains(detail, "terminal") &&
+		statusIsCompleted := strings.Contains(detail, "complete")
+		statusIsCancelled := strings.Contains(detail, "cancelled") || strings.Contains(detail, "canceled")
+		statusIsFailed := strings.Contains(detail, "fail")
+		terminalSignal := strings.Contains(detail, "already") ||
+			strings.Contains(detail, "terminal") ||
 			(strings.Contains(detail, "cannot") || strings.Contains(detail, "can't") || strings.Contains(detail, "can not"))
-		alreadyStatus := strings.Contains(detail, "already") &&
-			(strings.Contains(detail, "complete") ||
-				strings.Contains(detail, "cancelled") ||
-				strings.Contains(detail, "canceled") ||
-				strings.Contains(detail, "failed"))
-		return alreadyTerminal || cancelBlockedByTerminal || alreadyStatus
+		return terminalSignal && !statusIsFailed && (statusIsCompleted || statusIsCancelled)
 	default:
 		return false
 	}

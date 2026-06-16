@@ -167,4 +167,14 @@ func TestVectorStoreFileBatchCancelAlreadyTerminalErrorRequiresTerminalSignal(t 
 	if !isVectorStoreFileBatchCancelAlreadyTerminalError(terminalErr) {
 		t.Fatal("already-completed conflict was not treated as already-terminal")
 	}
+
+	failedErr := &openai.Error{
+		StatusCode: http.StatusConflict,
+		Type:       "invalid_request_error",
+		Code:       "batch_already_failed",
+		Message:    "Batch is already failed",
+	}
+	if isVectorStoreFileBatchCancelAlreadyTerminalError(failedErr) {
+		t.Fatal("already-failed conflict was treated as already-terminal")
+	}
 }

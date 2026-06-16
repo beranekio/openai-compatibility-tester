@@ -100,6 +100,17 @@ func (VectorStoreFiles) Run(ctx context.Context, client openai.Client, _ *config
 	if apiErr.StatusCode != http.StatusNotFound {
 		return fail("vector_store_files", fmt.Sprintf("get after delete returned status %d, want 404", apiErr.StatusCode))
 	}
+
+	sourceFile, err := client.Files.Get(ctx, uploaded.ID)
+	if err != nil {
+		return fmt.Errorf("source file get after vector store file delete failed: %w", err)
+	}
+	if err := validateFileObject("vector_store_files", sourceFile); err != nil {
+		return err
+	}
+	if sourceFile.ID != uploaded.ID {
+		return fail("vector_store_files", fmt.Sprintf("source file id after vector store file delete is %q, want %q", sourceFile.ID, uploaded.ID))
+	}
 	return nil
 }
 
