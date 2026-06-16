@@ -39,10 +39,12 @@ func (VectorStores) Run(ctx context.Context, client openai.Client, cfg *config.C
 	if err != nil {
 		return fmt.Errorf("vector store create failed: %w", err)
 	}
+	if created != nil && created.ID != "" {
+		vectorStoreID = created.ID
+	}
 	if err := validateVectorStoreObject("vector_stores", created); err != nil {
 		return err
 	}
-	vectorStoreID = created.ID
 	if created.Name != "compatibility-test-vector-store" {
 		return fail("vector_stores", fmt.Sprintf("create name is %q, want compatibility-test-vector-store", created.Name))
 	}
@@ -75,20 +77,15 @@ func (VectorStores) Run(ctx context.Context, client openai.Client, cfg *config.C
 	}
 
 	listPage, err := client.VectorStores.List(ctx, openai.VectorStoreListParams{
-		Limit: openai.Int(10),
+		Limit: openai.Int(100),
+		Order: openai.VectorStoreListParamsOrderDesc,
 	})
 	if err != nil {
 		return fmt.Errorf("vector store list failed: %w", err)
 	}
-	if err := validateVectorStoreListPage("vector_stores", listPage); err != nil {
+	found, err := vectorStoreListContains(listPage, vectorStoreID)
+	if err != nil {
 		return err
-	}
-	found := false
-	for _, item := range listPage.Data {
-		if item.ID == vectorStoreID {
-			found = true
-			break
-		}
 	}
 	if !found {
 		return fail("vector_stores", "created vector store missing from list response")
@@ -114,11 +111,8 @@ func (VectorStores) Run(ctx context.Context, client openai.Client, cfg *config.C
 	if deletedResp == nil {
 		return fail("vector_stores", "delete response is nil")
 	}
-	if deletedResp.ID != vectorStoreID {
-		return fail("vector_stores", fmt.Sprintf("delete id is %q, want %q", deletedResp.ID, vectorStoreID))
-	}
-	if !deletedResp.Deleted {
-		return fail("vector_stores", "delete response deleted is false")
+	if err := validateVectorStoreDeleteResponse("vector_stores", deletedResp, vectorStoreID); err != nil {
+		return err
 	}
 
 	_, getErr := client.VectorStores.Get(ctx, vectorStoreID)
@@ -134,6 +128,25 @@ func (VectorStores) Run(ctx context.Context, client openai.Client, cfg *config.C
 	}
 	deleted = true
 	return nil
+}
+
+func vectorStoreListContains(page *pagination.CursorPage[openai.VectorStore], vectorStoreID string) (bool, error) {
+	for page != nil {
+		if err := validateVectorStoreListPage("vector_stores", page); err != nil {
+			return false, err
+		}
+		for _, item := range page.Data {
+			if item.ID == vectorStoreID {
+				return true, nil
+			}
+		}
+		next, err := page.GetNextPage()
+		if err != nil {
+			return false, fmt.Errorf("vector store list next page failed: %w", err)
+		}
+		page = next
+	}
+	return false, nil
 }
 
 func validateVectorStoreObject(suite string, store *openai.VectorStore) error {
@@ -198,6 +211,20 @@ func validateVectorStoreFileCounts(suite string, counts openai.VectorStoreFileCo
 	if !counts.JSON.Total.Valid() {
 		return fail(suite, "vector store file_counts missing total")
 	}
+	for _, count := range []struct {
+		name  string
+		value int64
+	}{
+		{name: "cancelled", value: counts.Cancelled},
+		{name: "completed", value: counts.Completed},
+		{name: "failed", value: counts.Failed},
+		{name: "in_progress", value: counts.InProgress},
+		{name: "total", value: counts.Total},
+	} {
+		if count.value < 0 {
+			return fail(suite, fmt.Sprintf("vector store file_counts %s is %d, want >= 0", count.name, count.value))
+		}
+	}
 	if counts.Total != counts.Cancelled+counts.Completed+counts.Failed+counts.InProgress {
 		return fail(suite, "vector store file_counts total does not match status counts")
 	}
@@ -228,6 +255,22 @@ func validateVectorStoreListPage(suite string, page *pagination.CursorPage[opena
 	return nil
 }
 
+func validateVectorStoreDeleteResponse(suite string, deleted *openai.VectorStoreDeleted, wantID string) error {
+	if deleted.ID != wantID {
+		return fail(suite, fmt.Sprintf("delete id is %q, want %q", deleted.ID, wantID))
+	}
+	if !deleted.Deleted {
+		return fail(suite, "delete response deleted is false")
+	}
+	if !deleted.JSON.Object.Valid() {
+		return fail(suite, "delete response missing object")
+	}
+	if string(deleted.Object) != "vector_store.deleted" {
+		return fail(suite, fmt.Sprintf("delete object is %q, want vector_store.deleted", deleted.Object))
+	}
+	return nil
+}
+
 func validateVectorStoreSearchPage(suite string, page *pagination.Page[openai.VectorStoreSearchResponse]) error {
 	if page == nil {
 		return fail(suite, "search page is nil")
@@ -242,6 +285,12 @@ func validateVectorStoreSearchPage(suite string, page *pagination.Page[openai.Ve
 		return fail(suite, fmt.Sprintf("search object is %q, want vector_store.search_results.page", page.Object))
 	}
 	for _, result := range page.Data {
+		if !result.JSON.Attributes.Valid() {
+			return fail(suite, "search result missing attributes")
+		}
+		if !result.JSON.Content.Valid() {
+			return fail(suite, "search result missing content")
+		}
 		if result.FileID == "" {
 			return fail(suite, "search result missing file_id")
 		}
@@ -250,6 +299,9 @@ func validateVectorStoreSearchPage(suite string, page *pagination.Page[openai.Ve
 		}
 		if !result.JSON.Score.Valid() {
 			return fail(suite, "search result missing score")
+		}
+		if result.Score < 0 || result.Score > 1 {
+			return fail(suite, fmt.Sprintf("search result score is %g, want between 0 and 1", result.Score))
 		}
 		for _, content := range result.Content {
 			if content.Type != "text" {
