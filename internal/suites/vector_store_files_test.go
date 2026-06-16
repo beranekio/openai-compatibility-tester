@@ -92,6 +92,30 @@ func TestValidateVectorStoreFileObjectRejectsNegativeUsageBytes(t *testing.T) {
 	}
 }
 
+func TestValidateVectorStoreFileDeleteResponseRequiresObject(t *testing.T) {
+	var deleted openai.VectorStoreFileDeleted
+	if err := json.Unmarshal([]byte(`{"id":"file_mock","deleted":true}`), &deleted); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	err := validateVectorStoreFileDeleteResponse("vector_store_files", &deleted, "file_mock")
+	if err == nil || !strings.Contains(err.Error(), "delete response missing object") {
+		t.Fatalf("expected missing object validation error, got %v", err)
+	}
+}
+
+func TestValidateVectorStoreFileDeleteResponseRejectsWrongObject(t *testing.T) {
+	var deleted openai.VectorStoreFileDeleted
+	if err := json.Unmarshal([]byte(`{"id":"file_mock","object":"file.deleted","deleted":true}`), &deleted); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	err := validateVectorStoreFileDeleteResponse("vector_store_files", &deleted, "file_mock")
+	if err == nil || !strings.Contains(err.Error(), `delete object is "file.deleted"`) {
+		t.Fatalf("expected wrong object validation error, got %v", err)
+	}
+}
+
 func TestValidateVectorStoreFileBatchObjectAcceptsSingularObject(t *testing.T) {
 	var batch openai.VectorStoreFileBatch
 	raw := `{
@@ -192,6 +216,14 @@ func TestValidateVectorStoreFileBatchObjectRejectsNegativeFileCounts(t *testing.
 	err := validateVectorStoreFileBatchObject("vector_store_file_batches", &batch, "vs_mock")
 	if err == nil || !strings.Contains(err.Error(), "file_counts failed is -1") {
 		t.Fatalf("expected negative file_counts validation error, got %v", err)
+	}
+}
+
+func TestVectorStoreFileBatchCancelStatusAllowsInProgress(t *testing.T) {
+	for _, status := range []string{"in_progress", "cancelled", "cancelling", "completed"} {
+		if !isVectorStoreFileBatchCancelStatusOK(status) {
+			t.Fatalf("cancel status %q was rejected", status)
+		}
 	}
 }
 

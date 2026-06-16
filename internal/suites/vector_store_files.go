@@ -27,9 +27,10 @@ func (VectorStoreFiles) Run(ctx context.Context, client openai.Client, _ *config
 	if err != nil {
 		return err
 	}
-	var fileID string
+	var fileID, otherStoreID, otherFileID string
 	defer func() {
 		cleanupVectorStoreArtifacts(client, store.ID, fileID)
+		cleanupVectorStoreArtifacts(client, otherStoreID, otherFileID)
 	}()
 
 	uploaded, err := uploadVectorStoreSourceFile(ctx, client, "vector_store_files")
@@ -51,6 +52,29 @@ func (VectorStoreFiles) Run(ctx context.Context, client openai.Client, _ *config
 		return fail("vector_store_files", fmt.Sprintf("attached file id is %q, want %q", attached.ID, uploaded.ID))
 	}
 
+	otherStore, err := createVectorStoreForSuite(ctx, client, "vector_store_files", "compatibility-test-vector-store-files-other")
+	if err != nil {
+		return err
+	}
+	otherStoreID = otherStore.ID
+	otherUploaded, err := uploadVectorStoreSourceFile(ctx, client, "vector_store_files")
+	if err != nil {
+		return err
+	}
+	otherFileID = otherUploaded.ID
+	otherAttached, err := client.VectorStores.Files.New(ctx, otherStore.ID, openai.VectorStoreFileNewParams{
+		FileID: otherUploaded.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("other vector store file attach failed: %w", err)
+	}
+	if err := validateVectorStoreFileObject("vector_store_files", otherAttached, otherStore.ID); err != nil {
+		return err
+	}
+	if otherAttached.ID != otherUploaded.ID {
+		return fail("vector_store_files", fmt.Sprintf("other attached file id is %q, want %q", otherAttached.ID, otherUploaded.ID))
+	}
+
 	listPage, err := client.VectorStores.Files.List(ctx, store.ID, openai.VectorStoreFileListParams{
 		Limit: openai.Int(10),
 	})
@@ -62,6 +86,9 @@ func (VectorStoreFiles) Run(ctx context.Context, client openai.Client, _ *config
 	}
 	if !vectorStoreFileListContains(listPage.Data, uploaded.ID) {
 		return fail("vector_store_files", "attached file missing from list response")
+	}
+	if vectorStoreFileListContains(listPage.Data, otherUploaded.ID) {
+		return fail("vector_store_files", "list response included file from another vector store")
 	}
 
 	got, err := client.VectorStores.Files.Get(ctx, store.ID, uploaded.ID)
@@ -82,11 +109,8 @@ func (VectorStoreFiles) Run(ctx context.Context, client openai.Client, _ *config
 	if deleted == nil {
 		return fail("vector_store_files", "delete response is nil")
 	}
-	if deleted.ID != uploaded.ID {
-		return fail("vector_store_files", fmt.Sprintf("delete file id is %q, want %q", deleted.ID, uploaded.ID))
-	}
-	if !deleted.Deleted {
-		return fail("vector_store_files", "delete response deleted is false")
+	if err := validateVectorStoreFileDeleteResponse("vector_store_files", deleted, uploaded.ID); err != nil {
+		return err
 	}
 
 	_, getErr := client.VectorStores.Files.Get(ctx, store.ID, uploaded.ID)
@@ -110,6 +134,22 @@ func (VectorStoreFiles) Run(ctx context.Context, client openai.Client, _ *config
 	}
 	if sourceFile.ID != uploaded.ID {
 		return fail("vector_store_files", fmt.Sprintf("source file id after vector store file delete is %q, want %q", sourceFile.ID, uploaded.ID))
+	}
+	return nil
+}
+
+func validateVectorStoreFileDeleteResponse(suite string, deleted *openai.VectorStoreFileDeleted, wantID string) error {
+	if deleted.ID != wantID {
+		return fail(suite, fmt.Sprintf("delete file id is %q, want %q", deleted.ID, wantID))
+	}
+	if !deleted.Deleted {
+		return fail(suite, "delete response deleted is false")
+	}
+	if !deleted.JSON.Object.Valid() {
+		return fail(suite, "delete response missing object")
+	}
+	if string(deleted.Object) != "vector_store.file.deleted" {
+		return fail(suite, fmt.Sprintf("delete object is %q, want vector_store.file.deleted", deleted.Object))
 	}
 	return nil
 }
