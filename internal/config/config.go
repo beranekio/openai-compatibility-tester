@@ -12,21 +12,21 @@ import (
 )
 
 const (
-	EnvBaseURL         = "OPENAI_BASE_URL"
-	EnvAPIKey          = "OPENAI_API_KEY"
-	EnvModel           = "OPENAI_MODEL"
-	EnvCompletionModel = "OPENAI_COMPLETION_MODEL"
-	EnvEmbeddingModel  = "OPENAI_EMBEDDING_MODEL"
-	EnvResponsesModel  = "OPENAI_RESPONSES_MODEL"
-	EnvVisionModel      = "OPENAI_VISION_MODEL"
-	EnvReasoningModel   = "OPENAI_REASONING_MODEL"
-	EnvImageModel      = "OPENAI_IMAGE_MODEL"
-	EnvTTSModel            = "OPENAI_TTS_MODEL"
-	EnvWhisperModel        = "OPENAI_WHISPER_MODEL"
-	EnvTranscriptionModel  = "OPENAI_TRANSCRIPTION_MODEL"
-	EnvTestSuites      = "TEST_SUITES"
-	EnvRequestTimeout  = "REQUEST_TIMEOUT"
-	EnvAllowInsecureHTTP = "ALLOW_INSECURE_HTTP"
+	EnvBaseURL            = "OPENAI_BASE_URL"
+	EnvAPIKey             = "OPENAI_API_KEY"
+	EnvModel              = "OPENAI_MODEL"
+	EnvCompletionModel    = "OPENAI_COMPLETION_MODEL"
+	EnvEmbeddingModel     = "OPENAI_EMBEDDING_MODEL"
+	EnvResponsesModel     = "OPENAI_RESPONSES_MODEL"
+	EnvVisionModel        = "OPENAI_VISION_MODEL"
+	EnvReasoningModel     = "OPENAI_REASONING_MODEL"
+	EnvImageModel         = "OPENAI_IMAGE_MODEL"
+	EnvTTSModel           = "OPENAI_TTS_MODEL"
+	EnvWhisperModel       = "OPENAI_WHISPER_MODEL"
+	EnvTranscriptionModel = "OPENAI_TRANSCRIPTION_MODEL"
+	EnvTestSuites         = "TEST_SUITES"
+	EnvRequestTimeout     = "REQUEST_TIMEOUT"
+	EnvAllowInsecureHTTP  = "ALLOW_INSECURE_HTTP"
 
 	// DefaultCompletionModel is used when the completions suite is selected without
 	// an explicit completion model. Legacy /v1/completions expects instruct models.
@@ -134,20 +134,21 @@ var FullSuites = []string{
 	"batches_get",
 	"batches_cancel",
 	"conversations",
+	"vector_stores",
 }
 
 var knownSuites = map[string]struct{}{
 	"models":                        {},
 	"models_get":                    {},
 	"chat_completions":              {},
-	"chat_completions_stream":        {},
-	"chat_completions_stream_usage":  {},
-	"chat_completions_logprobs":      {},
-	"chat_completions_json":          {},
-	"chat_completions_vision":        {},
-	"chat_completions_reasoning":     {},
-	"chat_completions_audio":         {},
-	"chat_completions_tools":         {},
+	"chat_completions_stream":       {},
+	"chat_completions_stream_usage": {},
+	"chat_completions_logprobs":     {},
+	"chat_completions_json":         {},
+	"chat_completions_vision":       {},
+	"chat_completions_reasoning":    {},
+	"chat_completions_audio":        {},
+	"chat_completions_tools":        {},
 	"chat_completions_tools_stream": {},
 	"chat_completions_multi_turn":   {},
 	"chat_completions_get":          {},
@@ -183,26 +184,27 @@ var knownSuites = map[string]struct{}{
 	"batches_get":                   {},
 	"batches_cancel":                {},
 	"conversations":                 {},
+	"vector_stores":                 {},
 }
 
 // Config holds runtime settings for compatibility testing.
 type Config struct {
-	BaseURL         string
-	APIKey          string
-	Model           string
-	CompletionModel string
-	EmbeddingModel  string
-	ResponsesModel  string
-	VisionModel      string
-	ReasoningModel   string
-	ImageModel       string
-	TTSModel            string
-	WhisperModel        string
-	TranscriptionModel  string
-	Suites          []string
-	RequestTimeout  time.Duration
-	AllowInsecureHTTP bool
-	ListSuites      bool
+	BaseURL            string
+	APIKey             string
+	Model              string
+	CompletionModel    string
+	EmbeddingModel     string
+	ResponsesModel     string
+	VisionModel        string
+	ReasoningModel     string
+	ImageModel         string
+	TTSModel           string
+	WhisperModel       string
+	TranscriptionModel string
+	Suites             []string
+	RequestTimeout     time.Duration
+	AllowInsecureHTTP  bool
+	ListSuites         bool
 }
 
 // Load parses configuration from environment variables and command-line flags.
@@ -239,21 +241,21 @@ func Load(args []string) (*Config, error) {
 	}
 
 	cfg := &Config{
-		BaseURL:         strings.TrimRight(strings.TrimSpace(*baseURL), "/"),
-		APIKey:          strings.TrimSpace(*apiKey),
-		Model:           strings.TrimSpace(*model),
-		CompletionModel: strings.TrimSpace(*completionModel),
-		EmbeddingModel:    strings.TrimSpace(*embeddingModel),
-		ResponsesModel:    strings.TrimSpace(*responsesModel),
-		VisionModel:       strings.TrimSpace(*visionModel),
-		ReasoningModel:    strings.TrimSpace(*reasoningModel),
-		ImageModel:        strings.TrimSpace(*imageModel),
-		TTSModel:          strings.TrimSpace(*ttsModel),
-		WhisperModel:        strings.TrimSpace(*whisperModel),
-		TranscriptionModel:  strings.TrimSpace(*transcriptionModel),
-		RequestTimeout:    *timeout,
-		AllowInsecureHTTP: *allowInsecureHTTP,
-		ListSuites:        *listSuites,
+		BaseURL:            strings.TrimRight(strings.TrimSpace(*baseURL), "/"),
+		APIKey:             strings.TrimSpace(*apiKey),
+		Model:              strings.TrimSpace(*model),
+		CompletionModel:    strings.TrimSpace(*completionModel),
+		EmbeddingModel:     strings.TrimSpace(*embeddingModel),
+		ResponsesModel:     strings.TrimSpace(*responsesModel),
+		VisionModel:        strings.TrimSpace(*visionModel),
+		ReasoningModel:     strings.TrimSpace(*reasoningModel),
+		ImageModel:         strings.TrimSpace(*imageModel),
+		TTSModel:           strings.TrimSpace(*ttsModel),
+		WhisperModel:       strings.TrimSpace(*whisperModel),
+		TranscriptionModel: strings.TrimSpace(*transcriptionModel),
+		RequestTimeout:     *timeout,
+		AllowInsecureHTTP:  *allowInsecureHTTP,
+		ListSuites:         *listSuites,
 	}
 
 	if cfg.ListSuites {

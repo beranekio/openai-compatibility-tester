@@ -64,6 +64,7 @@ func All() []Suite {
 		BatchesGet{},
 		BatchesCancel{},
 		Conversations{},
+		VectorStores{},
 	}
 }
 
@@ -78,12 +79,12 @@ func ByName() map[string]Suite {
 
 // ModelRequirements describes which model settings selected suites need.
 type ModelRequirements struct {
-	Chat       bool
-	Completion bool
-	Embedding  bool
-	Vision     bool
-	Reasoning  bool
-	Image      bool
+	Chat          bool
+	Completion    bool
+	Embedding     bool
+	Vision        bool
+	Reasoning     bool
+	Image         bool
 	TTS           bool
 	Whisper       bool
 	Transcription bool
