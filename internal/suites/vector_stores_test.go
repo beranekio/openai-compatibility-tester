@@ -58,6 +58,62 @@ func TestValidateVectorStoreSearchPageAllowsEmptyData(t *testing.T) {
 	}
 }
 
+func TestValidateVectorStoreListPageRequiresFirstIDWithData(t *testing.T) {
+	page := parseVectorStoreListPage(t, `{
+		"object": "list",
+		"data": [{
+			"id": "vs_mock",
+			"object": "vector_store",
+			"created_at": 1700000000,
+			"name": "mock vector store",
+			"status": "completed",
+			"usage_bytes": 0,
+			"file_counts": {
+				"in_progress": 0,
+				"completed": 0,
+				"failed": 0,
+				"cancelled": 0,
+				"total": 0
+			}
+		}],
+		"last_id": "vs_mock",
+		"has_more": false
+	}`)
+
+	err := validateVectorStoreListPage("vector_stores", page)
+	if err == nil || !strings.Contains(err.Error(), "list missing first_id") {
+		t.Fatalf("expected missing first_id validation error, got %v", err)
+	}
+}
+
+func TestValidateVectorStoreListPageRequiresLastIDWithData(t *testing.T) {
+	page := parseVectorStoreListPage(t, `{
+		"object": "list",
+		"data": [{
+			"id": "vs_mock",
+			"object": "vector_store",
+			"created_at": 1700000000,
+			"name": "mock vector store",
+			"status": "completed",
+			"usage_bytes": 0,
+			"file_counts": {
+				"in_progress": 0,
+				"completed": 0,
+				"failed": 0,
+				"cancelled": 0,
+				"total": 0
+			}
+		}],
+		"first_id": "vs_mock",
+		"has_more": false
+	}`)
+
+	err := validateVectorStoreListPage("vector_stores", page)
+	if err == nil || !strings.Contains(err.Error(), "list missing last_id") {
+		t.Fatalf("expected missing last_id validation error, got %v", err)
+	}
+}
+
 func TestValidateVectorStoreObjectRejectsNegativeFileCounts(t *testing.T) {
 	var store openai.VectorStore
 	raw := `{
@@ -82,6 +138,33 @@ func TestValidateVectorStoreObjectRejectsNegativeFileCounts(t *testing.T) {
 	err := validateVectorStoreObject("vector_stores", &store)
 	if err == nil || !strings.Contains(err.Error(), "file_counts cancelled is -1") {
 		t.Fatalf("expected negative count validation error, got %v", err)
+	}
+}
+
+func TestValidateVectorStoreObjectRejectsNegativeUsageBytes(t *testing.T) {
+	var store openai.VectorStore
+	raw := `{
+		"id": "vs_negative_usage",
+		"object": "vector_store",
+		"created_at": 1700000000,
+		"name": "negative usage",
+		"status": "completed",
+		"usage_bytes": -1,
+		"file_counts": {
+			"in_progress": 0,
+			"completed": 0,
+			"failed": 0,
+			"cancelled": 0,
+			"total": 0
+		}
+	}`
+	if err := json.Unmarshal([]byte(raw), &store); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	err := validateVectorStoreObject("vector_stores", &store)
+	if err == nil || !strings.Contains(err.Error(), "usage_bytes is -1") {
+		t.Fatalf("expected negative usage_bytes validation error, got %v", err)
 	}
 }
 
@@ -151,6 +234,28 @@ func TestValidateVectorStoreSearchPageRequiresResultContent(t *testing.T) {
 	}
 }
 
+func TestValidateVectorStoreSearchPageRequiresContentText(t *testing.T) {
+	var page pagination.Page[openai.VectorStoreSearchResponse]
+	raw := `{
+		"object": "vector_store.search_results.page",
+		"data": [{
+			"file_id": "file_mock",
+			"filename": "test.txt",
+			"score": 0.7,
+			"attributes": {},
+			"content": [{"type": "text"}]
+		}]
+	}`
+	if err := json.Unmarshal([]byte(raw), &page); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	err := validateVectorStoreSearchPage("vector_stores", &page)
+	if err == nil || !strings.Contains(err.Error(), "search content missing text") {
+		t.Fatalf("expected missing content text validation error, got %v", err)
+	}
+}
+
 func TestValidateVectorStoreSearchPageRejectsOutOfRangeScore(t *testing.T) {
 	var page pagination.Page[openai.VectorStoreSearchResponse]
 	raw := `{
@@ -171,4 +276,14 @@ func TestValidateVectorStoreSearchPageRejectsOutOfRangeScore(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "score is 7") {
 		t.Fatalf("expected score bounds validation error, got %v", err)
 	}
+}
+
+func parseVectorStoreListPage(t *testing.T, raw string) *pagination.CursorPage[openai.VectorStore] {
+	t.Helper()
+
+	var page pagination.CursorPage[openai.VectorStore]
+	if err := json.Unmarshal([]byte(raw), &page); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+	return &page
 }

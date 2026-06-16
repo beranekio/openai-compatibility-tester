@@ -17,6 +17,11 @@ import (
 // VectorStores verifies the Vector Stores API lifecycle via client.VectorStores.*.
 type VectorStores struct{}
 
+const (
+	vectorStoreCreateName = "compatibility-test-vector-store"
+	vectorStoreUpdateName = "compatibility-test-vector-store-updated"
+)
+
 func (VectorStores) Name() string { return "vector_stores" }
 func (VectorStores) Description() string {
 	return "Vector Stores API lifecycle and search (POST/GET/DELETE /v1/vector_stores, POST /v1/vector_stores/{id}/search)"
@@ -34,7 +39,7 @@ func (VectorStores) Run(ctx context.Context, client openai.Client, cfg *config.C
 	}()
 
 	created, err := client.VectorStores.New(ctx, openai.VectorStoreNewParams{
-		Name: openai.String("compatibility-test-vector-store"),
+		Name: openai.String(vectorStoreCreateName),
 	})
 	if err != nil {
 		return fmt.Errorf("vector store create failed: %w", err)
@@ -45,8 +50,8 @@ func (VectorStores) Run(ctx context.Context, client openai.Client, cfg *config.C
 	if err := validateVectorStoreObject("vector_stores", created); err != nil {
 		return err
 	}
-	if created.Name != "compatibility-test-vector-store" {
-		return fail("vector_stores", fmt.Sprintf("create name is %q, want compatibility-test-vector-store", created.Name))
+	if created.Name != vectorStoreCreateName {
+		return fail("vector_stores", fmt.Sprintf("create name is %q, want %q", created.Name, vectorStoreCreateName))
 	}
 
 	got, err := client.VectorStores.Get(ctx, vectorStoreID)
@@ -59,9 +64,12 @@ func (VectorStores) Run(ctx context.Context, client openai.Client, cfg *config.C
 	if got.ID != vectorStoreID {
 		return fail("vector_stores", fmt.Sprintf("get id is %q, want %q", got.ID, vectorStoreID))
 	}
+	if got.Name != vectorStoreCreateName {
+		return fail("vector_stores", fmt.Sprintf("get name is %q, want %q", got.Name, vectorStoreCreateName))
+	}
 
 	updated, err := client.VectorStores.Update(ctx, vectorStoreID, openai.VectorStoreUpdateParams{
-		Name: openai.String("compatibility-test-vector-store-updated"),
+		Name: openai.String(vectorStoreUpdateName),
 	})
 	if err != nil {
 		return fmt.Errorf("vector store update failed: %w", err)
@@ -72,8 +80,8 @@ func (VectorStores) Run(ctx context.Context, client openai.Client, cfg *config.C
 	if updated.ID != vectorStoreID {
 		return fail("vector_stores", fmt.Sprintf("update id is %q, want %q", updated.ID, vectorStoreID))
 	}
-	if updated.Name != "compatibility-test-vector-store-updated" {
-		return fail("vector_stores", fmt.Sprintf("update name is %q, want compatibility-test-vector-store-updated", updated.Name))
+	if updated.Name != vectorStoreUpdateName {
+		return fail("vector_stores", fmt.Sprintf("update name is %q, want %q", updated.Name, vectorStoreUpdateName))
 	}
 
 	listPage, err := client.VectorStores.List(ctx, openai.VectorStoreListParams{
@@ -183,6 +191,9 @@ func validateVectorStoreObject(suite string, store *openai.VectorStore) error {
 	if !store.JSON.UsageBytes.Valid() {
 		return fail(suite, "vector store missing usage_bytes")
 	}
+	if store.UsageBytes < 0 {
+		return fail(suite, fmt.Sprintf("vector store usage_bytes is %d, want >= 0", store.UsageBytes))
+	}
 	return nil
 }
 
@@ -239,13 +250,30 @@ func validateVectorStoreListPage(suite string, page *pagination.CursorPage[opena
 		return fail(suite, "list missing has_more")
 	}
 	var envelope struct {
-		Object string `json:"object"`
+		Object  string `json:"object"`
+		FirstID string `json:"first_id"`
+		LastID  string `json:"last_id"`
 	}
 	if err := json.Unmarshal([]byte(page.RawJSON()), &envelope); err != nil {
 		return fail(suite, "list response is not valid JSON")
 	}
 	if envelope.Object != "list" {
 		return fail(suite, fmt.Sprintf("list object is %q, want list", envelope.Object))
+	}
+	if len(page.Data) == 0 {
+		return nil
+	}
+	if envelope.FirstID == "" {
+		return fail(suite, "list missing first_id")
+	}
+	if envelope.LastID == "" {
+		return fail(suite, "list missing last_id")
+	}
+	if envelope.FirstID != page.Data[0].ID {
+		return fail(suite, fmt.Sprintf("list first_id is %q, want %q", envelope.FirstID, page.Data[0].ID))
+	}
+	if envelope.LastID != page.Data[len(page.Data)-1].ID {
+		return fail(suite, fmt.Sprintf("list last_id is %q, want %q", envelope.LastID, page.Data[len(page.Data)-1].ID))
 	}
 	for i := range page.Data {
 		if err := validateVectorStoreObject(suite, &page.Data[i]); err != nil {
@@ -306,6 +334,9 @@ func validateVectorStoreSearchPage(suite string, page *pagination.Page[openai.Ve
 		for _, content := range result.Content {
 			if content.Type != "text" {
 				return fail(suite, fmt.Sprintf("search content type is %q, want text", content.Type))
+			}
+			if !content.JSON.Text.Valid() {
+				return fail(suite, "search content missing text")
 			}
 		}
 	}
