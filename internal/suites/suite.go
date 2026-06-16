@@ -63,6 +63,7 @@ func All() []Suite {
 		BatchesCreate{},
 		BatchesGet{},
 		BatchesCancel{},
+		Conversations{},
 	}
 }
 

@@ -11,22 +11,24 @@ import (
 // Server provides a minimal OpenAI-compatible HTTP API for CI tests.
 type Server struct {
 	*httptest.Server
-	store       *responseStore
-	chatStore   *chatCompletionStore
-	fileStore   *fileStore
-	uploadStore *uploadStore
-	batchStore  *batchStore
+	store             *responseStore
+	chatStore         *chatCompletionStore
+	fileStore         *fileStore
+	uploadStore       *uploadStore
+	batchStore        *batchStore
+	conversationStore *conversationStore
 }
 
 // New starts a mock OpenAI API server.
 func New() *Server {
 	mux := http.NewServeMux()
 	s := &Server{
-		store:       newResponseStore(),
-		chatStore:   newChatCompletionStore(),
-		fileStore:   newFileStore(),
-		uploadStore: newUploadStore(),
-		batchStore:  newBatchStore(),
+		store:             newResponseStore(),
+		chatStore:         newChatCompletionStore(),
+		fileStore:         newFileStore(),
+		uploadStore:       newUploadStore(),
+		batchStore:        newBatchStore(),
+		conversationStore: newConversationStore(),
 	}
 
 	mux.HandleFunc("GET /v1/models", handleModels)
@@ -64,6 +66,14 @@ func New() *Server {
 	mux.HandleFunc("POST /v1/batches", s.handleBatchCreate)
 	mux.HandleFunc("GET /v1/batches/{id}", s.handleBatchGet)
 	mux.HandleFunc("POST /v1/batches/{id}/cancel", s.handleBatchCancel)
+	mux.HandleFunc("POST /v1/conversations", s.handleConversationCreate)
+	mux.HandleFunc("GET /v1/conversations/{id}", s.handleConversationGet)
+	mux.HandleFunc("POST /v1/conversations/{id}", s.handleConversationUpdate)
+	mux.HandleFunc("DELETE /v1/conversations/{id}", s.handleConversationDelete)
+	mux.HandleFunc("POST /v1/conversations/{id}/items", s.handleConversationItemCreate)
+	mux.HandleFunc("GET /v1/conversations/{id}/items", s.handleConversationItemList)
+	mux.HandleFunc("GET /v1/conversations/{id}/items/{itemID}", s.handleConversationItemGet)
+	mux.HandleFunc("DELETE /v1/conversations/{id}/items/{itemID}", s.handleConversationItemDelete)
 
 	s.Server = httptest.NewServer(mux)
 	return s

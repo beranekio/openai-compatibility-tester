@@ -133,6 +133,7 @@ var FullSuites = []string{
 	"batches_create",
 	"batches_get",
 	"batches_cancel",
+	"conversations",
 }
 
 var knownSuites = map[string]struct{}{
@@ -181,6 +182,7 @@ var knownSuites = map[string]struct{}{
 	"batches_create":                {},
 	"batches_get":                   {},
 	"batches_cancel":                {},
+	"conversations":                 {},
 }
 
 // Config holds runtime settings for compatibility testing.

@@ -423,6 +423,20 @@ func TestLoadAllowsImagesVariationsSuiteWithoutImageModel(t *testing.T) {
 	}
 }
 
+func TestLoadAllowsConversationsSuiteWithoutModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvModel, "")
+
+	cfg, err := Load([]string{"--suites", "conversations", "--model="})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if len(cfg.Suites) != 1 || cfg.Suites[0] != "conversations" {
+		t.Fatalf("Suites = %v, want [conversations]", cfg.Suites)
+	}
+}
+
 func TestLoadRejectsImagesEditsSuiteWithoutImageModel(t *testing.T) {
 	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
