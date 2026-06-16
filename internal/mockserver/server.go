@@ -82,6 +82,14 @@ func New() *Server {
 	mux.HandleFunc("POST /v1/vector_stores/{id}", s.handleVectorStoreUpdate)
 	mux.HandleFunc("DELETE /v1/vector_stores/{id}", s.handleVectorStoreDelete)
 	mux.HandleFunc("POST /v1/vector_stores/{id}/search", s.handleVectorStoreSearch)
+	mux.HandleFunc("POST /v1/vector_stores/{id}/files", s.handleVectorStoreFileCreate)
+	mux.HandleFunc("GET /v1/vector_stores/{id}/files", s.handleVectorStoreFileList)
+	mux.HandleFunc("GET /v1/vector_stores/{id}/files/{fileID}", s.handleVectorStoreFileGet)
+	mux.HandleFunc("DELETE /v1/vector_stores/{id}/files/{fileID}", s.handleVectorStoreFileDelete)
+	mux.HandleFunc("POST /v1/vector_stores/{id}/file_batches", s.handleVectorStoreFileBatchCreate)
+	mux.HandleFunc("GET /v1/vector_stores/{id}/file_batches/{batchID}", s.handleVectorStoreFileBatchGet)
+	mux.HandleFunc("POST /v1/vector_stores/{id}/file_batches/{batchID}/cancel", s.handleVectorStoreFileBatchCancel)
+	mux.HandleFunc("GET /v1/vector_stores/{id}/file_batches/{batchID}/files", s.handleVectorStoreFileBatchListFiles)
 
 	s.Server = httptest.NewServer(mux)
 	return s

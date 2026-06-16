@@ -65,6 +65,8 @@ func All() []Suite {
 		BatchesCancel{},
 		Conversations{},
 		VectorStores{},
+		VectorStoreFiles{},
+		VectorStoreFileBatches{},
 	}
 }
 

@@ -76,6 +76,8 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"batches_cancel",
 			"conversations",
 			"vector_stores",
+			"vector_store_files",
+			"vector_store_file_batches",
 		},
 	}
 
