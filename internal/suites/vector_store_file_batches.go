@@ -25,21 +25,23 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 	if err != nil {
 		return err
 	}
-	var fileIDs []string
+	var cleanupFileIDs []string
 	defer func() {
-		cleanupVectorStoreArtifacts(client, store.ID, fileIDs...)
+		cleanupVectorStoreArtifacts(client, store.ID, cleanupFileIDs...)
 	}()
 
+	var batchFileIDs []string
 	for range 2 {
 		uploaded, err := uploadVectorStoreSourceFile(ctx, client, "vector_store_file_batches")
 		if err != nil {
 			return err
 		}
-		fileIDs = append(fileIDs, uploaded.ID)
+		batchFileIDs = append(batchFileIDs, uploaded.ID)
+		cleanupFileIDs = append(cleanupFileIDs, uploaded.ID)
 	}
 
 	created, err := client.VectorStores.FileBatches.New(ctx, store.ID, openai.VectorStoreFileBatchNewParams{
-		FileIDs: fileIDs,
+		FileIDs: batchFileIDs,
 	})
 	if err != nil {
 		return fmt.Errorf("vector store file batch create failed: %w", err)
@@ -47,8 +49,8 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 	if err := validateVectorStoreFileBatchObject("vector_store_file_batches", created, store.ID); err != nil {
 		return err
 	}
-	if created.FileCounts.Total != int64(len(fileIDs)) {
-		return fail("vector_store_file_batches", fmt.Sprintf("batch file_counts.total is %d, want %d", created.FileCounts.Total, len(fileIDs)))
+	if created.FileCounts.Total != int64(len(batchFileIDs)) {
+		return fail("vector_store_file_batches", fmt.Sprintf("batch file_counts.total is %d, want %d", created.FileCounts.Total, len(batchFileIDs)))
 	}
 	if !isVectorStoreFileBatchCreateStatusOK(string(created.Status)) {
 		return fail("vector_store_file_batches", fmt.Sprintf("batch status is %q, want in_progress or completed", created.Status))
@@ -65,6 +67,24 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 		return fail("vector_store_file_batches", fmt.Sprintf("get batch id is %q, want %q", got.ID, created.ID))
 	}
 
+	unrelated, err := uploadVectorStoreSourceFile(ctx, client, "vector_store_file_batches")
+	if err != nil {
+		return err
+	}
+	cleanupFileIDs = append(cleanupFileIDs, unrelated.ID)
+	unrelatedAttached, err := client.VectorStores.Files.New(ctx, store.ID, openai.VectorStoreFileNewParams{
+		FileID: unrelated.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("vector store unrelated file attach failed: %w", err)
+	}
+	if err := validateVectorStoreFileObject("vector_store_file_batches", unrelatedAttached, store.ID); err != nil {
+		return err
+	}
+	if unrelatedAttached.ID != unrelated.ID {
+		return fail("vector_store_file_batches", fmt.Sprintf("unrelated file id is %q, want %q", unrelatedAttached.ID, unrelated.ID))
+	}
+
 	listPage, err := client.VectorStores.FileBatches.ListFiles(ctx, store.ID, created.ID, openai.VectorStoreFileBatchListFilesParams{
 		Limit: openai.Int(10),
 	})
@@ -74,10 +94,13 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 	if err := validateVectorStoreFileListPage("vector_store_file_batches", listPage, store.ID); err != nil {
 		return err
 	}
-	for _, fileID := range fileIDs {
+	for _, fileID := range batchFileIDs {
 		if !vectorStoreFileListContains(listPage.Data, fileID) {
 			return fail("vector_store_file_batches", fmt.Sprintf("batch file %q missing from list files response", fileID))
 		}
+	}
+	if vectorStoreFileListContains(listPage.Data, unrelated.ID) {
+		return fail("vector_store_file_batches", "batch list files response included non-batch file")
 	}
 
 	cancelled, err := client.VectorStores.FileBatches.Cancel(ctx, store.ID, created.ID)
@@ -169,6 +192,20 @@ func validateVectorStoreFileBatchFileCounts(suite string, counts openai.VectorSt
 	if !counts.JSON.Total.Valid() {
 		return fail(suite, "vector store file batch file_counts missing total")
 	}
+	for _, count := range []struct {
+		name  string
+		value int64
+	}{
+		{name: "cancelled", value: counts.Cancelled},
+		{name: "completed", value: counts.Completed},
+		{name: "failed", value: counts.Failed},
+		{name: "in_progress", value: counts.InProgress},
+		{name: "total", value: counts.Total},
+	} {
+		if count.value < 0 {
+			return fail(suite, fmt.Sprintf("vector store file batch file_counts %s is %d, want >= 0", count.name, count.value))
+		}
+	}
 	if counts.Total != counts.Cancelled+counts.Completed+counts.Failed+counts.InProgress {
 		return fail(suite, "vector store file batch file_counts total does not match status counts")
 	}
@@ -190,14 +227,26 @@ func isVectorStoreFileBatchCancelAlreadyTerminalError(apiErr *openai.Error) bool
 	switch apiErr.StatusCode {
 	case http.StatusConflict, http.StatusBadRequest:
 		detail := strings.ToLower(strings.Join([]string{apiErr.Code, apiErr.Message, apiErr.Type}, " "))
-		statusIsCompleted := strings.Contains(detail, "complete")
-		statusIsCancelled := strings.Contains(detail, "cancelled") || strings.Contains(detail, "canceled")
-		statusIsFailed := strings.Contains(detail, "fail")
-		terminalSignal := strings.Contains(detail, "already") ||
-			strings.Contains(detail, "terminal") ||
+		statusIsCompleted := detailContainsWord(detail, "complete", "completed") && !strings.Contains(detail, "not complete")
+		statusIsCancelled := detailContainsWord(detail, "cancelled", "canceled")
+		statusIsFailed := detailContainsWord(detail, "fail", "failed", "failure")
+		terminalSignal := detailContainsWord(detail, "already", "terminal") ||
 			(strings.Contains(detail, "cannot") || strings.Contains(detail, "can't") || strings.Contains(detail, "can not"))
 		return terminalSignal && !statusIsFailed && (statusIsCompleted || statusIsCancelled)
 	default:
 		return false
 	}
+}
+
+func detailContainsWord(detail string, words ...string) bool {
+	for _, token := range strings.FieldsFunc(detail, func(r rune) bool {
+		return r < 'a' || r > 'z'
+	}) {
+		for _, word := range words {
+			if token == word {
+				return true
+			}
+		}
+	}
+	return false
 }

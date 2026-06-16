@@ -193,6 +193,9 @@ func validateVectorStoreFileObject(suite string, file *openai.VectorStoreFile, e
 	if !file.JSON.UsageBytes.Valid() {
 		return fail(suite, "vector store file missing usage_bytes")
 	}
+	if file.UsageBytes < 0 {
+		return fail(suite, fmt.Sprintf("vector store file usage_bytes is %d, want >= 0", file.UsageBytes))
+	}
 	if !file.JSON.VectorStoreID.Valid() {
 		return fail(suite, "vector store file missing vector_store_id")
 	}

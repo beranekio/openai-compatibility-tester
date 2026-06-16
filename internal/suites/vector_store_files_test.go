@@ -71,6 +71,27 @@ func TestValidateVectorStoreFileObjectRejectsWrongVectorStoreID(t *testing.T) {
 	}
 }
 
+func TestValidateVectorStoreFileObjectRejectsNegativeUsageBytes(t *testing.T) {
+	var file openai.VectorStoreFile
+	raw := `{
+		"id": "file_mock",
+		"object": "vector_store.file",
+		"created_at": 1700000000,
+		"vector_store_id": "vs_mock",
+		"status": "completed",
+		"last_error": null,
+		"usage_bytes": -1
+	}`
+	if err := json.Unmarshal([]byte(raw), &file); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	err := validateVectorStoreFileObject("vector_store_files", &file, "vs_mock")
+	if err == nil || !strings.Contains(err.Error(), "usage_bytes is -1") {
+		t.Fatalf("expected negative usage_bytes validation error, got %v", err)
+	}
+}
+
 func TestValidateVectorStoreFileBatchObjectAcceptsSingularObject(t *testing.T) {
 	var batch openai.VectorStoreFileBatch
 	raw := `{
@@ -148,6 +169,32 @@ func TestValidateVectorStoreFileBatchObjectRejectsWrongVectorStoreID(t *testing.
 	}
 }
 
+func TestValidateVectorStoreFileBatchObjectRejectsNegativeFileCounts(t *testing.T) {
+	var batch openai.VectorStoreFileBatch
+	raw := `{
+		"id": "vsfb_mock",
+		"object": "vector_store.files_batch",
+		"created_at": 1700000000,
+		"vector_store_id": "vs_mock",
+		"status": "completed",
+		"file_counts": {
+			"in_progress": 0,
+			"completed": 2,
+			"failed": -1,
+			"cancelled": 0,
+			"total": 1
+		}
+	}`
+	if err := json.Unmarshal([]byte(raw), &batch); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	err := validateVectorStoreFileBatchObject("vector_store_file_batches", &batch, "vs_mock")
+	if err == nil || !strings.Contains(err.Error(), "file_counts failed is -1") {
+		t.Fatalf("expected negative file_counts validation error, got %v", err)
+	}
+}
+
 func TestVectorStoreFileBatchCancelAlreadyTerminalErrorRequiresTerminalSignal(t *testing.T) {
 	genericErr := &openai.Error{
 		StatusCode: http.StatusBadRequest,
@@ -176,5 +223,23 @@ func TestVectorStoreFileBatchCancelAlreadyTerminalErrorRequiresTerminalSignal(t 
 	}
 	if isVectorStoreFileBatchCancelAlreadyTerminalError(failedErr) {
 		t.Fatal("already-failed conflict was treated as already-terminal")
+	}
+
+	incompleteErr := &openai.Error{
+		StatusCode: http.StatusBadRequest,
+		Type:       "invalid_request_error",
+		Message:    "Cannot cancel an incomplete batch",
+	}
+	if isVectorStoreFileBatchCancelAlreadyTerminalError(incompleteErr) {
+		t.Fatal("incomplete cancel error was treated as already-terminal")
+	}
+
+	notCompleteErr := &openai.Error{
+		StatusCode: http.StatusBadRequest,
+		Type:       "invalid_request_error",
+		Message:    "Cannot cancel a batch that is not complete",
+	}
+	if isVectorStoreFileBatchCancelAlreadyTerminalError(notCompleteErr) {
+		t.Fatal("not-complete cancel error was treated as already-terminal")
 	}
 }
