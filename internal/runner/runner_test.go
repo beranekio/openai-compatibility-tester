@@ -74,6 +74,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"batches_create",
 			"batches_get",
 			"batches_cancel",
+			"conversations",
 		},
 	}
 

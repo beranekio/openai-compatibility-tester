@@ -89,6 +89,7 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `batches_create` | `client.Batches.New` | `POST /v1/batches` |
 | `batches_get` | `client.Batches.Get` | `GET /v1/batches/{id}` |
 | `batches_cancel` | `client.Batches.Cancel` | `POST /v1/batches/{id}/cancel` |
+| `conversations` | `client.Conversations.New`, `Get`, `Update`, `Delete`; `client.Conversations.Items.New`, `List`, `Get`, `Delete` | `POST/GET/DELETE /v1/conversations`, `POST/GET/DELETE /v1/conversations/{id}/items` |
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
