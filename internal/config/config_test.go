@@ -437,17 +437,23 @@ func TestLoadAllowsConversationsSuiteWithoutModel(t *testing.T) {
 	}
 }
 
-func TestLoadAllowsVectorStoresSuiteWithoutModel(t *testing.T) {
+func TestLoadAllowsVectorStoreSuitesWithoutModel(t *testing.T) {
 	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 	t.Setenv(EnvModel, "")
 
-	cfg, err := Load([]string{"--suites", "vector_stores", "--model="})
+	cfg, err := Load([]string{"--suites", "vector_stores,vector_store_files,vector_store_file_batches", "--model="})
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if len(cfg.Suites) != 1 || cfg.Suites[0] != "vector_stores" {
-		t.Fatalf("Suites = %v, want [vector_stores]", cfg.Suites)
+	want := []string{"vector_stores", "vector_store_files", "vector_store_file_batches"}
+	if len(cfg.Suites) != len(want) {
+		t.Fatalf("len(Suites) = %d, want %d", len(cfg.Suites), len(want))
+	}
+	for i, name := range want {
+		if cfg.Suites[i] != name {
+			t.Fatalf("Suites[%d] = %q, want %q", i, cfg.Suites[i], name)
+		}
 	}
 }
 
