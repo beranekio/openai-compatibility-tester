@@ -85,11 +85,8 @@ func (VectorStoreFiles) Run(ctx context.Context, client openai.Client, _ *config
 	if err := validateVectorStoreFileListPage("vector_store_files", listPage, store.ID); err != nil {
 		return err
 	}
-	if !vectorStoreFileListContains(listPage.Data, uploaded.ID) {
-		return fail("vector_store_files", "attached file missing from list response")
-	}
-	if vectorStoreFileListContains(listPage.Data, otherUploaded.ID) {
-		return fail("vector_store_files", "list response included file from another vector store")
+	if err := validateVectorStoreFileListIDs("vector_store_files", listPage.Data, []string{uploaded.ID}, "list response"); err != nil {
+		return err
 	}
 	if err := expectVectorStoreFileGetNotFound(ctx, client, "vector_store_files", store.ID, otherUploaded.ID, "cross-store get"); err != nil {
 		return err
@@ -155,8 +152,8 @@ func (VectorStoreFiles) Run(ctx context.Context, client openai.Client, _ *config
 	if err := validateVectorStoreFileListPage("vector_store_files", listAfterDelete, store.ID); err != nil {
 		return err
 	}
-	if vectorStoreFileListContains(listAfterDelete.Data, uploaded.ID) {
-		return fail("vector_store_files", "deleted file still present in list response")
+	if err := validateVectorStoreFileListIDs("vector_store_files", listAfterDelete.Data, nil, "list after delete response"); err != nil {
+		return err
 	}
 
 	sourceFile, err := client.Files.Get(ctx, uploaded.ID)
@@ -369,11 +366,31 @@ func validateVectorStoreFileListPage(suite string, page *pagination.CursorPage[o
 	return nil
 }
 
-func vectorStoreFileListContains(files []openai.VectorStoreFile, fileID string) bool {
+func validateVectorStoreFileListIDs(suite string, files []openai.VectorStoreFile, wantIDs []string, context string) error {
+	if len(files) != len(wantIDs) {
+		return fail(suite, fmt.Sprintf("%s returned %d files, want %d", context, len(files), len(wantIDs)))
+	}
+	wantCounts := make(map[string]int, len(wantIDs))
+	for _, id := range wantIDs {
+		wantCounts[id]++
+	}
+	seenCounts := make(map[string]int, len(files))
 	for _, file := range files {
-		if file.ID == fileID {
-			return true
+		seenCounts[file.ID]++
+	}
+	for id, count := range seenCounts {
+		wantCount := wantCounts[id]
+		if wantCount == 0 {
+			return fail(suite, fmt.Sprintf("%s included unexpected file %q", context, id))
+		}
+		if count != wantCount {
+			return fail(suite, fmt.Sprintf("%s included file %q %d times, want %d", context, id, count, wantCount))
 		}
 	}
-	return false
+	for id, wantCount := range wantCounts {
+		if seenCounts[id] != wantCount {
+			return fail(suite, fmt.Sprintf("%s missing file %q", context, id))
+		}
+	}
+	return nil
 }

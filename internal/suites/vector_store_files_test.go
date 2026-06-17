@@ -229,6 +229,30 @@ func TestValidateVectorStoreFileListPageRejectsHasMore(t *testing.T) {
 	}
 }
 
+func TestValidateVectorStoreFileListIDsRejectsDuplicateFile(t *testing.T) {
+	files := []openai.VectorStoreFile{
+		{ID: "file_mock"},
+		{ID: "file_mock"},
+	}
+
+	err := validateVectorStoreFileListIDs("vector_store_files", files, []string{"file_mock", "file_other"}, "list response")
+	if err == nil || !strings.Contains(err.Error(), `included file "file_mock" 2 times`) {
+		t.Fatalf("expected duplicate file validation error, got %v", err)
+	}
+}
+
+func TestValidateVectorStoreFileListIDsRejectsUnexpectedFile(t *testing.T) {
+	files := []openai.VectorStoreFile{
+		{ID: "file_mock"},
+		{ID: "file_extra"},
+	}
+
+	err := validateVectorStoreFileListIDs("vector_store_files", files, []string{"file_mock", "file_other"}, "list response")
+	if err == nil || !strings.Contains(err.Error(), `included unexpected file "file_extra"`) {
+		t.Fatalf("expected unexpected file validation error, got %v", err)
+	}
+}
+
 func TestValidateVectorStoreFileBatchObjectAcceptsSingularObject(t *testing.T) {
 	var batch openai.VectorStoreFileBatch
 	raw := `{
@@ -511,6 +535,32 @@ func TestValidateVectorStoreFileBatchCancelStateRejectsCancelledWithInProgressCo
 	err := validateVectorStoreFileBatchCancelState("vector_store_file_batches", &batch, 2)
 	if err == nil || !strings.Contains(err.Error(), "file_counts.in_progress is 1") {
 		t.Fatalf("expected in-progress count validation error for cancelled batch, got %v", err)
+	}
+}
+
+func TestValidateVectorStoreFileBatchAlreadyTerminalStateRejectsInProgress(t *testing.T) {
+	var batch openai.VectorStoreFileBatch
+	raw := `{
+		"id": "vsfb_mock",
+		"object": "vector_store.files_batch",
+		"created_at": 1700000000,
+		"vector_store_id": "vs_mock",
+		"status": "in_progress",
+		"file_counts": {
+			"in_progress": 1,
+			"completed": 1,
+			"failed": 0,
+			"cancelled": 0,
+			"total": 2
+		}
+	}`
+	if err := json.Unmarshal([]byte(raw), &batch); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	err := validateVectorStoreFileBatchAlreadyTerminalState("vector_store_file_batches", &batch, 2)
+	if err == nil || !strings.Contains(err.Error(), `status after terminal cancel error is "in_progress"`) {
+		t.Fatalf("expected in-progress terminal cancel validation error, got %v", err)
 	}
 }
 
