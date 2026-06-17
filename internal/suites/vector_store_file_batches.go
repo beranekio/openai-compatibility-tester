@@ -159,7 +159,10 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 			if terminal.ID != created.ID {
 				return fail("vector_store_file_batches", fmt.Sprintf("terminal batch id after cancel error is %q, want %q", terminal.ID, created.ID))
 			}
-			return validateVectorStoreFileBatchAlreadyTerminalState("vector_store_file_batches", terminal, int64(len(batchFileIDs)))
+			if err := validateVectorStoreFileBatchAlreadyTerminalState("vector_store_file_batches", terminal, int64(len(batchFileIDs))); err != nil {
+				return err
+			}
+			return validateVectorStoreFileBatchUnaffectedByCancel(ctx, client, "vector_store_file_batches", store.ID, otherBatch.ID, 1)
 		}
 		return fmt.Errorf("vector store file batch cancel failed: %w", err)
 	}
@@ -173,20 +176,21 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 		return err
 	}
 
-	otherGot, err := client.VectorStores.FileBatches.Get(ctx, store.ID, otherBatch.ID)
+	return validateVectorStoreFileBatchUnaffectedByCancel(ctx, client, "vector_store_file_batches", store.ID, otherBatch.ID, 1)
+}
+
+func validateVectorStoreFileBatchUnaffectedByCancel(ctx context.Context, client openai.Client, suite, vectorStoreID, batchID string, wantTotal int64) error {
+	got, err := client.VectorStores.FileBatches.Get(ctx, vectorStoreID, batchID)
 	if err != nil {
-		return fmt.Errorf("vector store second file batch get after cancel failed: %w", err)
+		return fmt.Errorf("vector store control file batch get after cancel failed: %w", err)
 	}
-	if err := validateVectorStoreFileBatchObject("vector_store_file_batches", otherGot, store.ID); err != nil {
+	if err := validateVectorStoreFileBatchObject(suite, got, vectorStoreID); err != nil {
 		return err
 	}
-	if otherGot.ID != otherBatch.ID {
-		return fail("vector_store_file_batches", fmt.Sprintf("other batch id after cancel is %q, want %q", otherGot.ID, otherBatch.ID))
+	if got.ID != batchID {
+		return fail(suite, fmt.Sprintf("control batch id after cancel is %q, want %q", got.ID, batchID))
 	}
-	if err := validateVectorStoreFileBatchPreCancelState("vector_store_file_batches", otherGot, 1); err != nil {
-		return err
-	}
-	return nil
+	return validateVectorStoreFileBatchPreCancelState(suite, got, wantTotal)
 }
 
 func expectVectorStoreFileBatchGetNotFound(ctx context.Context, client openai.Client, suite, vectorStoreID, batchID, action string) error {
