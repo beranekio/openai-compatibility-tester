@@ -51,6 +51,30 @@ func TestValidateVectorStoreFileObjectRequiresLastError(t *testing.T) {
 	}
 }
 
+func TestValidateVectorStoreFileObjectRejectsNonNullLastError(t *testing.T) {
+	var file openai.VectorStoreFile
+	raw := `{
+		"id": "file_mock",
+		"object": "vector_store.file",
+		"created_at": 1700000000,
+		"vector_store_id": "vs_mock",
+		"status": "completed",
+		"last_error": {
+			"code": "invalid_file",
+			"message": "file failed ingestion"
+		},
+		"usage_bytes": 24
+	}`
+	if err := json.Unmarshal([]byte(raw), &file); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	err := validateVectorStoreFileObject("vector_store_files", &file, "vs_mock")
+	if err == nil || !strings.Contains(err.Error(), "last_error is non-null") {
+		t.Fatalf("expected non-null last_error validation error, got %v", err)
+	}
+}
+
 func TestValidateVectorStoreFileObjectRejectsWrongVectorStoreID(t *testing.T) {
 	var file openai.VectorStoreFile
 	raw := `{
@@ -179,6 +203,29 @@ func TestValidateVectorStoreFileListPageRejectsWrongLastID(t *testing.T) {
 	err := validateVectorStoreFileListPage("vector_store_files", page, "vs_mock")
 	if err == nil || !strings.Contains(err.Error(), `list last_id is "file_other"`) {
 		t.Fatalf("expected wrong last_id validation error, got %v", err)
+	}
+}
+
+func TestValidateVectorStoreFileListPageRejectsHasMore(t *testing.T) {
+	page := parseVectorStoreFileListPage(t, `{
+		"object": "list",
+		"data": [{
+			"id": "file_mock",
+			"object": "vector_store.file",
+			"created_at": 1700000000,
+			"vector_store_id": "vs_mock",
+			"status": "completed",
+			"last_error": null,
+			"usage_bytes": 24
+		}],
+		"first_id": "file_mock",
+		"last_id": "file_mock",
+		"has_more": true
+	}`)
+
+	err := validateVectorStoreFileListPage("vector_store_files", page, "vs_mock")
+	if err == nil || !strings.Contains(err.Error(), "list has_more is true") {
+		t.Fatalf("expected has_more validation error, got %v", err)
 	}
 }
 
@@ -360,6 +407,58 @@ func TestValidateVectorStoreFileBatchPreCancelStatusRejectsCancelled(t *testing.
 	err := validateVectorStoreFileBatchPreCancelStatus("vector_store_file_batches", &batch)
 	if err == nil || !strings.Contains(err.Error(), `status is "cancelled"`) {
 		t.Fatalf("expected cancelled pre-cancel status validation error, got %v", err)
+	}
+}
+
+func TestValidateVectorStoreFileBatchPreCancelStateRejectsCancelledCount(t *testing.T) {
+	var batch openai.VectorStoreFileBatch
+	raw := `{
+		"id": "vsfb_mock",
+		"object": "vector_store.files_batch",
+		"created_at": 1700000000,
+		"vector_store_id": "vs_mock",
+		"status": "in_progress",
+		"file_counts": {
+			"in_progress": 0,
+			"completed": 0,
+			"failed": 0,
+			"cancelled": 1,
+			"total": 1
+		}
+	}`
+	if err := json.Unmarshal([]byte(raw), &batch); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	err := validateVectorStoreFileBatchPreCancelState("vector_store_file_batches", &batch, 1)
+	if err == nil || !strings.Contains(err.Error(), "file_counts.cancelled is 1") {
+		t.Fatalf("expected cancelled pre-cancel count validation error, got %v", err)
+	}
+}
+
+func TestValidateVectorStoreFileBatchPreCancelStateRejectsCompletedWithInProgressCount(t *testing.T) {
+	var batch openai.VectorStoreFileBatch
+	raw := `{
+		"id": "vsfb_mock",
+		"object": "vector_store.files_batch",
+		"created_at": 1700000000,
+		"vector_store_id": "vs_mock",
+		"status": "completed",
+		"file_counts": {
+			"in_progress": 1,
+			"completed": 1,
+			"failed": 0,
+			"cancelled": 0,
+			"total": 2
+		}
+	}`
+	if err := json.Unmarshal([]byte(raw), &batch); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	err := validateVectorStoreFileBatchPreCancelState("vector_store_file_batches", &batch, 2)
+	if err == nil || !strings.Contains(err.Error(), "file_counts.in_progress is 1") {
+		t.Fatalf("expected in-progress count validation error for completed batch, got %v", err)
 	}
 }
 

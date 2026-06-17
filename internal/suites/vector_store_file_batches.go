@@ -49,10 +49,7 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 	if err := validateVectorStoreFileBatchObject("vector_store_file_batches", created, store.ID); err != nil {
 		return err
 	}
-	if err := validateVectorStoreFileBatchUploadCounts("vector_store_file_batches", created, int64(len(batchFileIDs))); err != nil {
-		return err
-	}
-	if err := validateVectorStoreFileBatchPreCancelStatus("vector_store_file_batches", created); err != nil {
+	if err := validateVectorStoreFileBatchPreCancelState("vector_store_file_batches", created, int64(len(batchFileIDs))); err != nil {
 		return err
 	}
 
@@ -66,10 +63,7 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 	if got.ID != created.ID {
 		return fail("vector_store_file_batches", fmt.Sprintf("get batch id is %q, want %q", got.ID, created.ID))
 	}
-	if err := validateVectorStoreFileBatchUploadCounts("vector_store_file_batches", got, int64(len(batchFileIDs))); err != nil {
-		return err
-	}
-	if err := validateVectorStoreFileBatchPreCancelStatus("vector_store_file_batches", got); err != nil {
+	if err := validateVectorStoreFileBatchPreCancelState("vector_store_file_batches", got, int64(len(batchFileIDs))); err != nil {
 		return err
 	}
 
@@ -87,10 +81,7 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 	if err := validateVectorStoreFileBatchObject("vector_store_file_batches", otherBatch, store.ID); err != nil {
 		return err
 	}
-	if err := validateVectorStoreFileBatchUploadCounts("vector_store_file_batches", otherBatch, 1); err != nil {
-		return err
-	}
-	if err := validateVectorStoreFileBatchPreCancelStatus("vector_store_file_batches", otherBatch); err != nil {
+	if err := validateVectorStoreFileBatchPreCancelState("vector_store_file_batches", otherBatch, 1); err != nil {
 		return err
 	}
 
@@ -132,6 +123,20 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 	if !isVectorStoreFileBatchCancelStatusOK(string(cancelled.Status)) {
 		return fail("vector_store_file_batches", fmt.Sprintf("cancel status is %q, want in_progress, cancelled, or completed", cancelled.Status))
 	}
+
+	otherGot, err := client.VectorStores.FileBatches.Get(ctx, store.ID, otherBatch.ID)
+	if err != nil {
+		return fmt.Errorf("vector store second file batch get after cancel failed: %w", err)
+	}
+	if err := validateVectorStoreFileBatchObject("vector_store_file_batches", otherGot, store.ID); err != nil {
+		return err
+	}
+	if otherGot.ID != otherBatch.ID {
+		return fail("vector_store_file_batches", fmt.Sprintf("other batch id after cancel is %q, want %q", otherGot.ID, otherBatch.ID))
+	}
+	if err := validateVectorStoreFileBatchPreCancelState("vector_store_file_batches", otherGot, 1); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -141,6 +146,27 @@ func validateVectorStoreFileBatchUploadCounts(suite string, batch *openai.Vector
 	}
 	if batch.FileCounts.Failed != 0 {
 		return fail(suite, fmt.Sprintf("batch file_counts.failed is %d, want 0", batch.FileCounts.Failed))
+	}
+	return nil
+}
+
+func validateVectorStoreFileBatchPreCancelState(suite string, batch *openai.VectorStoreFileBatch, wantTotal int64) error {
+	if err := validateVectorStoreFileBatchUploadCounts(suite, batch, wantTotal); err != nil {
+		return err
+	}
+	if err := validateVectorStoreFileBatchPreCancelStatus(suite, batch); err != nil {
+		return err
+	}
+	if batch.FileCounts.Cancelled != 0 {
+		return fail(suite, fmt.Sprintf("batch file_counts.cancelled is %d, want 0 before cancel", batch.FileCounts.Cancelled))
+	}
+	if batch.Status == openai.VectorStoreFileBatchStatusCompleted {
+		if batch.FileCounts.InProgress != 0 {
+			return fail(suite, fmt.Sprintf("batch file_counts.in_progress is %d, want 0 for completed batch", batch.FileCounts.InProgress))
+		}
+		if batch.FileCounts.Completed != wantTotal {
+			return fail(suite, fmt.Sprintf("batch file_counts.completed is %d, want %d for completed batch", batch.FileCounts.Completed, wantTotal))
+		}
 	}
 	return nil
 }

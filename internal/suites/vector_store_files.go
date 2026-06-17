@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
@@ -90,6 +91,9 @@ func (VectorStoreFiles) Run(ctx context.Context, client openai.Client, _ *config
 	if vectorStoreFileListContains(listPage.Data, otherUploaded.ID) {
 		return fail("vector_store_files", "list response included file from another vector store")
 	}
+	if err := expectVectorStoreFileGetNotFound(ctx, client, "vector_store_files", store.ID, otherUploaded.ID, "cross-store get"); err != nil {
+		return err
+	}
 
 	got, err := client.VectorStores.Files.Get(ctx, store.ID, uploaded.ID)
 	if err != nil {
@@ -113,16 +117,32 @@ func (VectorStoreFiles) Run(ctx context.Context, client openai.Client, _ *config
 		return err
 	}
 
-	_, getErr := client.VectorStores.Files.Get(ctx, store.ID, uploaded.ID)
-	if getErr == nil {
-		return fail("vector_store_files", "get after delete succeeded; vector store file still exists")
+	if err := expectVectorStoreFileGetNotFound(ctx, client, "vector_store_files", store.ID, uploaded.ID, "get after delete"); err != nil {
+		return err
 	}
-	var apiErr *openai.Error
-	if !errors.As(getErr, &apiErr) {
-		return fmt.Errorf("get after delete failed: %w", getErr)
+
+	preservedStore, err := client.VectorStores.Get(ctx, store.ID)
+	if err != nil {
+		return fmt.Errorf("vector store get after vector store file delete failed: %w", err)
 	}
-	if apiErr.StatusCode != http.StatusNotFound {
-		return fail("vector_store_files", fmt.Sprintf("get after delete returned status %d, want 404", apiErr.StatusCode))
+	if err := validateVectorStoreObject("vector_store_files", preservedStore); err != nil {
+		return err
+	}
+	if preservedStore.ID != store.ID {
+		return fail("vector_store_files", fmt.Sprintf("vector store id after file delete is %q, want %q", preservedStore.ID, store.ID))
+	}
+
+	listAfterDelete, err := client.VectorStores.Files.List(ctx, store.ID, openai.VectorStoreFileListParams{
+		Limit: openai.Int(10),
+	})
+	if err != nil {
+		return fmt.Errorf("vector store file list after delete failed: %w", err)
+	}
+	if err := validateVectorStoreFileListPage("vector_store_files", listAfterDelete, store.ID); err != nil {
+		return err
+	}
+	if vectorStoreFileListContains(listAfterDelete.Data, uploaded.ID) {
+		return fail("vector_store_files", "deleted file still present in list response")
 	}
 
 	sourceFile, err := client.Files.Get(ctx, uploaded.ID)
@@ -134,6 +154,21 @@ func (VectorStoreFiles) Run(ctx context.Context, client openai.Client, _ *config
 	}
 	if sourceFile.ID != uploaded.ID {
 		return fail("vector_store_files", fmt.Sprintf("source file id after vector store file delete is %q, want %q", sourceFile.ID, uploaded.ID))
+	}
+	return nil
+}
+
+func expectVectorStoreFileGetNotFound(ctx context.Context, client openai.Client, suite, vectorStoreID, fileID, action string) error {
+	_, err := client.VectorStores.Files.Get(ctx, vectorStoreID, fileID)
+	if err == nil {
+		return fail(suite, fmt.Sprintf("%s succeeded; vector store file exists", action))
+	}
+	var apiErr *openai.Error
+	if !errors.As(err, &apiErr) {
+		return fmt.Errorf("%s failed: %w", action, err)
+	}
+	if apiErr.StatusCode != http.StatusNotFound {
+		return fail(suite, fmt.Sprintf("%s returned status %d, want 404", action, apiErr.StatusCode))
 	}
 	return nil
 }
@@ -227,8 +262,12 @@ func validateVectorStoreFileObject(suite string, file *openai.VectorStoreFile, e
 	if !isVectorStoreFileStatusOK(file.Status) {
 		return fail(suite, fmt.Sprintf("vector store file status is %q, want in_progress or completed", file.Status))
 	}
-	if file.JSON.LastError.Raw() == "" {
+	lastError := strings.TrimSpace(file.JSON.LastError.Raw())
+	if lastError == "" {
 		return fail(suite, "vector store file missing last_error")
+	}
+	if lastError != "null" {
+		return fail(suite, "vector store file last_error is non-null")
 	}
 	if !file.JSON.UsageBytes.Valid() {
 		return fail(suite, "vector store file missing usage_bytes")
@@ -263,6 +302,9 @@ func validateVectorStoreFileListPage(suite string, page *pagination.CursorPage[o
 	}
 	if !page.JSON.HasMore.Valid() {
 		return fail(suite, "list missing has_more")
+	}
+	if page.HasMore {
+		return fail(suite, "list has_more is true, want false")
 	}
 	var envelope struct {
 		Object  string `json:"object"`
