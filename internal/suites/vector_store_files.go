@@ -106,6 +106,20 @@ func (VectorStoreFiles) Run(ctx context.Context, client openai.Client, _ *config
 		return fail("vector_store_files", fmt.Sprintf("get file id is %q, want %q", got.ID, uploaded.ID))
 	}
 
+	if err := expectVectorStoreFileDeleteNotFound(ctx, client, "vector_store_files", store.ID, otherUploaded.ID, "cross-store delete"); err != nil {
+		return err
+	}
+	otherGot, err := client.VectorStores.Files.Get(ctx, otherStore.ID, otherUploaded.ID)
+	if err != nil {
+		return fmt.Errorf("other vector store file get after cross-store delete failed: %w", err)
+	}
+	if err := validateVectorStoreFileObject("vector_store_files", otherGot, otherStore.ID); err != nil {
+		return err
+	}
+	if otherGot.ID != otherUploaded.ID {
+		return fail("vector_store_files", fmt.Sprintf("other get file id after cross-store delete is %q, want %q", otherGot.ID, otherUploaded.ID))
+	}
+
 	deleted, err := client.VectorStores.Files.Delete(ctx, store.ID, uploaded.ID)
 	if err != nil {
 		return fmt.Errorf("vector store file delete failed: %w", err)
@@ -154,6 +168,21 @@ func (VectorStoreFiles) Run(ctx context.Context, client openai.Client, _ *config
 	}
 	if sourceFile.ID != uploaded.ID {
 		return fail("vector_store_files", fmt.Sprintf("source file id after vector store file delete is %q, want %q", sourceFile.ID, uploaded.ID))
+	}
+	return nil
+}
+
+func expectVectorStoreFileDeleteNotFound(ctx context.Context, client openai.Client, suite, vectorStoreID, fileID, action string) error {
+	_, err := client.VectorStores.Files.Delete(ctx, vectorStoreID, fileID)
+	if err == nil {
+		return fail(suite, fmt.Sprintf("%s succeeded; vector store file was deleted", action))
+	}
+	var apiErr *openai.Error
+	if !errors.As(err, &apiErr) {
+		return fmt.Errorf("%s failed: %w", action, err)
+	}
+	if apiErr.StatusCode != http.StatusNotFound {
+		return fail(suite, fmt.Sprintf("%s returned status %d, want 404", action, apiErr.StatusCode))
 	}
 	return nil
 }

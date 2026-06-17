@@ -25,9 +25,11 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 	if err != nil {
 		return err
 	}
+	var otherStoreID string
 	var cleanupFileIDs []string
 	defer func() {
-		cleanupVectorStoreArtifacts(client, store.ID, cleanupFileIDs...)
+		cleanupVectorStoreArtifacts(client, store.ID)
+		cleanupVectorStoreArtifacts(client, otherStoreID, cleanupFileIDs...)
 	}()
 
 	var batchFileIDs []string
@@ -64,6 +66,32 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 		return fail("vector_store_file_batches", fmt.Sprintf("get batch id is %q, want %q", got.ID, created.ID))
 	}
 	if err := validateVectorStoreFileBatchPreCancelState("vector_store_file_batches", got, int64(len(batchFileIDs))); err != nil {
+		return err
+	}
+
+	otherStore, err := createVectorStoreForSuite(ctx, client, "vector_store_file_batches", "compatibility-test-vector-store-file-batches-other")
+	if err != nil {
+		return err
+	}
+	otherStoreID = otherStore.ID
+	otherStoreBatchFile, err := uploadVectorStoreSourceFile(ctx, client, "vector_store_file_batches")
+	if err != nil {
+		return err
+	}
+	cleanupFileIDs = append(cleanupFileIDs, otherStoreBatchFile.ID)
+	otherStoreBatch, err := client.VectorStores.FileBatches.New(ctx, otherStore.ID, openai.VectorStoreFileBatchNewParams{
+		FileIDs: []string{otherStoreBatchFile.ID},
+	})
+	if err != nil {
+		return fmt.Errorf("other vector store file batch create failed: %w", err)
+	}
+	if err := validateVectorStoreFileBatchObject("vector_store_file_batches", otherStoreBatch, otherStore.ID); err != nil {
+		return err
+	}
+	if err := validateVectorStoreFileBatchPreCancelState("vector_store_file_batches", otherStoreBatch, 1); err != nil {
+		return err
+	}
+	if err := expectVectorStoreFileBatchGetNotFound(ctx, client, "vector_store_file_batches", store.ID, otherStoreBatch.ID, "cross-store batch get"); err != nil {
 		return err
 	}
 
@@ -117,11 +145,8 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 	if cancelled.ID != created.ID {
 		return fail("vector_store_file_batches", fmt.Sprintf("cancel batch id is %q, want %q", cancelled.ID, created.ID))
 	}
-	if err := validateVectorStoreFileBatchUploadCounts("vector_store_file_batches", cancelled, int64(len(batchFileIDs))); err != nil {
+	if err := validateVectorStoreFileBatchCancelState("vector_store_file_batches", cancelled, int64(len(batchFileIDs))); err != nil {
 		return err
-	}
-	if !isVectorStoreFileBatchCancelStatusOK(string(cancelled.Status)) {
-		return fail("vector_store_file_batches", fmt.Sprintf("cancel status is %q, want in_progress, cancelled, or completed", cancelled.Status))
 	}
 
 	otherGot, err := client.VectorStores.FileBatches.Get(ctx, store.ID, otherBatch.ID)
@@ -140,12 +165,50 @@ func (VectorStoreFileBatches) Run(ctx context.Context, client openai.Client, _ *
 	return nil
 }
 
+func expectVectorStoreFileBatchGetNotFound(ctx context.Context, client openai.Client, suite, vectorStoreID, batchID, action string) error {
+	_, err := client.VectorStores.FileBatches.Get(ctx, vectorStoreID, batchID)
+	if err == nil {
+		return fail(suite, fmt.Sprintf("%s succeeded; vector store file batch exists", action))
+	}
+	var apiErr *openai.Error
+	if !errors.As(err, &apiErr) {
+		return fmt.Errorf("%s failed: %w", action, err)
+	}
+	if apiErr.StatusCode != http.StatusNotFound {
+		return fail(suite, fmt.Sprintf("%s returned status %d, want 404", action, apiErr.StatusCode))
+	}
+	return nil
+}
+
 func validateVectorStoreFileBatchUploadCounts(suite string, batch *openai.VectorStoreFileBatch, wantTotal int64) error {
 	if batch.FileCounts.Total != wantTotal {
 		return fail(suite, fmt.Sprintf("batch file_counts.total is %d, want %d", batch.FileCounts.Total, wantTotal))
 	}
 	if batch.FileCounts.Failed != 0 {
 		return fail(suite, fmt.Sprintf("batch file_counts.failed is %d, want 0", batch.FileCounts.Failed))
+	}
+	return nil
+}
+
+func validateVectorStoreFileBatchCancelState(suite string, batch *openai.VectorStoreFileBatch, wantTotal int64) error {
+	if err := validateVectorStoreFileBatchUploadCounts(suite, batch, wantTotal); err != nil {
+		return err
+	}
+	if !isVectorStoreFileBatchCancelStatusOK(string(batch.Status)) {
+		return fail(suite, fmt.Sprintf("cancel status is %q, want in_progress, cancelled, or completed", batch.Status))
+	}
+	switch string(batch.Status) {
+	case "completed":
+		if batch.FileCounts.InProgress != 0 {
+			return fail(suite, fmt.Sprintf("batch file_counts.in_progress is %d, want 0 for completed batch", batch.FileCounts.InProgress))
+		}
+		if batch.FileCounts.Completed != wantTotal {
+			return fail(suite, fmt.Sprintf("batch file_counts.completed is %d, want %d for completed batch", batch.FileCounts.Completed, wantTotal))
+		}
+	case "cancelled":
+		if batch.FileCounts.InProgress != 0 {
+			return fail(suite, fmt.Sprintf("batch file_counts.in_progress is %d, want 0 for cancelled batch", batch.FileCounts.InProgress))
+		}
 	}
 	return nil
 }

@@ -462,6 +462,58 @@ func TestValidateVectorStoreFileBatchPreCancelStateRejectsCompletedWithInProgres
 	}
 }
 
+func TestValidateVectorStoreFileBatchCancelStateRejectsCompletedWithInProgressCount(t *testing.T) {
+	var batch openai.VectorStoreFileBatch
+	raw := `{
+		"id": "vsfb_mock",
+		"object": "vector_store.files_batch",
+		"created_at": 1700000000,
+		"vector_store_id": "vs_mock",
+		"status": "completed",
+		"file_counts": {
+			"in_progress": 1,
+			"completed": 1,
+			"failed": 0,
+			"cancelled": 0,
+			"total": 2
+		}
+	}`
+	if err := json.Unmarshal([]byte(raw), &batch); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	err := validateVectorStoreFileBatchCancelState("vector_store_file_batches", &batch, 2)
+	if err == nil || !strings.Contains(err.Error(), "file_counts.in_progress is 1") {
+		t.Fatalf("expected in-progress count validation error for completed cancel response, got %v", err)
+	}
+}
+
+func TestValidateVectorStoreFileBatchCancelStateRejectsCancelledWithInProgressCount(t *testing.T) {
+	var batch openai.VectorStoreFileBatch
+	raw := `{
+		"id": "vsfb_mock",
+		"object": "vector_store.files_batch",
+		"created_at": 1700000000,
+		"vector_store_id": "vs_mock",
+		"status": "cancelled",
+		"file_counts": {
+			"in_progress": 1,
+			"completed": 0,
+			"failed": 0,
+			"cancelled": 1,
+			"total": 2
+		}
+	}`
+	if err := json.Unmarshal([]byte(raw), &batch); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	err := validateVectorStoreFileBatchCancelState("vector_store_file_batches", &batch, 2)
+	if err == nil || !strings.Contains(err.Error(), "file_counts.in_progress is 1") {
+		t.Fatalf("expected in-progress count validation error for cancelled batch, got %v", err)
+	}
+}
+
 func TestVectorStoreFileBatchCancelStatusAllowsInProgress(t *testing.T) {
 	for _, status := range []string{"in_progress", "cancelled", "cancelling", "completed"} {
 		if !isVectorStoreFileBatchCancelStatusOK(status) {
