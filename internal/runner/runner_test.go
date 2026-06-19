@@ -3,6 +3,9 @@ package runner
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -204,7 +207,7 @@ func TestRunRejectsUnknownSuiteBeforeRequests(t *testing.T) {
 	}
 }
 
-func TestRunPassesWithOrgAndProjectHeaders(t *testing.T) {
+func TestRunPassesWithOrgAndProjectConfigured(t *testing.T) {
 	server := mockserver.New()
 	t.Cleanup(server.Close)
 
@@ -227,6 +230,59 @@ func TestRunPassesWithOrgAndProjectHeaders(t *testing.T) {
 	}
 	if code := ExitCode(results); code != 0 {
 		t.Fatalf("ExitCode() = %d, want 0; summary:\n%s", code, FormatSummary(results))
+	}
+}
+
+func TestRunnerSendsOrgAndProjectHeaders(t *testing.T) {
+	const (
+		wantOrg     = "org-header-test"
+		wantProject = "proj-header-test"
+	)
+
+	var gotOrg, gotProject string
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/models", func(w http.ResponseWriter, r *http.Request) {
+		gotOrg = r.Header.Get("OpenAI-Organization")
+		gotProject = r.Header.Get("OpenAI-Project")
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"object": "list",
+			"data": []map[string]any{{
+				"id":       "gpt-4o-mini",
+				"object":   "model",
+				"created":  1700000000,
+				"owned_by": "mock",
+			}},
+		})
+	})
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	cfg := &config.Config{
+		BaseURL:        server.URL + "/v1",
+		APIKey:         "test-key",
+		OrgID:          wantOrg,
+		ProjectID:      wantProject,
+		Model:          "gpt-4o-mini",
+		RequestTimeout: 30 * time.Second,
+		Suites:         []string{"models"},
+	}
+
+	runner := New(cfg)
+	runner.Output = &bytes.Buffer{}
+
+	results, err := runner.Run(context.Background())
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if code := ExitCode(results); code != 0 {
+		t.Fatalf("ExitCode() = %d, want 0; summary:\n%s", code, FormatSummary(results))
+	}
+	if gotOrg != wantOrg {
+		t.Fatalf("OpenAI-Organization = %q, want %q", gotOrg, wantOrg)
+	}
+	if gotProject != wantProject {
+		t.Fatalf("OpenAI-Project = %q, want %q", gotProject, wantProject)
 	}
 }
 
