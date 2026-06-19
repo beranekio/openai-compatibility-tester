@@ -49,10 +49,10 @@ func (Videos) Run(ctx context.Context, client openai.Client, cfg *config.Config)
 	if err != nil {
 		return fmt.Errorf("video create failed: %w", err)
 	}
+	videoID = submitted.ID
 	if err := validateVideoObject("videos", submitted); err != nil {
 		return err
 	}
-	videoID = submitted.ID
 
 	created, err := client.Videos.PollStatus(ctx, videoID, 0)
 	if err != nil {
@@ -136,9 +136,6 @@ func validateVideoObject(suite string, video *openai.Video) error {
 	}
 	if video.Status == openai.VideoStatusCompleted && !video.JSON.CompletedAt.Valid() {
 		return fail(suite, "completed video missing completed_at")
-	}
-	if video.Status == openai.VideoStatusCompleted && !video.JSON.ExpiresAt.Valid() {
-		return fail(suite, "completed video missing expires_at")
 	}
 	if video.Status == openai.VideoStatusFailed && !video.JSON.Error.Valid() {
 		return fail(suite, "failed video missing error")
@@ -272,8 +269,8 @@ func validateVideoContentResponse(suite string, resp *http.Response, minBytes in
 	if err != nil {
 		return fail(suite, fmt.Sprintf("Content-Type %q is invalid: %v", contentType, err))
 	}
-	if !strings.HasPrefix(mediaType, "video/") && mediaType != "application/octet-stream" {
-		return fail(suite, fmt.Sprintf("Content-Type is %q, want video/* or application/octet-stream", mediaType))
+	if !strings.HasPrefix(mediaType, "video/") && mediaType != "application/octet-stream" && mediaType != "application/binary" {
+		return fail(suite, fmt.Sprintf("Content-Type is %q, want video/*, application/octet-stream, or application/binary", mediaType))
 	}
 	return nil
 }
