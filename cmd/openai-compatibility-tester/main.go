@@ -40,7 +40,11 @@ func main() {
 func printSuites() {
 	fmt.Println("Available test suites:")
 	for _, suite := range suites.All() {
-		fmt.Printf("  %s - %s\n", suite.Name(), suite.Description())
+		name := suite.Name()
+		if suites.IsDeprecated(suite) {
+			name = "(deprecated) " + name
+		}
+		fmt.Printf("  %s - %s\n", name, suite.Description())
 	}
 	fmt.Println()
 	fmt.Printf("Default suites: %s\n", strings.Join(config.DefaultSuites, ", "))

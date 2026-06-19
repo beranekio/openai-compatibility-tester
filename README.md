@@ -107,12 +107,25 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `fine_tuning` | `client.FineTuning.Jobs.New`, `List`, `Get`, `Cancel`; `client.FineTuning.Jobs.Checkpoints.List`; `client.FineTuning.Checkpoints.Permissions.List` | `POST/GET /v1/fine_tuning/jobs`, `POST /v1/fine_tuning/jobs/{id}/cancel`, `GET /v1/fine_tuning/jobs/{id}/checkpoints`, `GET /v1/fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions` |
 | `chatkit_sessions` | `client.Beta.ChatKit.Sessions.New`, `Cancel` | `POST /v1/chatkit/sessions`, `POST /v1/chatkit/sessions/{id}/cancel` |
 | `chatkit_threads` | `client.Beta.ChatKit.Threads.List`, `Get`, `ListItems`[, `Delete`] | `GET /v1/chatkit/threads`, `GET /v1/chatkit/threads/{id}`, `GET /v1/chatkit/threads/{id}/items`[, `DELETE /v1/chatkit/threads/{id}`] |
+| `(deprecated) assistants` | `client.Beta.Assistants.New`, `Get`, `Update`, `List`, `Delete` | `GET/POST /v1/assistants`, `GET/POST/DELETE /v1/assistants/{id}` |
+| `(deprecated) assistants_threads` | `client.Beta.Threads.New`, `Get`, `Update`, `Delete`; `client.Beta.Threads.Messages.New`, `List`, `Get`; `client.Beta.Threads.Runs.New`, `Get` | `POST /v1/threads`, `GET/POST/DELETE /v1/threads/{id}`, `POST/GET /v1/threads/{id}/messages`, `GET /v1/threads/{id}/messages/{message_id}`, `POST /v1/threads/{id}/runs`, `GET /v1/threads/{id}/runs/{run_id}` |
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
 Extended preset (`extended`): default suites plus `chat_completions_stream_usage`, `chat_completions_logprobs`, `chat_completions_json`, `chat_completions_tools`, `chat_completions_tools_stream`, `chat_completions_multi_turn`, `chat_completions_get`, `chat_completions_list`, `chat_completions_delete`, `chat_completions_messages`, `responses_tools`, `responses_tools_stream`, `responses_json`, `responses_get`, `responses_delete`, `responses_cancel`, `responses_input_items`, `responses_compact`, `responses_input_tokens`, `completions`, `completions_stream`, `embeddings`, `embeddings_batch`, `chat_completions_vision`, `chat_completions_reasoning`, `moderations`, `images_generations`, `images_edits`, `audio_speech`, `audio_transcriptions`, `audio_transcriptions_stream`, and `audio_translations`.
 
 Full preset (`full`): every registered suite (see `--list-suites`).
+
+Deprecated Assistants API suites (`assistants`, `assistants_threads`) are **opt-in** — included in `full`, but not in `default` or `extended`. They use `OPENAI_MODEL` for the assistant model and are labeled `(deprecated)` in `--list-suites`:
+
+```bash
+docker run --rm \
+  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
+  -e OPENAI_API_KEY=your-api-key \
+  -e OPENAI_MODEL=your-chat-model \
+  -e TEST_SUITES=assistants,assistants_threads \
+  ghcr.io/beranekio/openai-compatibility-tester:latest
+```
 
 Structured JSON output (`chat_completions_json`) is **opt-in** — included in `extended` and `full`, but not in the default `all` set:
 
