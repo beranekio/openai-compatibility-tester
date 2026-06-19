@@ -23,6 +23,9 @@ func validateSkillZipContentResponse(suite string, resp *http.Response, wantInSk
 	if resp.Body == nil {
 		return fail(suite, "response body is nil")
 	}
+	if resp.StatusCode != http.StatusOK {
+		return fail(suite, fmt.Sprintf("content status is %d, want 200", resp.StatusCode))
+	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)

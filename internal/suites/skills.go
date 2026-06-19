@@ -22,7 +22,7 @@ type Skills struct{}
 
 func (Skills) Name() string { return "skills" }
 func (Skills) Description() string {
-	return "Skills API lifecycle (POST/GET/DELETE /v1/skills)"
+	return "Skills API lifecycle (POST /v1/skills, GET /v1/skills, GET/POST/DELETE /v1/skills/{id}, POST /v1/skills/{id}/versions)"
 }
 
 func (Skills) Run(ctx context.Context, client openai.Client, _ *config.Config) error {
@@ -199,13 +199,30 @@ func validateSkillListPage(suite string, page *pagination.CursorPage[openai.Skil
 		return fail(suite, "list missing has_more")
 	}
 	var envelope struct {
-		Object string `json:"object"`
+		Object  string `json:"object"`
+		FirstID string `json:"first_id"`
+		LastID  string `json:"last_id"`
 	}
 	if err := json.Unmarshal([]byte(page.RawJSON()), &envelope); err != nil {
 		return fail(suite, "list response is not valid JSON")
 	}
 	if envelope.Object != "list" {
 		return fail(suite, fmt.Sprintf("list object is %q, want list", envelope.Object))
+	}
+	if len(page.Data) == 0 {
+		return nil
+	}
+	if envelope.FirstID == "" {
+		return fail(suite, "list missing first_id")
+	}
+	if envelope.LastID == "" {
+		return fail(suite, "list missing last_id")
+	}
+	if envelope.FirstID != page.Data[0].ID {
+		return fail(suite, fmt.Sprintf("list first_id is %q, want %q", envelope.FirstID, page.Data[0].ID))
+	}
+	if envelope.LastID != page.Data[len(page.Data)-1].ID {
+		return fail(suite, fmt.Sprintf("list last_id is %q, want %q", envelope.LastID, page.Data[len(page.Data)-1].ID))
 	}
 	for i := range page.Data {
 		if err := validateSkillObject(suite, &page.Data[i]); err != nil {
