@@ -2,9 +2,9 @@ package suites
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
+	"github.com/beranekio/openai-compatibility-tester/internal/suitespec"
 	"github.com/openai/openai-go/v3"
 )
 
@@ -152,13 +152,7 @@ func RequiredModels(names []string) ModelRequirements {
 
 // ValidateNames reports whether every name is a registered suite.
 func ValidateNames(names []string) error {
-	registry := ByName()
-	for _, name := range names {
-		if _, ok := registry[name]; !ok {
-			return fmt.Errorf("unknown test suite %q (use --list-suites to see options)", name)
-		}
-	}
-	return nil
+	return suitespec.ValidateNames(names)
 }
 
 // Names returns sorted suite names for display.

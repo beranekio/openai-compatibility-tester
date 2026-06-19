@@ -45,7 +45,7 @@ type Suite interface {
 }
 ```
 
-Register new suites in `internal/suites/suite.go` (`All()`, `knownSuites` in config if needed, `RequiredModels()` / `validateModelsForSuites()` when model config is required). For deprecated APIs, implement `DeprecatedSuite` and ensure `printSuites()` labels them `(deprecated)`.
+Register new suites in `internal/suites/suite.go` (`All()`, plus `internal/suitespec/names.go` and `config.FullSuites` — keep all three in sync via tests), `RequiredModels()` / `validateModelsForSuites()` when model config is required). For deprecated APIs, implement `DeprecatedSuite` and ensure `printSuites()` labels them `(deprecated)`.
 
 ## Adding a new test suite
 
@@ -57,7 +57,7 @@ Follow this checklist for every new suite:
 4. **Register** the suite in `suites.All()` and update:
    - `config.DefaultSuites` (only if it should run by default)
    - `config.ExtendedSuites` and `config.FullSuites` (keep `FullSuites` in sync — `internal/suites/suite_test.go` enforces this; deprecated suites are opt-in via `FullSuites` only)
-   - `config.knownSuites`
+   - `internal/suitespec/names.go` (suite name registry for validation)
    - `suites.RequiredModels()` and `config.validateModelsForSuites()` (if a model env var is needed)
    - `config.Load()` flags/env vars (if new settings are required)
 5. **Extend** `internal/mockserver/server.go` with a handler so CI stays offline.
