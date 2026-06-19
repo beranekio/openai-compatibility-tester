@@ -183,8 +183,8 @@ After pushing a commit that addresses a comment, **resolve the corresponding Git
 Use the GraphQL API (requires `gh` auth):
 
 ```bash
-# Set the PR you are working on; derive owner/repo from the current checkout.
-PR_NUMBER=93
+# Run from the PR branch (or set PR_NUMBER explicitly).
+PR_NUMBER=$(gh pr view --json number -q .number)
 OWNER=$(gh repo view --json owner -q .owner.login)
 REPO=$(gh repo view --json name -q .name)
 
@@ -203,7 +203,12 @@ query($owner: String!, $repo: String!, $number: Int!) {
 
 # Resolve a thread by ID (replace PRRT_... with an id from the list above)
 THREAD_ID=PRRT_...
-gh api graphql -f query="mutation { resolveReviewThread(input: {threadId: \"$THREAD_ID\"}) { thread { isResolved } } }"
+gh api graphql -f query='
+mutation($threadId: ID!) {
+  resolveReviewThread(input: {threadId: $threadId}) {
+    thread { isResolved }
+  }
+}' -f threadId="$THREAD_ID"
 ```
 
 Resolve threads in the same PR pass as the fix (or immediately after a batch of fixes lands). If a comment was already fixed in an earlier commit on the branch, resolve it without re-implementing.
@@ -233,7 +238,7 @@ When **you** (an AI coding agent) open a GitHub issue or pull request in this re
 
 Use one label per agent product, not a generic “agent-created” tag. The label name is **`agent-`** plus your agent identity in lowercase (e.g. `agent-grok`, `agent-copilot`, `agent-codex`, `agent-cursor`).
 
-Create your label the first time you need it:
+Create your label the first time you need it (requires label-management permissions; if `gh label create` fails with a permission error, ask a maintainer to create the label once):
 
 ```bash
 # Example for Grok (skip create when the label already exists)
