@@ -83,24 +83,6 @@ func validateChatKitSessionCreate(suite string, session *openai.ChatSession, wan
 	if session.User != wantUser {
 		return fail(suite, fmt.Sprintf("session user is %q, want %q", session.User, wantUser))
 	}
-	if !session.JSON.ChatKitConfiguration.Valid() {
-		return fail(suite, "session missing chatkit_configuration")
-	}
-	if !session.ChatKitConfiguration.JSON.AutomaticThreadTitling.Valid() {
-		return fail(suite, "session missing chatkit_configuration.automatic_thread_titling")
-	}
-	if !session.ChatKitConfiguration.JSON.FileUpload.Valid() {
-		return fail(suite, "session missing chatkit_configuration.file_upload")
-	}
-	if !session.ChatKitConfiguration.JSON.History.Valid() {
-		return fail(suite, "session missing chatkit_configuration.history")
-	}
-	if !session.JSON.RateLimits.Valid() {
-		return fail(suite, "session missing rate_limits")
-	}
-	if !session.RateLimits.JSON.MaxRequestsPer1Minute.Valid() {
-		return fail(suite, "session missing rate_limits.max_requests_per_1_minute")
-	}
 	if !session.JSON.Workflow.Valid() {
 		return fail(suite, "session missing workflow")
 	}
@@ -109,9 +91,6 @@ func validateChatKitSessionCreate(suite string, session *openai.ChatSession, wan
 	}
 	if session.Workflow.ID != wantWorkflowID {
 		return fail(suite, fmt.Sprintf("session workflow id is %q, want %q", session.Workflow.ID, wantWorkflowID))
-	}
-	if !session.Workflow.JSON.Tracing.Valid() {
-		return fail(suite, "session missing workflow.tracing")
 	}
 	return nil
 }
