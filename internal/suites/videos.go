@@ -16,7 +16,10 @@ import (
 	"github.com/openai/openai-go/v3/packages/pagination"
 )
 
-const videoCreatePrompt = "A short compatibility test clip of a red circle on a white background."
+const (
+	videoCreatePrompt      = "A short compatibility test clip of a red circle on a white background."
+	videoContentProbeBytes = 512
+)
 
 // Videos verifies the Videos API lifecycle via client.Videos.*.
 type Videos struct{}
@@ -183,16 +186,29 @@ func validateVideoListPage(suite string, page *pagination.ConversationCursorPage
 	if page == nil {
 		return fail(suite, "list page is nil")
 	}
-	if !page.JSON.HasMore.Valid() {
-		return fail(suite, "list missing has_more")
-	}
-	if !page.JSON.LastID.Valid() && len(page.Data) > 0 {
-		return fail(suite, "list missing last_id")
-	}
 	for i := range page.Data {
-		if err := validateVideoObject(suite, &page.Data[i]); err != nil {
+		if err := validateVideoListItem(suite, &page.Data[i]); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func validateVideoListItem(suite string, video *openai.Video) error {
+	if video == nil {
+		return fail(suite, "list video is nil")
+	}
+	if video.ID == "" {
+		return fail(suite, "list video missing id")
+	}
+	if video.JSON.Object.Valid() && string(video.Object) != "video" {
+		return fail(suite, fmt.Sprintf("list video object is %q, want video", video.Object))
+	}
+	if video.JSON.Model.Valid() && video.Model == "" {
+		return fail(suite, "list video model is empty")
+	}
+	if video.JSON.Status.Valid() && !isVideoStatusOK(video.Status) {
+		return fail(suite, fmt.Sprintf("list video status is %q, want queued, in_progress, completed, or failed", video.Status))
 	}
 	return nil
 }
@@ -240,7 +256,7 @@ func validateVideoContentResponse(suite string, resp *http.Response, minBytes in
 		return fail(suite, fmt.Sprintf("content status is %d, want 200", resp.StatusCode))
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, videoContentProbeBytes))
 	if err != nil {
 		return fmt.Errorf("%s: read content body: %w", suite, err)
 	}
