@@ -183,7 +183,12 @@ After pushing a commit that addresses a comment, **resolve the corresponding Git
 Use the GraphQL API (requires `gh` auth):
 
 ```bash
-# List unresolved threads for a PR
+# Set the PR you are working on; derive owner/repo from the current checkout.
+PR_NUMBER=93
+OWNER=$(gh repo view --json owner -q .owner.login)
+REPO=$(gh repo view --json name -q .name)
+
+# List unresolved threads (first page only — GraphQL returns at most 100 per query)
 gh api graphql -f query='
 query($owner: String!, $repo: String!, $number: Int!) {
   repository(owner: $owner, name: $repo) {
@@ -193,11 +198,12 @@ query($owner: String!, $repo: String!, $number: Int!) {
       }
     }
   }
-}' -f owner=beranekio -f repo=openai-compatibility-tester -F number=90 \
+}' -f owner="$OWNER" -f repo="$REPO" -F number="$PR_NUMBER" \
   --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false) | .id'
 
-# Resolve a thread by ID
-gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "PRRT_..."}) { thread { isResolved } } }'
+# Resolve a thread by ID (replace PRRT_... with an id from the list above)
+THREAD_ID=PRRT_...
+gh api graphql -f query="mutation { resolveReviewThread(input: {threadId: \"$THREAD_ID\"}) { thread { isResolved } } }"
 ```
 
 Resolve threads in the same PR pass as the fix (or immediately after a batch of fixes lands). If a comment was already fixed in an earlier commit on the branch, resolve it without re-implementing.
