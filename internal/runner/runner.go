@@ -31,11 +31,18 @@ type Runner struct {
 
 // New creates a runner configured for the target endpoint.
 func New(cfg *config.Config) *Runner {
-	client := openai.NewClient(
+	opts := []option.RequestOption{
 		option.WithBaseURL(cfg.BaseURL),
 		option.WithAPIKey(cfg.APIKey),
 		option.WithMaxRetries(0),
-	)
+	}
+	if cfg.OrgID != "" {
+		opts = append(opts, option.WithOrganization(cfg.OrgID))
+	}
+	if cfg.ProjectID != "" {
+		opts = append(opts, option.WithProject(cfg.ProjectID))
+	}
+	client := openai.NewClient(opts...)
 
 	return &Runner{
 		Client: client,

@@ -71,6 +71,42 @@ func TestLoadRejectsUnknownSuiteName(t *testing.T) {
 	}
 }
 
+func TestLoadOrgAndProjectIDs(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvOrgID, "org-test")
+	t.Setenv(EnvProjectID, "proj-test")
+
+	cfg, err := Load([]string{})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.OrgID != "org-test" {
+		t.Fatalf("OrgID = %q, want org-test", cfg.OrgID)
+	}
+	if cfg.ProjectID != "proj-test" {
+		t.Fatalf("ProjectID = %q, want proj-test", cfg.ProjectID)
+	}
+}
+
+func TestLoadOrgAndProjectIDFlagsOverrideEnvironment(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvOrgID, "org-env")
+	t.Setenv(EnvProjectID, "proj-env")
+
+	cfg, err := Load([]string{"--org-id", "org-flag", "--project-id", "proj-flag"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.OrgID != "org-flag" {
+		t.Fatalf("OrgID = %q, want org-flag", cfg.OrgID)
+	}
+	if cfg.ProjectID != "proj-flag" {
+		t.Fatalf("ProjectID = %q, want proj-flag", cfg.ProjectID)
+	}
+}
+
 func TestLoadRequiresBaseURL(t *testing.T) {
 	t.Setenv(EnvBaseURL, "")
 	t.Setenv(EnvAPIKey, "test-key")

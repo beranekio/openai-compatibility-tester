@@ -16,6 +16,8 @@ import (
 const (
 	EnvBaseURL            = "OPENAI_BASE_URL"
 	EnvAPIKey             = "OPENAI_API_KEY"
+	EnvOrgID              = "OPENAI_ORG_ID"
+	EnvProjectID          = "OPENAI_PROJECT_ID"
 	EnvAdminAPIKey        = "OPENAI_ADMIN_API_KEY"
 	EnvModel              = "OPENAI_MODEL"
 	EnvCompletionModel    = "OPENAI_COMPLETION_MODEL"
@@ -172,6 +174,8 @@ var FullSuites = []string{
 type Config struct {
 	BaseURL            string
 	APIKey             string
+	OrgID              string
+	ProjectID          string
 	AdminAPIKey        string
 	Model              string
 	CompletionModel    string
@@ -200,6 +204,8 @@ func Load(args []string) (*Config, error) {
 
 	baseURL := fs.String("base-url", envOrDefault(EnvBaseURL, ""), "OpenAI-compatible API base URL")
 	apiKey := fs.String("api-key", "", "API key for the endpoint (or set "+EnvAPIKey+")")
+	orgID := fs.String("org-id", envOrDefault(EnvOrgID, ""), "OpenAI organization ID (or set "+EnvOrgID+")")
+	projectID := fs.String("project-id", envOrDefault(EnvProjectID, ""), "OpenAI project ID (or set "+EnvProjectID+")")
 	adminAPIKey := fs.String("admin-api-key", envOrDefault(EnvAdminAPIKey, ""), "Admin API key for fine_tuning checkpoint permissions (or set "+EnvAdminAPIKey+")")
 	model := fs.String("model", envOrDefault(EnvModel, "gpt-4o-mini"), "Model for chat completion and models_get suites")
 	completionModel := fs.String("completion-model", envOrDefault(EnvCompletionModel, ""), "Model for legacy completions suite (defaults to "+DefaultCompletionModel+" when completions is selected)")
@@ -234,6 +240,8 @@ func Load(args []string) (*Config, error) {
 	cfg := &Config{
 		BaseURL:            strings.TrimRight(strings.TrimSpace(*baseURL), "/"),
 		APIKey:             strings.TrimSpace(*apiKey),
+		OrgID:              strings.TrimSpace(*orgID),
+		ProjectID:          strings.TrimSpace(*projectID),
 		AdminAPIKey:        strings.TrimSpace(*adminAPIKey),
 		Model:              strings.TrimSpace(*model),
 		CompletionModel:    strings.TrimSpace(*completionModel),

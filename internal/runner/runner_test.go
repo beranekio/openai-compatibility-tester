@@ -204,6 +204,32 @@ func TestRunRejectsUnknownSuiteBeforeRequests(t *testing.T) {
 	}
 }
 
+func TestRunPassesWithOrgAndProjectHeaders(t *testing.T) {
+	server := mockserver.New()
+	t.Cleanup(server.Close)
+
+	cfg := &config.Config{
+		BaseURL:        server.BaseURL(),
+		APIKey:         "test-key",
+		OrgID:          "org-smoke-test",
+		ProjectID:      "proj-smoke-test",
+		Model:          "gpt-4o-mini",
+		RequestTimeout: 30 * time.Second,
+		Suites:         []string{"models"},
+	}
+
+	runner := New(cfg)
+	runner.Output = &bytes.Buffer{}
+
+	results, err := runner.Run(context.Background())
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if code := ExitCode(results); code != 0 {
+		t.Fatalf("ExitCode() = %d, want 0; summary:\n%s", code, FormatSummary(results))
+	}
+}
+
 func TestRunRejectsUnknownSuite(t *testing.T) {
 	cfg := &config.Config{
 		BaseURL: "https://example.com/v1",
