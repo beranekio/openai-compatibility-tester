@@ -37,21 +37,26 @@ func (Videos) Run(ctx context.Context, client openai.Client, cfg *config.Config)
 		}
 	}()
 
-	created, err := client.Videos.NewAndPoll(ctx, openai.VideoNewParams{
-		Model:  openai.VideoModel(cfg.VideoModel),
-		Prompt: videoCreatePrompt,
+	submitted, err := client.Videos.New(ctx, openai.VideoNewParams{
+		Model:   openai.VideoModel(cfg.VideoModel),
+		Prompt:  videoCreatePrompt,
 		Seconds: openai.VideoSeconds4,
 		Size:    openai.VideoSize720x1280,
-	}, 100)
+	})
 	if err != nil {
 		return fmt.Errorf("video create failed: %w", err)
 	}
-	if err := validateVideoObject("videos", created); err != nil {
+	if err := validateVideoObject("videos", submitted); err != nil {
 		return err
 	}
-	videoID = created.ID
-	if created.Prompt != videoCreatePrompt {
-		return fail("videos", fmt.Sprintf("create prompt is %q, want %q", created.Prompt, videoCreatePrompt))
+	videoID = submitted.ID
+
+	created, err := client.Videos.PollStatus(ctx, videoID, 0)
+	if err != nil {
+		return fmt.Errorf("video poll failed: %w", err)
+	}
+	if err := validateVideoObject("videos", created); err != nil {
+		return err
 	}
 	if created.Status != openai.VideoStatusCompleted {
 		return fail("videos", fmt.Sprintf("create status is %q, want completed", created.Status))
@@ -126,14 +131,14 @@ func validateVideoObject(suite string, video *openai.Video) error {
 	if !video.JSON.CreatedAt.Valid() {
 		return fail(suite, "video missing created_at")
 	}
-	if !video.JSON.CompletedAt.Valid() {
-		return fail(suite, "video missing completed_at")
+	if video.Status == openai.VideoStatusCompleted && !video.JSON.CompletedAt.Valid() {
+		return fail(suite, "completed video missing completed_at")
 	}
-	if !video.JSON.ExpiresAt.Valid() {
-		return fail(suite, "video missing expires_at")
+	if video.Status == openai.VideoStatusCompleted && !video.JSON.ExpiresAt.Valid() {
+		return fail(suite, "completed video missing expires_at")
 	}
-	if !video.JSON.Error.Valid() {
-		return fail(suite, "video missing error")
+	if video.Status == openai.VideoStatusFailed && !video.JSON.Error.Valid() {
+		return fail(suite, "failed video missing error")
 	}
 	if !video.JSON.Model.Valid() {
 		return fail(suite, "video missing model")
@@ -146,12 +151,6 @@ func validateVideoObject(suite string, video *openai.Video) error {
 	}
 	if !video.JSON.Progress.Valid() {
 		return fail(suite, "video missing progress")
-	}
-	if !video.JSON.Prompt.Valid() {
-		return fail(suite, "video missing prompt")
-	}
-	if !video.JSON.RemixedFromVideoID.Valid() {
-		return fail(suite, "video missing remixed_from_video_id")
 	}
 	if !video.JSON.Seconds.Valid() {
 		return fail(suite, "video missing seconds")

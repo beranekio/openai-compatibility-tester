@@ -99,22 +99,33 @@ func (s *videoStore) delete(id string) bool {
 }
 
 func videoPayload(video storedVideo) map[string]any {
-	return map[string]any{
+	var remixedFrom any
+	if video.remixedFromVideoID != "" {
+		remixedFrom = video.remixedFromVideoID
+	}
+	var errPayload any
+	if video.status == "failed" {
+		errPayload = map[string]any{
+			"code":    "server_error",
+			"message": "An error occurred",
+		}
+	}
+	payload := map[string]any{
 		"id":                    video.id,
 		"object":                "video",
 		"created_at":            video.createdAt,
-		"completed_at":          video.completedAt,
-		"expires_at":            video.expiresAt,
 		"model":                 video.model,
 		"prompt":                video.prompt,
 		"progress":              video.progress,
-		"remixed_from_video_id": video.remixedFromVideoID,
+		"remixed_from_video_id": remixedFrom,
 		"seconds":               video.seconds,
 		"size":                  video.size,
 		"status":                video.status,
-		"error": map[string]any{
-			"code":    "",
-			"message": "",
-		},
+		"error":                 errPayload,
 	}
+	if video.status == "completed" {
+		payload["completed_at"] = video.completedAt
+		payload["expires_at"] = video.expiresAt
+	}
+	return payload
 }
