@@ -86,6 +86,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"videos",
 			"skills",
 			"skill_versions",
+			"fine_tuning",
 		},
 	}
 

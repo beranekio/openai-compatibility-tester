@@ -101,6 +101,7 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `videos` | `client.Videos.New`, `PollStatus`, `Get`, `List`, `DownloadContent`, `Delete` | `POST/GET/DELETE /v1/videos`, `GET /v1/videos/{id}/content` |
 | `skills` | `client.Skills.New`, `Get`, `Update`, `List`, `Delete`; `client.Skills.Versions.New` | `POST /v1/skills`, `GET /v1/skills`, `GET/POST/DELETE /v1/skills/{id}`, `POST /v1/skills/{id}/versions` |
 | `skill_versions` | `client.Skills.Versions.New`, `Get`, `List`, `Delete`; `client.Skills.Content.Get`; `client.Skills.Versions.Content.Get` | `POST/GET /v1/skills/{id}/versions`, `GET/DELETE /v1/skills/{id}/versions/{version}`, `GET /v1/skills/{id}/content`, `GET /v1/skills/{id}/versions/{version}/content` |
+| `fine_tuning` | `client.FineTuning.Jobs.New`, `List`, `Get`, `Cancel`; `client.FineTuning.Jobs.Checkpoints.List`; `client.FineTuning.Checkpoints.Permissions.List` | `POST/GET /v1/fine_tuning/jobs`, `POST /v1/fine_tuning/jobs/{id}/cancel`, `GET /v1/fine_tuning/jobs/{id}/checkpoints`, `GET /v1/fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions` |
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
@@ -247,6 +248,17 @@ docker run --rm \
   -e OPENAI_API_KEY=your-api-key \
   -e OPENAI_REALTIME_MODEL=gpt-4o-realtime-preview \
   -e TEST_SUITES=realtime_client_secrets \
+  ghcr.io/beranekio/openai-compatibility-tester:latest
+```
+
+**Fine-tuning** — strictly opt-in (`full` preset only). The `fine_tuning` suite uploads a minimal training JSONL file, creates a job, lists/gets it, lists checkpoints, smoke-tests checkpoint permissions, and cancels the job. It does **not** wait for a full training run, but against real OpenAI endpoints it can still incur **cost and take minutes** if the provider runs actual fine-tuning. Use only when you intend to test fine-tuning compatibility:
+
+```bash
+docker run --rm \
+  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
+  -e OPENAI_API_KEY=your-api-key \
+  -e OPENAI_MODEL=gpt-4o-mini \
+  -e TEST_SUITES=fine_tuning \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 
