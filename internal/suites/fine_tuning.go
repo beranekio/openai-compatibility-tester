@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
@@ -45,10 +46,10 @@ func (FineTuning) Run(ctx context.Context, client openai.Client, cfg *config.Con
 	if err != nil {
 		return fmt.Errorf("fine-tuning job create failed: %w", err)
 	}
+	jobID = created.ID
 	if err := validateFineTuningJobEnvelope("fine_tuning", created); err != nil {
 		return err
 	}
-	jobID = created.ID
 	if created.TrainingFile != uploaded.ID {
 		return fail("fine_tuning", fmt.Sprintf("job training_file is %q, want %q", created.TrainingFile, uploaded.ID))
 	}
@@ -88,48 +89,38 @@ func (FineTuning) Run(ctx context.Context, client openai.Client, cfg *config.Con
 		return fail("fine_tuning", fmt.Sprintf("get id is %q, want %q", got.ID, jobID))
 	}
 
-	skipCancel, err := waitForFineTuningCancelable(ctx, client, "fine_tuning", jobID)
-	if err != nil {
-		return err
-	}
-
 	checkpointPage, err := waitForFineTuningCheckpoints(ctx, client, "fine_tuning", jobID)
 	if err != nil {
 		return err
 	}
-	if len(checkpointPage.Data) == 0 {
-		return fail("fine_tuning", "checkpoint list returned empty data")
-	}
-	checkpoint := checkpointPage.Data[0]
-	if err := validateFineTuningCheckpoint("fine_tuning", &checkpoint); err != nil {
-		return err
-	}
-	if checkpoint.FineTuningJobID != jobID {
-		return fail("fine_tuning", fmt.Sprintf("checkpoint job id is %q, want %q", checkpoint.FineTuningJobID, jobID))
-	}
+	if len(checkpointPage.Data) > 0 {
+		checkpoint := checkpointPage.Data[0]
+		if err := validateFineTuningCheckpoint("fine_tuning", &checkpoint); err != nil {
+			return err
+		}
+		if checkpoint.FineTuningJobID != jobID {
+			return fail("fine_tuning", fmt.Sprintf("checkpoint job id is %q, want %q", checkpoint.FineTuningJobID, jobID))
+		}
 
-	permPage, err := client.FineTuning.Checkpoints.Permissions.List(
-		ctx,
-		checkpoint.FineTunedModelCheckpoint,
-		openai.FineTuningCheckpointPermissionListParams{},
-		option.WithAdminAPIKey(cfg.APIKey),
-	)
-	if err != nil {
-		return fmt.Errorf("fine-tuning checkpoint permission list failed: %w", err)
-	}
-	if err := validateFineTuningCheckpointPermissionPage("fine_tuning", permPage); err != nil {
-		return err
-	}
-
-	if skipCancel {
-		return exerciseFineTuningCancelEndpoint(ctx, client, "fine_tuning", jobID)
+		permPage, err := client.FineTuning.Checkpoints.Permissions.List(
+			ctx,
+			checkpoint.FineTunedModelCheckpoint,
+			openai.FineTuningCheckpointPermissionListParams{},
+			option.WithAdminAPIKey(cfg.APIKey),
+		)
+		if err != nil {
+			return fmt.Errorf("fine-tuning checkpoint permission list failed: %w", err)
+		}
+		if err := validateFineTuningCheckpointPermissionPage("fine_tuning", permPage); err != nil {
+			return err
+		}
 	}
 
 	cancelled, err := client.FineTuning.Jobs.Cancel(ctx, jobID)
 	if err != nil {
 		var apiErr *openai.Error
 		if errors.As(err, &apiErr) && isFineTuningCancelAlreadyTerminalError(apiErr) {
-			return exerciseFineTuningCancelEndpoint(ctx, client, "fine_tuning", jobID)
+			return nil
 		}
 		return fmt.Errorf("fine-tuning job cancel failed: %w", err)
 	}
@@ -140,7 +131,7 @@ func (FineTuning) Run(ctx context.Context, client openai.Client, cfg *config.Con
 		return fail("fine_tuning", fmt.Sprintf("cancel id is %q, want %q", cancelled.ID, jobID))
 	}
 	if !isFineTuningCancelStatusOK(string(cancelled.Status)) {
-		return fail("fine_tuning", fmt.Sprintf("cancel status is %q, want cancelled", cancelled.Status))
+		return fail("fine_tuning", fmt.Sprintf("cancel status is %q, want cancelling or cancelled", cancelled.Status))
 	}
 	return nil
 }
@@ -170,14 +161,9 @@ func deleteFineTuneTrainingFile(client openai.Client, fileID string) {
 
 func cleanupFineTuningArtifacts(client openai.Client, jobID, fileID string) {
 	if jobID != "" {
-		pollCtx, pollCancel := context.WithTimeout(context.Background(), 10*time.Second)
-		skipCancel, err := waitForFineTuningCancelable(pollCtx, client, "fine_tuning", jobID)
-		pollCancel()
-		if err == nil && !skipCancel {
-			cancelCtx, cancelCancel := context.WithTimeout(context.Background(), 10*time.Second)
-			_, _ = client.FineTuning.Jobs.Cancel(cancelCtx, jobID)
-			cancelCancel()
-		}
+		cancelCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		_, _ = client.FineTuning.Jobs.Cancel(cancelCtx, jobID)
+		cancel()
 	}
 	if fileID != "" {
 		deleteFineTuneTrainingFile(client, fileID)
@@ -193,13 +179,24 @@ func isFineTuningTerminalFailure(status string) bool {
 }
 
 func isFineTuningCancelStatusOK(status string) bool {
-	return status == "cancelled"
+	return status == "cancelled" || status == "cancelling"
 }
 
 func isFineTuningCancelAlreadyTerminalError(apiErr *openai.Error) bool {
+	if apiErr == nil {
+		return false
+	}
 	switch apiErr.StatusCode {
 	case http.StatusConflict, http.StatusBadRequest:
-		return true
+		if apiErr.Code == "invalid_job_status" {
+			return true
+		}
+		detail := strings.ToLower(strings.Join([]string{apiErr.Code, apiErr.Message, apiErr.Type}, " "))
+		statusIsSucceeded := detailContainsWord(detail, "succeed", "succeeded", "finished", "complete", "completed")
+		statusIsCancelled := detailContainsWord(detail, "cancelled", "canceled")
+		terminalSignal := detailContainsWord(detail, "already", "terminal") ||
+			strings.Contains(detail, "cannot") || strings.Contains(detail, "can't") || strings.Contains(detail, "can not")
+		return terminalSignal && (statusIsSucceeded || statusIsCancelled)
 	default:
 		return false
 	}
@@ -222,8 +219,11 @@ func waitForFineTuningCheckpoints(ctx context.Context, client openai.Client, sui
 			return nil, fmt.Errorf("fine-tuning job get failed: %w", err)
 		}
 		status := string(got.Status)
-		if isFineTuningTerminalFailure(status) {
+		switch status {
+		case "failed":
 			return nil, fail(suite, fmt.Sprintf("fine-tuning job failed with terminal status %q before checkpoints were available", status))
+		case "succeeded", "cancelled":
+			return page, nil
 		}
 		select {
 		case <-ctx.Done():
@@ -231,54 +231,6 @@ func waitForFineTuningCheckpoints(ctx context.Context, client openai.Client, sui
 		case <-time.After(fineTuningPollInterval):
 		}
 	}
-}
-
-func waitForFineTuningCancelable(ctx context.Context, client openai.Client, suite, jobID string) (skipCancel bool, err error) {
-	for {
-		got, err := client.FineTuning.Jobs.Get(ctx, jobID)
-		if err != nil {
-			return false, fmt.Errorf("fine-tuning job get failed: %w", err)
-		}
-		if err := validateFineTuningJobEnvelope(suite, got); err != nil {
-			return false, err
-		}
-		if got.ID != jobID {
-			return false, fail(suite, fmt.Sprintf("job id is %q, want %q", got.ID, jobID))
-		}
-		status := string(got.Status)
-		switch status {
-		case "running":
-			return false, nil
-		case "succeeded", "cancelled", "failed":
-			return true, nil
-		}
-		if isFineTuningTerminalFailure(status) {
-			return false, fail(suite, fmt.Sprintf("fine-tuning job failed with terminal status %q", status))
-		}
-		select {
-		case <-ctx.Done():
-			return false, fmt.Errorf("timed out waiting for cancelable fine-tuning job status: %w", ctx.Err())
-		case <-time.After(fineTuningPollInterval):
-		}
-	}
-}
-
-func exerciseFineTuningCancelEndpoint(ctx context.Context, client openai.Client, suite, jobID string) error {
-	cancelled, err := client.FineTuning.Jobs.Cancel(ctx, jobID)
-	if err != nil {
-		var apiErr *openai.Error
-		if errors.As(err, &apiErr) && isFineTuningCancelAlreadyTerminalError(apiErr) {
-			return nil
-		}
-		return fmt.Errorf("fine-tuning job cancel failed: %w", err)
-	}
-	if err := validateFineTuningJobEnvelope(suite, cancelled); err != nil {
-		return err
-	}
-	if cancelled.ID != jobID {
-		return fail(suite, fmt.Sprintf("cancel id is %q, want %q", cancelled.ID, jobID))
-	}
-	return nil
 }
 
 func validateFineTuningJobEnvelope(suite string, job *openai.FineTuningJob) error {

@@ -1,9 +1,11 @@
 package mockserver
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 )
 
 func (s *Server) handleFineTuningJobCreate(w http.ResponseWriter, r *http.Request) {
@@ -29,8 +31,22 @@ func (s *Server) handleFineTuningJobCreate(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "missing training_file", http.StatusBadRequest)
 		return
 	}
-	if _, ok := s.fileStore.get(req.TrainingFile); !ok {
+	file, ok := s.fileStore.get(req.TrainingFile)
+	if !ok {
 		writeNotFound(w, "File not found", "training_file")
+		return
+	}
+	if countJSONLExamples(file.bytes) < 10 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]any{
+			"error": map[string]any{
+				"message": "Training file must have at least 10 examples.",
+				"type":    "invalid_request_error",
+				"param":   "training_file",
+				"code":    "insufficient_examples",
+			},
+		})
 		return
 	}
 
@@ -79,13 +95,12 @@ func (s *Server) handleFineTuningJobGet(w http.ResponseWriter, r *http.Request) 
 
 func (s *Server) handleFineTuningJobCancel(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	job, ok := s.fineTuningStore.get(id)
+	job, ok, alreadyTerminal := s.fineTuningStore.cancel(id)
 	if !ok {
 		writeNotFound(w, "Fine tuning job not found", "id")
 		return
 	}
-	switch job.status {
-	case "succeeded", "failed", "cancelled":
+	if alreadyTerminal {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]any{
@@ -96,11 +111,6 @@ func (s *Server) handleFineTuningJobCancel(w http.ResponseWriter, r *http.Reques
 				"code":    "invalid_job_status",
 			},
 		})
-		return
-	}
-	job, ok = s.fineTuningStore.cancel(id)
-	if !ok {
-		writeNotFound(w, "Fine tuning job not found", "id")
 		return
 	}
 	writeJSON(w, fineTuningJobObjectPayload(job))
@@ -137,8 +147,8 @@ func (s *Server) handleFineTuningCheckpointPermissionList(w http.ResponseWriter,
 	writeJSON(w, map[string]any{
 		"object":   "list",
 		"data":     []map[string]any{},
-		"first_id": nil,
-		"last_id":  nil,
+		"first_id": "",
+		"last_id":  "",
 		"has_more": false,
 	})
 }
@@ -186,6 +196,16 @@ func fineTuningJobObjectPayload(job storedFineTuningJob) map[string]any {
 		payload["finished_at"] = job.createdAt + 60
 	}
 	return payload
+}
+
+func countJSONLExamples(data []byte) int {
+	count := 0
+	for _, line := range bytes.Split(data, []byte("\n")) {
+		if len(strings.TrimSpace(string(line))) > 0 {
+			count++
+		}
+	}
+	return count
 }
 
 func fineTuningCheckpointObjectPayload(checkpoint storedFineTuningCheckpoint) map[string]any {

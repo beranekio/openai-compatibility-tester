@@ -36,6 +36,20 @@ func newFineTuningStore() *fineTuningStore {
 	}
 }
 
+func cloneFineTuningCheckpoints(checkpoints []storedFineTuningCheckpoint) []storedFineTuningCheckpoint {
+	if len(checkpoints) == 0 {
+		return nil
+	}
+	cp := make([]storedFineTuningCheckpoint, len(checkpoints))
+	copy(cp, checkpoints)
+	return cp
+}
+
+func cloneFineTuningJob(job storedFineTuningJob) storedFineTuningJob {
+	job.checkpoints = cloneFineTuningCheckpoints(job.checkpoints)
+	return job
+}
+
 func (s *fineTuningStore) allocateJobID() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -56,7 +70,7 @@ func (s *fineTuningStore) get(id string) (storedFineTuningJob, bool) {
 	if !ok {
 		return storedFineTuningJob{}, false
 	}
-	return job, true
+	return cloneFineTuningJob(job), true
 }
 
 func (s *fineTuningStore) list() []storedFineTuningJob {
@@ -64,7 +78,7 @@ func (s *fineTuningStore) list() []storedFineTuningJob {
 	defer s.mu.Unlock()
 	items := make([]storedFineTuningJob, 0, len(s.jobs))
 	for _, job := range s.jobs {
-		items = append(items, job)
+		items = append(items, cloneFineTuningJob(job))
 	}
 	sort.Slice(items, func(i, j int) bool {
 		return items[i].id > items[j].id
@@ -89,19 +103,23 @@ func (s *fineTuningStore) advanceStatus(id string) (storedFineTuningJob, bool) {
 		job.status = "succeeded"
 	}
 	s.jobs[id] = job
-	return job, true
+	return cloneFineTuningJob(job), true
 }
 
-func (s *fineTuningStore) cancel(id string) (storedFineTuningJob, bool) {
+func (s *fineTuningStore) cancel(id string) (storedFineTuningJob, bool, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	job, ok := s.jobs[id]
 	if !ok {
-		return storedFineTuningJob{}, false
+		return storedFineTuningJob{}, false, false
+	}
+	switch job.status {
+	case "succeeded", "failed", "cancelled":
+		return cloneFineTuningJob(job), true, true
 	}
 	job.status = "cancelled"
 	s.jobs[id] = job
-	return job, true
+	return cloneFineTuningJob(job), true, false
 }
 
 func (s *fineTuningStore) newCheckpointLocked(job storedFineTuningJob) storedFineTuningCheckpoint {
