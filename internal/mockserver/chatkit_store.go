@@ -1,6 +1,7 @@
 package mockserver
 
 import (
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -113,7 +114,7 @@ func (s *chatKitStore) listThreads(user string) []storedChatKitThread {
 	for id := range s.threads {
 		ids = append(ids, id)
 	}
-	sortStrings(ids)
+	slices.Sort(ids)
 	var items []storedChatKitThread
 	for _, id := range ids {
 		thread := s.threads[id]
@@ -137,14 +138,6 @@ func (s *chatKitStore) deleteThread(id string) bool {
 
 func cloneChatKitThread(thread storedChatKitThread) storedChatKitThread {
 	cloned := thread
-	cloned.items = append([]storedChatKitThreadItem(nil), thread.items...)
+	cloned.items = slices.Clone(thread.items)
 	return cloned
-}
-
-func sortStrings(values []string) {
-	for i := 1; i < len(values); i++ {
-		for j := i; j > 0 && values[j-1] > values[j]; j-- {
-			values[j-1], values[j] = values[j], values[j-1]
-		}
-	}
 }

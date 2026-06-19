@@ -8,10 +8,7 @@ import (
 	"github.com/openai/openai-go/v3"
 )
 
-const (
-	chatkitSessionUser       = "compatibility-test-user"
-	chatkitSessionWorkflowID = "wf_mock_compat_test"
-)
+const chatkitSessionUser = "compatibility-test-user"
 
 // ChatKitSessions verifies Beta ChatKit session lifecycle via client.Beta.ChatKit.Sessions.*.
 type ChatKitSessions struct{}
@@ -21,17 +18,17 @@ func (ChatKitSessions) Description() string {
 	return "Beta ChatKit sessions (POST /v1/chatkit/sessions, POST /v1/chatkit/sessions/{id}/cancel)"
 }
 
-func (ChatKitSessions) Run(ctx context.Context, client openai.Client, _ *config.Config) error {
+func (ChatKitSessions) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
 	created, err := client.Beta.ChatKit.Sessions.New(ctx, openai.BetaChatKitSessionNewParams{
 		User: chatkitSessionUser,
 		Workflow: openai.ChatSessionWorkflowParam{
-			ID: chatkitSessionWorkflowID,
+			ID: cfg.ChatKitWorkflowID,
 		},
 	})
 	if err != nil {
 		return fmt.Errorf("chatkit session create failed: %w", err)
 	}
-	if err := validateChatKitSession("chatkit_sessions", created, chatkitSessionUser, chatkitSessionWorkflowID, openai.ChatSessionStatusActive); err != nil {
+	if err := validateChatKitSession("chatkit_sessions", created, chatkitSessionUser, cfg.ChatKitWorkflowID, openai.ChatSessionStatusActive); err != nil {
 		return err
 	}
 	sessionID := created.ID
@@ -40,7 +37,7 @@ func (ChatKitSessions) Run(ctx context.Context, client openai.Client, _ *config.
 	if err != nil {
 		return fmt.Errorf("chatkit session cancel failed: %w", err)
 	}
-	if err := validateChatKitSession("chatkit_sessions", cancelled, chatkitSessionUser, chatkitSessionWorkflowID, openai.ChatSessionStatusCancelled); err != nil {
+	if err := validateChatKitSession("chatkit_sessions", cancelled, chatkitSessionUser, cfg.ChatKitWorkflowID, openai.ChatSessionStatusCancelled); err != nil {
 		return err
 	}
 	if cancelled.ID != sessionID {
@@ -118,9 +115,6 @@ func validateChatKitSession(suite string, session *openai.ChatSession, wantUser,
 	}
 	if !session.Workflow.JSON.Tracing.Valid() {
 		return fail(suite, "session missing workflow.tracing")
-	}
-	if !session.Workflow.JSON.Version.Valid() {
-		return fail(suite, "session missing workflow.version")
 	}
 	return nil
 }

@@ -128,7 +128,7 @@ func chatKitSessionPayload(session storedChatKitSession) map[string]any {
 			"id":              session.workflowID,
 			"state_variables": map[string]any{},
 			"tracing":         map[string]any{"enabled": true},
-			"version":         "",
+			"version":         nil,
 		},
 	}
 }

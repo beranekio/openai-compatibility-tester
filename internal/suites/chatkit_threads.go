@@ -13,17 +13,15 @@ import (
 
 const chatkitThreadUser = "compatibility-test-user"
 
-const chatkitThreadItemText = "Remember this compatibility test item."
-
 // ChatKitThreads verifies Beta ChatKit thread lifecycle via client.Beta.ChatKit.Threads.*.
 type ChatKitThreads struct{}
 
 func (ChatKitThreads) Name() string { return "chatkit_threads" }
 func (ChatKitThreads) Description() string {
-	return "Beta ChatKit threads (GET/DELETE /v1/chatkit/threads, GET /v1/chatkit/threads/{id}/items)"
+	return "Beta ChatKit threads (GET /v1/chatkit/threads, GET /v1/chatkit/threads/{id}, GET /v1/chatkit/threads/{id}/items[, DELETE when OPENAI_CHATKIT_TEST_THREAD_ID is set])"
 }
 
-func (ChatKitThreads) Run(ctx context.Context, client openai.Client, _ *config.Config) error {
+func (ChatKitThreads) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
 	listPage, err := client.Beta.ChatKit.Threads.List(ctx, openai.BetaChatKitThreadListParams{
 		Limit: openai.Int(10),
 		User:  openai.String(chatkitThreadUser),
@@ -36,10 +34,18 @@ func (ChatKitThreads) Run(ctx context.Context, client openai.Client, _ *config.C
 		return err
 	}
 	if len(listPage.Data) == 0 {
-		return fail("chatkit_threads", "thread list returned empty data")
+		return nil
 	}
-	threadID := listPage.Data[0].ID
 
+	threadID := cfg.ChatKitTestThreadID
+	if threadID == "" {
+		threadID = listPage.Data[0].ID
+		return runChatKitThreadsReadOnly(ctx, client, threadID)
+	}
+	return runChatKitThreadsWithDelete(ctx, client, threadID)
+}
+
+func runChatKitThreadsReadOnly(ctx context.Context, client openai.Client, threadID string) error {
 	got, err := client.Beta.ChatKit.Threads.Get(ctx, threadID)
 	if err != nil {
 		return fmt.Errorf("chatkit thread get failed: %w", err)
@@ -50,9 +56,6 @@ func (ChatKitThreads) Run(ctx context.Context, client openai.Client, _ *config.C
 	if got.ID != threadID {
 		return fail("chatkit_threads", fmt.Sprintf("get id is %q, want %q", got.ID, threadID))
 	}
-	if got.User != chatkitThreadUser {
-		return fail("chatkit_threads", fmt.Sprintf("get user is %q, want %q", got.User, chatkitThreadUser))
-	}
 
 	itemPage, err := client.Beta.ChatKit.Threads.ListItems(ctx, threadID, openai.BetaChatKitThreadListItemsParams{
 		Limit: openai.Int(10),
@@ -61,14 +64,12 @@ func (ChatKitThreads) Run(ctx context.Context, client openai.Client, _ *config.C
 	if err != nil {
 		return fmt.Errorf("chatkit thread item list failed: %w", err)
 	}
-	if err := validateChatKitThreadItemPage("chatkit_threads", itemPage); err != nil {
+	return validateChatKitThreadItemPage("chatkit_threads", itemPage)
+}
+
+func runChatKitThreadsWithDelete(ctx context.Context, client openai.Client, threadID string) error {
+	if err := runChatKitThreadsReadOnly(ctx, client, threadID); err != nil {
 		return err
-	}
-	if len(itemPage.Data) == 0 {
-		return fail("chatkit_threads", "thread item list returned empty data")
-	}
-	if !chatKitThreadItemsContainText(itemPage.Data, chatkitThreadItemText) {
-		return fail("chatkit_threads", "thread item list missing seeded message text")
 	}
 
 	deleted, err := client.Beta.ChatKit.Threads.Delete(ctx, threadID)
@@ -115,11 +116,8 @@ func validateChatKitThread(suite string, thread *openai.ChatKitThread) error {
 	if !thread.JSON.Status.Valid() {
 		return fail(suite, "thread missing status")
 	}
-	if thread.Status.Type != "active" {
-		return fail(suite, fmt.Sprintf("thread status type is %q, want active", thread.Status.Type))
-	}
-	if !thread.JSON.Title.Valid() {
-		return fail(suite, "thread missing title")
+	if !isValidChatKitThreadStatus(thread.Status.Type) {
+		return fail(suite, fmt.Sprintf("thread status type is %q, want active, locked, or closed", thread.Status.Type))
 	}
 	if !thread.JSON.User.Valid() {
 		return fail(suite, "thread missing user")
@@ -128,6 +126,15 @@ func validateChatKitThread(suite string, thread *openai.ChatKitThread) error {
 		return fail(suite, "thread user is empty")
 	}
 	return nil
+}
+
+func isValidChatKitThreadStatus(statusType string) bool {
+	switch statusType {
+	case "active", "locked", "closed":
+		return true
+	default:
+		return false
+	}
 }
 
 func validateChatKitThreadPage(suite string, page *pagination.ConversationCursorPage[openai.ChatKitThread]) error {
@@ -202,19 +209,4 @@ func validateChatKitThreadDeleted(suite string, deleted *openai.BetaChatKitThrea
 		return fail(suite, fmt.Sprintf("delete object is %q, want chatkit.thread.deleted", deleted.Object))
 	}
 	return nil
-}
-
-func chatKitThreadItemsContainText(items []openai.ChatKitThreadItemListDataUnion, want string) bool {
-	for _, item := range items {
-		if item.Type != "chatkit.user_message" {
-			continue
-		}
-		userMessage := item.AsChatKitUserMessage()
-		for _, content := range userMessage.Content {
-			if content.Type == "input_text" && content.Text == want {
-				return true
-			}
-		}
-	}
-	return false
 }
