@@ -92,6 +92,8 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"fine_tuning",
 			"chatkit_sessions",
 			"chatkit_threads",
+			"assistants",
+			"assistants_threads",
 		},
 	}
 

@@ -23,6 +23,8 @@ type Server struct {
 	skillStore        *skillStore
 	fineTuningStore   *fineTuningStore
 	chatKitStore      *chatKitStore
+	assistantStore    *assistantStore
+	threadStore       *threadStore
 }
 
 // New starts a mock OpenAI API server.
@@ -41,6 +43,8 @@ func New() *Server {
 		skillStore:        newSkillStore(),
 		fineTuningStore:   newFineTuningStore(),
 		chatKitStore:      newChatKitStore(),
+		assistantStore:    newAssistantStore(),
+		threadStore:       newThreadStore(),
 	}
 
 	mux.HandleFunc("GET /v1/models", handleModels)
@@ -138,6 +142,20 @@ func New() *Server {
 	mux.HandleFunc("GET /v1/chatkit/threads/{id}", s.handleChatKitThreadGet)
 	mux.HandleFunc("DELETE /v1/chatkit/threads/{id}", s.handleChatKitThreadDelete)
 	mux.HandleFunc("GET /v1/chatkit/threads/{id}/items", s.handleChatKitThreadListItems)
+	mux.HandleFunc("POST /v1/assistants", s.handleAssistantCreate)
+	mux.HandleFunc("GET /v1/assistants", s.handleAssistantList)
+	mux.HandleFunc("GET /v1/assistants/{id}", s.handleAssistantGet)
+	mux.HandleFunc("POST /v1/assistants/{id}", s.handleAssistantUpdate)
+	mux.HandleFunc("DELETE /v1/assistants/{id}", s.handleAssistantDelete)
+	mux.HandleFunc("POST /v1/threads", s.handleThreadCreate)
+	mux.HandleFunc("GET /v1/threads/{id}", s.handleThreadGet)
+	mux.HandleFunc("POST /v1/threads/{id}", s.handleThreadUpdate)
+	mux.HandleFunc("DELETE /v1/threads/{id}", s.handleThreadDelete)
+	mux.HandleFunc("POST /v1/threads/{id}/messages", s.handleThreadMessageCreate)
+	mux.HandleFunc("GET /v1/threads/{id}/messages", s.handleThreadMessageList)
+	mux.HandleFunc("GET /v1/threads/{id}/messages/{messageID}", s.handleThreadMessageGet)
+	mux.HandleFunc("POST /v1/threads/{id}/runs", s.handleThreadRunCreate)
+	mux.HandleFunc("GET /v1/threads/{id}/runs/{runID}", s.handleThreadRunGet)
 
 	s.Server = httptest.NewServer(mux)
 	return s
