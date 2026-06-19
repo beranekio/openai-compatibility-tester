@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
+	"github.com/beranekio/openai-compatibility-tester/internal/testutil"
 
 	"github.com/openai/openai-go/v3"
 )
@@ -18,7 +19,7 @@ func (ImagesVariations) Description() string { return "Image variations (POST /v
 func (ImagesVariations) Run(ctx context.Context, client openai.Client, _ *config.Config) error {
 	resp, err := client.Images.NewVariation(ctx, openai.ImageNewVariationParams{
 		Model: openai.ImageModelDallE2,
-		Image: smallPNGReader(),
+		Image: testutil.SmallPNGReader(),
 		N:     openai.Int(1),
 	})
 	if err != nil {

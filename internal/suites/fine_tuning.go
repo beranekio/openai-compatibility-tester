@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
+	"github.com/beranekio/openai-compatibility-tester/internal/testutil"
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
@@ -139,7 +140,7 @@ func (FineTuning) Run(ctx context.Context, client openai.Client, cfg *config.Con
 
 func uploadFineTuneTrainingFile(ctx context.Context, client openai.Client) (*openai.FileObject, error) {
 	uploaded, err := client.Files.New(ctx, openai.FileNewParams{
-		File:    smallFineTuneJSONLReader(),
+		File:    testutil.SmallFineTuneJSONLReader(),
 		Purpose: openai.FilePurposeFineTune,
 	})
 	if err != nil {

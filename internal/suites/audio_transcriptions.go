@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
+	"github.com/beranekio/openai-compatibility-tester/internal/testutil"
 
 	"github.com/openai/openai-go/v3"
 )
@@ -12,12 +13,14 @@ import (
 // AudioTranscriptions verifies POST /v1/audio/transcriptions via client.Audio.Transcriptions.New.
 type AudioTranscriptions struct{}
 
-func (AudioTranscriptions) Name() string        { return "audio_transcriptions" }
-func (AudioTranscriptions) Description() string { return "Audio transcriptions (POST /v1/audio/transcriptions)" }
+func (AudioTranscriptions) Name() string { return "audio_transcriptions" }
+func (AudioTranscriptions) Description() string {
+	return "Audio transcriptions (POST /v1/audio/transcriptions)"
+}
 
 func (AudioTranscriptions) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
 	resp, err := client.Audio.Transcriptions.New(ctx, openai.AudioTranscriptionNewParams{
-		File:           smallWAVReader(),
+		File:           testutil.SmallWAVReader(),
 		Model:          openai.AudioModel(cfg.WhisperModel),
 		ResponseFormat: openai.AudioResponseFormatJSON,
 	})

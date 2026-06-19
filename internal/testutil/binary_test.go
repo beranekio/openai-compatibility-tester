@@ -1,6 +1,7 @@
-package suites
+package testutil
 
 import (
+	"encoding/base64"
 	"io"
 	"net/http"
 	"strings"
@@ -16,14 +17,14 @@ func testHTTPResponse(contentType, body string) *http.Response {
 
 func TestValidateBinaryHTTPResponse(t *testing.T) {
 	t.Run("nil response", func(t *testing.T) {
-		err := validateBinaryHTTPResponse("audio_speech", nil, 1)
+		err := ValidateBinaryHTTPResponse(nil, 1)
 		if err == nil {
 			t.Fatal("expected error for nil response")
 		}
 	})
 
 	t.Run("nil body", func(t *testing.T) {
-		err := validateBinaryHTTPResponse("audio_speech", &http.Response{}, 1)
+		err := ValidateBinaryHTTPResponse(&http.Response{}, 1)
 		if err == nil {
 			t.Fatal("expected error for nil body")
 		}
@@ -46,9 +47,9 @@ func TestValidateBinaryHTTPResponse(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateBinaryHTTPResponse("audio_speech", testHTTPResponse(tt.contentType, tt.body), 1)
+			err := ValidateBinaryHTTPResponse(testHTTPResponse(tt.contentType, tt.body), 1)
 			if (err != nil) != tt.wantErr {
-				t.Fatalf("validateBinaryHTTPResponse() error = %v, wantErr %v", err, tt.wantErr)
+				t.Fatalf("ValidateBinaryHTTPResponse() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -67,10 +68,53 @@ func TestValidateBase64Data(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateBase64Data("chat_completions_audio", tt.data, 1)
+			err := ValidateBase64Data(tt.data, 1)
 			if (err != nil) != tt.wantErr {
-				t.Fatalf("validateBase64Data() error = %v, wantErr %v", err, tt.wantErr)
+				t.Fatalf("ValidateBase64Data() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestValidateWAVBytes(t *testing.T) {
+	if err := ValidateWAVBytes(SmallWAVBytes()); err != nil {
+		t.Fatalf("ValidateWAVBytes() on embedded fixture error = %v", err)
+	}
+	if err := ValidateWAVBytes([]byte("not wav")); err == nil {
+		t.Fatal("expected error for invalid WAV bytes")
+	}
+}
+
+func TestValidateBase64WAVData(t *testing.T) {
+	valid := base64.StdEncoding.EncodeToString(SmallWAVBytes())
+	if err := ValidateBase64WAVData(valid, 12); err != nil {
+		t.Fatalf("ValidateBase64WAVData() on embedded fixture error = %v", err)
+	}
+	if err := ValidateBase64WAVData("not-base64!!!", 1); err == nil {
+		t.Fatal("expected error for invalid base64")
+	}
+}
+
+func TestEmbeddedFixtures(t *testing.T) {
+	if len(SmallPNGBytes()) == 0 {
+		t.Fatal("embedded PNG fixture is empty")
+	}
+	if len(SmallWAVBytes()) < 12 {
+		t.Fatal("embedded WAV fixture is too short")
+	}
+	if string(SmallWAVBytes()[0:4]) != "RIFF" {
+		t.Fatal("embedded WAV fixture missing RIFF header")
+	}
+
+	png := SmallPNGBytes()
+	png[0] ^= 0xff
+	if SmallPNGBytes()[0] == png[0] {
+		t.Fatal("SmallPNGBytes() returned shared mutable slice")
+	}
+
+	wav := SmallWAVBytes()
+	wav[0] ^= 0xff
+	if SmallWAVBytes()[0] == wav[0] {
+		t.Fatal("SmallWAVBytes() returned shared mutable slice")
 	}
 }

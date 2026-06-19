@@ -11,8 +11,7 @@ import (
 )
 
 const (
-	skillBundleFolder        = "compatibility-test-skill"
-	skillContentMarker       = "Compatibility test skill instructions."
+	skillContentMarker        = "Compatibility test skill instructions."
 	skillVersionContentMarker = "Compatibility test skill instructions v2."
 )
 

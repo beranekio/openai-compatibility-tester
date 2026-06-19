@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/beranekio/openai-compatibility-tester/internal/testutil"
 	"github.com/openai/openai-go/v3"
 )
 
 func TestValidateChatCompletionAudio(t *testing.T) {
-	validData := base64.StdEncoding.EncodeToString(smallWAVBytes())
+	validData := base64.StdEncoding.EncodeToString(testutil.SmallWAVBytes())
 
 	tests := []struct {
 		name    string
@@ -19,10 +20,10 @@ func TestValidateChatCompletionAudio(t *testing.T) {
 		{
 			name: "valid audio",
 			fields: map[string]any{
-				"id":          "audio-1",
-				"data":        validData,
-				"expires_at":  1700003600,
-				"transcript":  "pong",
+				"id":         "audio-1",
+				"data":       validData,
+				"expires_at": 1700003600,
+				"transcript": "pong",
 			},
 			wantErr: false,
 		},
@@ -38,10 +39,10 @@ func TestValidateChatCompletionAudio(t *testing.T) {
 		{
 			name: "empty data",
 			fields: map[string]any{
-				"id":          "audio-1",
-				"data":        "",
-				"expires_at":  1700003600,
-				"transcript":  "pong",
+				"id":         "audio-1",
+				"data":       "",
+				"expires_at": 1700003600,
+				"transcript": "pong",
 			},
 			wantErr: true,
 		},
@@ -66,20 +67,20 @@ func TestValidateChatCompletionAudio(t *testing.T) {
 		{
 			name: "invalid base64",
 			fields: map[string]any{
-				"id":          "audio-1",
-				"data":        "not-base64!!!",
-				"expires_at":  1700003600,
-				"transcript":  "pong",
+				"id":         "audio-1",
+				"data":       "not-base64!!!",
+				"expires_at": 1700003600,
+				"transcript": "pong",
 			},
 			wantErr: true,
 		},
 		{
 			name: "non-wav payload",
 			fields: map[string]any{
-				"id":          "audio-1",
-				"data":        "YQ==",
-				"expires_at":  1700003600,
-				"transcript":  "pong",
+				"id":         "audio-1",
+				"data":       "YQ==",
+				"expires_at": 1700003600,
+				"transcript": "pong",
 			},
 			wantErr: true,
 		},
@@ -101,10 +102,10 @@ func TestHasChatCompletionAudioOutput(t *testing.T) {
 		"role":    "assistant",
 		"content": nil,
 		"audio": map[string]any{
-			"id":          "audio-1",
-			"data":        base64.StdEncoding.EncodeToString(smallWAVBytes()),
-			"expires_at":  1700003600,
-			"transcript":  "pong",
+			"id":         "audio-1",
+			"data":       base64.StdEncoding.EncodeToString(testutil.SmallWAVBytes()),
+			"expires_at": 1700003600,
+			"transcript": "pong",
 		},
 	})
 	if !hasChatCompletionAudioOutput(audio) {

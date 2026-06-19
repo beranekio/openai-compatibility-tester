@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
+	"github.com/beranekio/openai-compatibility-tester/internal/testutil"
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/packages/pagination"
@@ -43,7 +44,7 @@ func (ContainerFiles) Run(ctx context.Context, client openai.Client, _ *config.C
 	containerID = created.ID
 
 	uploaded, err := client.Containers.Files.New(ctx, containerID, openai.ContainerFileNewParams{
-		File: smallTextFileReader(),
+		File: testutil.SmallTextFileReader(),
 	})
 	if err != nil {
 		return fmt.Errorf("container file upload failed: %w", err)
@@ -55,8 +56,8 @@ func (ContainerFiles) Run(ctx context.Context, client openai.Client, _ *config.C
 	if uploaded.Source != "user" {
 		return fail("container_files", fmt.Sprintf("upload source is %q, want user", uploaded.Source))
 	}
-	if uploaded.Bytes != int64(len(smallTextFileBytes())) {
-		return fail("container_files", fmt.Sprintf("upload bytes is %d, want %d", uploaded.Bytes, len(smallTextFileBytes())))
+	if uploaded.Bytes != int64(len(testutil.SmallTextFileBytes())) {
+		return fail("container_files", fmt.Sprintf("upload bytes is %d, want %d", uploaded.Bytes, len(testutil.SmallTextFileBytes())))
 	}
 
 	listPage, err := client.Containers.Files.List(ctx, containerID, openai.ContainerFileListParams{
@@ -88,7 +89,7 @@ func (ContainerFiles) Run(ctx context.Context, client openai.Client, _ *config.C
 	if err != nil {
 		return fmt.Errorf("container file content failed: %w", err)
 	}
-	if err := validateContainerFileContentResponse("container_files", contentResp, smallTextFileBytes()); err != nil {
+	if err := validateContainerFileContentResponse("container_files", contentResp, testutil.SmallTextFileBytes()); err != nil {
 		return err
 	}
 

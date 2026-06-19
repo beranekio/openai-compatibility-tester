@@ -1,34 +1,39 @@
-package suites
+package testutil
 
 import (
 	"bytes"
-	"encoding/binary"
+	_ "embed"
 	"encoding/json"
 	"fmt"
-	"image"
-	"image/color"
-	"image/png"
 	"io"
 )
 
-// smallPNG is an 8x8 RGBA PNG with transparent pixels for DALL-E 2 edit compatibility.
-var smallPNG = func() []byte {
-	img := image.NewRGBA(image.Rect(0, 0, 8, 8))
-	for y := 0; y < 8; y++ {
-		for x := 0; x < 8; x++ {
-			if x < 4 {
-				img.SetRGBA(x, y, color.RGBA{R: 255, A: 0})
-			} else {
-				img.SetRGBA(x, y, color.RGBA{R: 255, A: 255})
-			}
-		}
-	}
-	var buf bytes.Buffer
-	if err := png.Encode(&buf, img); err != nil {
-		panic(err)
-	}
-	return buf.Bytes()
-}()
+//go:embed testdata/small.png
+var smallPNG []byte
+
+//go:embed testdata/small.wav
+var smallWAV []byte
+
+// SkillBundleFolder is the top-level directory name in skill upload zip bundles.
+const SkillBundleFolder = "compatibility-test-skill"
+
+const smallTextFileContent = "compatibility test file\n"
+
+const smallSkillFileContent = `---
+name: compatibility-test-skill
+description: compatibility test skill
+---
+
+Compatibility test skill instructions.
+`
+
+const skillVersionUpdatedContent = `---
+name: compatibility-test-skill
+description: compatibility test skill v2
+---
+
+Compatibility test skill instructions v2.
+`
 
 type namedPNGReader struct {
 	r *bytes.Reader
@@ -46,7 +51,15 @@ func (r *namedPNGReader) ContentType() string {
 	return "image/png"
 }
 
-func smallPNGReader() io.Reader {
+// SmallPNGBytes returns a copy of the embedded 8x8 RGBA PNG used for multipart image uploads.
+func SmallPNGBytes() []byte {
+	buf := make([]byte, len(smallPNG))
+	copy(buf, smallPNG)
+	return buf
+}
+
+// SmallPNGReader returns a multipart-ready reader for the embedded PNG fixture.
+func SmallPNGReader() io.Reader {
 	return &namedPNGReader{r: bytes.NewReader(smallPNG)}
 }
 
@@ -66,11 +79,17 @@ func (r *namedWAVReader) ContentType() string {
 	return "audio/wav"
 }
 
-func smallWAVReader() io.Reader {
-	return &namedWAVReader{r: bytes.NewReader(smallWAVBytes())}
+// SmallWAVBytes returns a copy of the embedded minimal mono 8-bit WAV fixture.
+func SmallWAVBytes() []byte {
+	buf := make([]byte, len(smallWAV))
+	copy(buf, smallWAV)
+	return buf
 }
 
-const smallTextFileContent = "compatibility test file\n"
+// SmallWAVReader returns a multipart-ready reader for the embedded WAV fixture.
+func SmallWAVReader() io.Reader {
+	return &namedWAVReader{r: bytes.NewReader(smallWAV)}
+}
 
 type namedTextReader struct {
 	r        *bytes.Reader
@@ -89,32 +108,18 @@ func (r *namedTextReader) ContentType() string {
 	return "text/plain"
 }
 
-func smallTextFileReader() io.Reader {
+// SmallTextFileReader returns a multipart-ready reader for a small text file fixture.
+func SmallTextFileReader() io.Reader {
 	return &namedTextReader{
 		r:        bytes.NewReader([]byte(smallTextFileContent)),
 		filename: "test.txt",
 	}
 }
 
-func smallTextFileBytes() []byte {
+// SmallTextFileBytes returns the bytes of the small text file fixture.
+func SmallTextFileBytes() []byte {
 	return []byte(smallTextFileContent)
 }
-
-const smallSkillFileContent = `---
-name: compatibility-test-skill
-description: compatibility test skill
----
-
-Compatibility test skill instructions.
-`
-
-const skillVersionUpdatedContent = `---
-name: compatibility-test-skill
-description: compatibility test skill v2
----
-
-Compatibility test skill instructions v2.
-`
 
 type namedSkillFileReader struct {
 	r        *bytes.Reader
@@ -133,18 +138,21 @@ func (r *namedSkillFileReader) ContentType() string {
 	return "text/markdown"
 }
 
-func smallSkillFileReader() io.Reader {
-	return skillFileReader(smallSkillFileContent)
+// SmallSkillFileReader returns a multipart-ready reader for a minimal skill bundle file.
+func SmallSkillFileReader() io.Reader {
+	return SkillFileReader(smallSkillFileContent)
 }
 
-func skillVersionFileReader() io.Reader {
-	return skillFileReader(skillVersionUpdatedContent)
+// SkillVersionFileReader returns a multipart-ready reader for an updated skill bundle file.
+func SkillVersionFileReader() io.Reader {
+	return SkillFileReader(skillVersionUpdatedContent)
 }
 
-func skillFileReader(content string) io.Reader {
+// SkillFileReader returns a multipart-ready reader for skill bundle content.
+func SkillFileReader(content string) io.Reader {
 	return &namedSkillFileReader{
 		r:        bytes.NewReader([]byte(content)),
-		filename: skillBundleFolder + "/SKILL.md",
+		filename: SkillBundleFolder + "/SKILL.md",
 	}
 }
 
@@ -165,9 +173,9 @@ func (r *namedJSONLReader) ContentType() string {
 	return "application/jsonl"
 }
 
-// smallFineTuneJSONLReader returns a minimal chat-format JSONL file for fine-tuning jobs.
+// SmallFineTuneJSONLReader returns a minimal chat-format JSONL file for fine-tuning jobs.
 // OpenAI requires at least 10 training examples.
-func smallFineTuneJSONLReader() io.Reader {
+func SmallFineTuneJSONLReader() io.Reader {
 	line, err := json.Marshal(map[string]any{
 		"messages": []map[string]string{
 			{"role": "system", "content": "You are a helpful assistant."},
@@ -189,8 +197,8 @@ func smallFineTuneJSONLReader() io.Reader {
 	}
 }
 
-// smallBatchJSONLReader returns a minimal JSONL input file for chat completion batch jobs.
-func smallBatchJSONLReader(model string) io.Reader {
+// SmallBatchJSONLReader returns a minimal JSONL input file for chat completion batch jobs.
+func SmallBatchJSONLReader(model string) io.Reader {
 	line, err := json.Marshal(map[string]any{
 		"custom_id": "batch-request-1",
 		"method":    "POST",
@@ -209,33 +217,4 @@ func smallBatchJSONLReader(model string) io.Reader {
 		r:        bytes.NewReader(append(line, '\n')),
 		filename: "batch-input.jsonl",
 	}
-}
-
-// smallWAVBytes returns a minimal mono 8-bit WAV file for multipart audio upload tests.
-func smallWAVBytes() []byte {
-	const (
-		sampleRate    = uint32(8000)
-		numSamples    = uint32(4000) // 0.5s at 8 kHz
-		bitsPerSample = uint16(8)
-		numChannels   = uint16(1)
-	)
-	dataSize := numSamples
-	fileSize := uint32(36 + dataSize)
-
-	var b bytes.Buffer
-	b.WriteString("RIFF")
-	_ = binary.Write(&b, binary.LittleEndian, fileSize)
-	b.WriteString("WAVE")
-	b.WriteString("fmt ")
-	_ = binary.Write(&b, binary.LittleEndian, uint32(16))
-	_ = binary.Write(&b, binary.LittleEndian, uint16(1))
-	_ = binary.Write(&b, binary.LittleEndian, numChannels)
-	_ = binary.Write(&b, binary.LittleEndian, sampleRate)
-	_ = binary.Write(&b, binary.LittleEndian, sampleRate*uint32(numChannels)*uint32(bitsPerSample)/8)
-	_ = binary.Write(&b, binary.LittleEndian, uint16(numChannels*bitsPerSample/8))
-	_ = binary.Write(&b, binary.LittleEndian, bitsPerSample)
-	b.WriteString("data")
-	_ = binary.Write(&b, binary.LittleEndian, dataSize)
-	_, _ = b.Write(make([]byte, dataSize))
-	return b.Bytes()
 }
