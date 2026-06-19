@@ -496,6 +496,34 @@ func TestLoadUsesRealtimeModelFromEnv(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsVideosSuiteWithoutVideoModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvVideoModel, "")
+
+	_, err := Load([]string{"--suites", "videos"})
+	if err == nil || !strings.Contains(err.Error(), EnvVideoModel) {
+		t.Fatalf("expected missing video model error, got %v", err)
+	}
+}
+
+func TestLoadAllowsVideosSuiteWithVideoModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvVideoModel, "sora-2")
+
+	cfg, err := Load([]string{"--suites", "videos"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if len(cfg.Suites) != 1 || cfg.Suites[0] != "videos" {
+		t.Fatalf("Suites = %v, want [videos]", cfg.Suites)
+	}
+	if cfg.VideoModel != "sora-2" {
+		t.Fatalf("VideoModel = %q, want sora-2", cfg.VideoModel)
+	}
+}
+
 func TestLoadRejectsAudioTranscriptionsStreamWithoutTranscriptionModel(t *testing.T) {
 	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
@@ -599,6 +627,7 @@ func TestLoadResponsesToolsSuitesInExtendedAndFullPresets(t *testing.T) {
 	t.Setenv(EnvAPIKey, "test-key")
 	t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
 	t.Setenv(EnvImageModel, "dall-e-2")
+	t.Setenv(EnvVideoModel, "sora-2")
 	t.Setenv(EnvTTSModel, "tts-1")
 	t.Setenv(EnvWhisperModel, "whisper-1")
 	t.Setenv(EnvTranscriptionModel, "gpt-4o-mini-transcribe")
@@ -667,6 +696,7 @@ func TestLoadSuitePresets(t *testing.T) {
 			setup: func(t *testing.T) {
 				t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
 				t.Setenv(EnvImageModel, "dall-e-2")
+				t.Setenv(EnvVideoModel, "sora-2")
 				t.Setenv(EnvTTSModel, "tts-1")
 				t.Setenv(EnvWhisperModel, "whisper-1")
 				t.Setenv(EnvTranscriptionModel, "gpt-4o-mini-transcribe")
@@ -680,6 +710,7 @@ func TestLoadSuitePresets(t *testing.T) {
 			setup: func(t *testing.T) {
 				t.Setenv(EnvEmbeddingModel, "text-embedding-3-small")
 				t.Setenv(EnvImageModel, "dall-e-2")
+				t.Setenv(EnvVideoModel, "sora-2")
 				t.Setenv(EnvTTSModel, "tts-1")
 				t.Setenv(EnvWhisperModel, "whisper-1")
 				t.Setenv(EnvTranscriptionModel, "gpt-4o-mini-transcribe")

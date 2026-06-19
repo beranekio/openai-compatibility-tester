@@ -70,6 +70,7 @@ func All() []Suite {
 		RealtimeClientSecrets{},
 		Containers{},
 		ContainerFiles{},
+		Videos{},
 	}
 }
 
@@ -94,6 +95,7 @@ type ModelRequirements struct {
 	Whisper       bool
 	Transcription bool
 	Realtime      bool
+	Video         bool
 }
 
 // RequiredModels returns which model settings must be configured for the suites.
@@ -121,6 +123,8 @@ func RequiredModels(names []string) ModelRequirements {
 			req.Transcription = true
 		case "realtime_client_secrets":
 			req.Realtime = true
+		case "videos":
+			req.Video = true
 		}
 	}
 	return req

@@ -94,6 +94,7 @@ Prefer extending shared helpers over duplicating validation logic across suites.
 | `OPENAI_COMPLETION_MODEL` | Legacy completions (defaults to `gpt-3.5-turbo-instruct` when selected) |
 | `OPENAI_EMBEDDING_MODEL` | Required when `embeddings` is selected |
 | `OPENAI_REALTIME_MODEL` | Realtime API suites (defaults to `gpt-realtime`) |
+| `OPENAI_VIDEO_MODEL` | Required when `videos` is selected |
 | `TEST_SUITES` | Comma-separated names or `all` |
 | `REQUEST_TIMEOUT` | Per-suite timeout (default `2m`) |
 | `ALLOW_INSECURE_HTTP` | Allow non-loopback `http://` |

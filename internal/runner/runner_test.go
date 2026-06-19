@@ -24,6 +24,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 		VisionModel:        "gpt-4o-mini",
 		ReasoningModel:     "o3-mini",
 		ImageModel:         "dall-e-2",
+		VideoModel:         "sora-2",
 		TTSModel:           "tts-1",
 		WhisperModel:       "whisper-1",
 		TranscriptionModel: "gpt-4o-mini-transcribe",
@@ -82,6 +83,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"realtime_client_secrets",
 			"containers",
 			"container_files",
+			"videos",
 		},
 	}
 

@@ -27,6 +27,7 @@ docker run --rm \
 | `OPENAI_VISION_MODEL` | `--vision-model` | when `chat_completions_vision` is selected | same as `OPENAI_MODEL` | Model used for vision chat suites |
 | `OPENAI_REASONING_MODEL` | `--reasoning-model` | when `chat_completions_reasoning` is selected | — | Model used for reasoning chat suites (e.g. `o3-mini`, `o4-mini`) |
 | `OPENAI_IMAGE_MODEL` | `--image-model` | when `images_generations` or `images_edits` is selected | — | Model used for image generation and edit suites |
+| `OPENAI_VIDEO_MODEL` | `--video-model` | when `videos` is selected | — | Model used for video generation suites (e.g. `sora-2`) |
 | `OPENAI_TTS_MODEL` | `--tts-model` | when `audio_speech` is selected | — | Model used for text-to-speech suites |
 | `OPENAI_WHISPER_MODEL` | `--whisper-model` | when `audio_transcriptions` or `audio_translations` is selected | — | Model for non-streaming transcription and translation (e.g. `whisper-1`) |
 | `OPENAI_TRANSCRIPTION_MODEL` | `--transcription-model` | when `audio_transcriptions_stream` is selected | — | Model for streaming transcription (e.g. `gpt-4o-mini-transcribe`) |
@@ -97,6 +98,7 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `realtime_client_secrets` | `client.Realtime.ClientSecrets.New` | `POST /v1/realtime/client_secrets` (WebSocket sessions not exercised) |
 | `containers` | `client.Containers.New`, `Get`, `List`, `Delete` | `POST /v1/containers`, `GET /v1/containers`, `GET/DELETE /v1/containers/{id}` |
 | `container_files` | `client.Containers.Files.New`, `List`, `Get`, `Delete`; `client.Containers.Files.Content.Get` | `POST/GET /v1/containers/{id}/files`, `GET/DELETE /v1/containers/{id}/files/{file_id}`, `GET /v1/containers/{id}/files/{file_id}/content` |
+| `videos` | `client.Videos.New`, `PollStatus`, `Get`, `List`, `DownloadContent`, `Delete` | `POST/GET/DELETE /v1/videos`, `GET /v1/videos/{id}/content` |
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
@@ -178,6 +180,18 @@ docker run --rm \
 ```
 
 `images_edits` uses `OPENAI_IMAGE_MODEL` (GPT Image models or `dall-e-2`; `dall-e-3` is not supported for edits).
+
+**Video generation** — requires a video model (`OPENAI_VIDEO_MODEL`). The suite polls until the job completes; increase `REQUEST_TIMEOUT` for slow endpoints:
+
+```bash
+docker run --rm \
+  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
+  -e OPENAI_API_KEY=your-api-key \
+  -e OPENAI_VIDEO_MODEL=sora-2 \
+  -e REQUEST_TIMEOUT=10m \
+  -e TEST_SUITES=videos \
+  ghcr.io/beranekio/openai-compatibility-tester:latest
+```
 
 Add `images_variations` only when your endpoint still exposes legacy DALL-E 2 `/v1/images/variations`. The suite always requests `dall-e-2` (the only model that endpoint supports) and does not use `OPENAI_IMAGE_MODEL`. Official OpenAI retired DALL-E models in May 2026; this suite is included in `full` but not in `extended`:
 
