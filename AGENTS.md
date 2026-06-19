@@ -210,7 +210,7 @@ Resolve threads in the same PR pass as the fix (or immediately after a batch of 
 
 ### Declined feedback — reply with rationale
 
-When you **choose not to implement** a suggestion, do **not** silently ignore it or leave the thread unresolved. Post a short reply on that thread explaining why, for example:
+When you **choose not to implement** a suggestion, do **not** silently ignore it or leave the thread **without a reply**. Post a short reply on that thread explaining why, for example:
 
 - out of scope for this PR (suggest a follow-up issue)
 - conflicts with suite design principles (e.g. lenient provider compatibility)
@@ -236,11 +236,12 @@ Use one label per agent product, not a generic “agent-created” tag. The labe
 Create your label the first time you need it:
 
 ```bash
-# Example for Grok
-gh label create agent-grok \
-  --description "Issue or PR opened by Grok" \
-  --color "5319E7" \
-  2>/dev/null || true
+# Example for Grok (skip create when the label already exists)
+if ! gh label list --search agent-grok --json name -q '.[].name' | grep -qx agent-grok; then
+  gh label create agent-grok \
+    --description "Issue or PR opened by Grok" \
+    --color "5319E7"
+fi
 ```
 
 When creating the item:
