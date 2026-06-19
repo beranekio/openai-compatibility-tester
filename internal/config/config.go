@@ -21,6 +21,7 @@ const (
 	EnvVisionModel        = "OPENAI_VISION_MODEL"
 	EnvReasoningModel     = "OPENAI_REASONING_MODEL"
 	EnvImageModel         = "OPENAI_IMAGE_MODEL"
+	EnvVideoModel         = "OPENAI_VIDEO_MODEL"
 	EnvTTSModel           = "OPENAI_TTS_MODEL"
 	EnvWhisperModel       = "OPENAI_WHISPER_MODEL"
 	EnvTranscriptionModel = "OPENAI_TRANSCRIPTION_MODEL"
@@ -145,6 +146,7 @@ var FullSuites = []string{
 	"realtime_client_secrets",
 	"containers",
 	"container_files",
+	"videos",
 }
 
 var knownSuites = map[string]struct{}{
@@ -200,6 +202,7 @@ var knownSuites = map[string]struct{}{
 	"realtime_client_secrets":       {},
 	"containers":                    {},
 	"container_files":               {},
+	"videos":                        {},
 }
 
 // Config holds runtime settings for compatibility testing.
@@ -213,6 +216,7 @@ type Config struct {
 	VisionModel        string
 	ReasoningModel     string
 	ImageModel         string
+	VideoModel         string
 	TTSModel           string
 	WhisperModel       string
 	TranscriptionModel string
@@ -237,6 +241,7 @@ func Load(args []string) (*Config, error) {
 	visionModel := fs.String("vision-model", envOrDefault(EnvVisionModel, ""), "Model for vision chat suites (defaults to --model)")
 	reasoningModel := fs.String("reasoning-model", envOrDefault(EnvReasoningModel, ""), "Model for reasoning chat suites (required when chat_completions_reasoning is selected)")
 	imageModel := fs.String("image-model", envOrDefault(EnvImageModel, ""), "Model for image generation suites")
+	videoModel := fs.String("video-model", envOrDefault(EnvVideoModel, ""), "Model for video generation suites")
 	ttsModel := fs.String("tts-model", envOrDefault(EnvTTSModel, ""), "Model for text-to-speech suites")
 	whisperModel := fs.String("whisper-model", envOrDefault(EnvWhisperModel, ""), "Model for audio transcription and translation suites")
 	transcriptionModel := fs.String("transcription-model", envOrDefault(EnvTranscriptionModel, ""), "Model for streaming audio transcription suite")
@@ -267,6 +272,7 @@ func Load(args []string) (*Config, error) {
 		VisionModel:        strings.TrimSpace(*visionModel),
 		ReasoningModel:     strings.TrimSpace(*reasoningModel),
 		ImageModel:         strings.TrimSpace(*imageModel),
+		VideoModel:         strings.TrimSpace(*videoModel),
 		TTSModel:           strings.TrimSpace(*ttsModel),
 		WhisperModel:       strings.TrimSpace(*whisperModel),
 		TranscriptionModel: strings.TrimSpace(*transcriptionModel),
@@ -401,7 +407,7 @@ func validateSuiteNames(names []string) error {
 
 func validateModelsForSuites(cfg *Config) error {
 	var needsChat, needsResponses, needsCompletion, needsEmbedding bool
-	var needsVision, needsReasoning, needsImage, needsTTS, needsWhisper, needsTranscription, needsRealtime bool
+	var needsVision, needsReasoning, needsImage, needsVideo, needsTTS, needsWhisper, needsTranscription, needsRealtime bool
 	for _, name := range cfg.Suites {
 		switch name {
 		case "chat_completions", "chat_completions_stream", "chat_completions_stream_usage", "chat_completions_logprobs", "chat_completions_json", "chat_completions_audio", "chat_completions_tools", "chat_completions_tools_stream", "chat_completions_multi_turn", "chat_completions_get", "chat_completions_list", "chat_completions_delete", "chat_completions_messages", "models_get", "batches_create", "batches_get", "batches_cancel":
@@ -418,6 +424,8 @@ func validateModelsForSuites(cfg *Config) error {
 			needsReasoning = true
 		case "images_generations", "images_edits":
 			needsImage = true
+		case "videos":
+			needsVideo = true
 		case "audio_speech":
 			needsTTS = true
 		case "audio_transcriptions", "audio_translations":
@@ -448,6 +456,9 @@ func validateModelsForSuites(cfg *Config) error {
 	}
 	if needsImage && cfg.ImageModel == "" {
 		return fmt.Errorf("%s or --image-model is required for selected suites", EnvImageModel)
+	}
+	if needsVideo && cfg.VideoModel == "" {
+		return fmt.Errorf("%s or --video-model is required for selected suites", EnvVideoModel)
 	}
 	if needsTTS && cfg.TTSModel == "" {
 		return fmt.Errorf("%s or --tts-model is required for selected suites", EnvTTSModel)
