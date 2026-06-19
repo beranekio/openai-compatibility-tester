@@ -105,4 +105,16 @@ func TestEmbeddedFixtures(t *testing.T) {
 	if string(SmallWAVBytes()[0:4]) != "RIFF" {
 		t.Fatal("embedded WAV fixture missing RIFF header")
 	}
+
+	png := SmallPNGBytes()
+	png[0] ^= 0xff
+	if SmallPNGBytes()[0] == png[0] {
+		t.Fatal("SmallPNGBytes() returned shared mutable slice")
+	}
+
+	wav := SmallWAVBytes()
+	wav[0] ^= 0xff
+	if SmallWAVBytes()[0] == wav[0] {
+		t.Fatal("SmallWAVBytes() returned shared mutable slice")
+	}
 }

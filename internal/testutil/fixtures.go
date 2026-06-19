@@ -51,9 +51,11 @@ func (r *namedPNGReader) ContentType() string {
 	return "image/png"
 }
 
-// SmallPNGBytes returns the embedded 8x8 RGBA PNG used for multipart image uploads.
+// SmallPNGBytes returns a copy of the embedded 8x8 RGBA PNG used for multipart image uploads.
 func SmallPNGBytes() []byte {
-	return smallPNG
+	buf := make([]byte, len(smallPNG))
+	copy(buf, smallPNG)
+	return buf
 }
 
 // SmallPNGReader returns a multipart-ready reader for the embedded PNG fixture.
@@ -77,9 +79,11 @@ func (r *namedWAVReader) ContentType() string {
 	return "audio/wav"
 }
 
-// SmallWAVBytes returns the embedded minimal mono 8-bit WAV fixture.
+// SmallWAVBytes returns a copy of the embedded minimal mono 8-bit WAV fixture.
 func SmallWAVBytes() []byte {
-	return smallWAV
+	buf := make([]byte, len(smallWAV))
+	copy(buf, smallWAV)
+	return buf
 }
 
 // SmallWAVReader returns a multipart-ready reader for the embedded WAV fixture.

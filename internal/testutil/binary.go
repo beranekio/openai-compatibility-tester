@@ -44,14 +44,14 @@ func ValidateBinaryHTTPResponse(resp *http.Response, minBytes int) error {
 // ValidateBase64Data checks that data is non-empty valid base64 with at least minBytes decoded.
 func ValidateBase64Data(data string, minBytes int) error {
 	if strings.TrimSpace(data) == "" {
-		return fmt.Errorf("audio data is empty")
+		return fmt.Errorf("data is empty")
 	}
 	decoded, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
-		return fmt.Errorf("audio data is not valid base64: %w", err)
+		return fmt.Errorf("data is not valid base64: %w", err)
 	}
 	if len(decoded) < minBytes {
-		return fmt.Errorf("audio data has %d bytes after decode, want at least %d", len(decoded), minBytes)
+		return fmt.Errorf("data has %d bytes after decode, want at least %d", len(decoded), minBytes)
 	}
 	return nil
 }
@@ -59,10 +59,10 @@ func ValidateBase64Data(data string, minBytes int) error {
 // ValidateWAVBytes checks that data looks like a minimal WAV file.
 func ValidateWAVBytes(data []byte) error {
 	if len(data) < 12 {
-		return fmt.Errorf("audio data is too short to be WAV")
+		return fmt.Errorf("data is too short to be WAV")
 	}
 	if string(data[0:4]) != "RIFF" || string(data[8:12]) != "WAVE" {
-		return fmt.Errorf("audio data is not a WAV file")
+		return fmt.Errorf("data is not a WAV file")
 	}
 	return nil
 }
@@ -70,14 +70,14 @@ func ValidateWAVBytes(data []byte) error {
 // ValidateBase64WAVData checks that data is valid base64-encoded WAV with at least minBytes decoded.
 func ValidateBase64WAVData(data string, minBytes int) error {
 	if strings.TrimSpace(data) == "" {
-		return fmt.Errorf("audio data is empty")
+		return fmt.Errorf("data is empty")
 	}
 	decoded, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
-		return fmt.Errorf("audio data is not valid base64: %w", err)
+		return fmt.Errorf("data is not valid base64: %w", err)
 	}
 	if len(decoded) < minBytes {
-		return fmt.Errorf("audio data has %d bytes after decode, want at least %d", len(decoded), minBytes)
+		return fmt.Errorf("data has %d bytes after decode, want at least %d", len(decoded), minBytes)
 	}
 	return ValidateWAVBytes(decoded)
 }
