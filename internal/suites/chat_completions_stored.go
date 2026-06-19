@@ -2,7 +2,6 @@ package suites
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
@@ -34,39 +33,7 @@ func createStoredChatCompletion(ctx context.Context, client openai.Client, cfg *
 }
 
 func validateChatCompletionListPage(suite string, page *pagination.CursorPage[openai.ChatCompletion]) error {
-	if page == nil {
-		return fail(suite, "list page is nil")
-	}
-	if !page.JSON.HasMore.Valid() {
-		return fail(suite, "list missing has_more")
-	}
-	var envelope struct {
-		Object  string `json:"object"`
-		FirstID string `json:"first_id"`
-		LastID  string `json:"last_id"`
-	}
-	if err := json.Unmarshal([]byte(page.RawJSON()), &envelope); err != nil {
-		return fail(suite, "list response is not valid JSON")
-	}
-	if envelope.Object != "list" {
-		return fail(suite, fmt.Sprintf("list object is %q, want list", envelope.Object))
-	}
-	if len(page.Data) == 0 {
-		return nil
-	}
-	if envelope.FirstID == "" {
-		return fail(suite, "list missing first_id")
-	}
-	if envelope.LastID == "" {
-		return fail(suite, "list missing last_id")
-	}
-	if envelope.FirstID != page.Data[0].ID {
-		return fail(suite, fmt.Sprintf("list first_id is %q, want %q", envelope.FirstID, page.Data[0].ID))
-	}
-	if envelope.LastID != page.Data[len(page.Data)-1].ID {
-		return fail(suite, fmt.Sprintf("list last_id is %q, want %q", envelope.LastID, page.Data[len(page.Data)-1].ID))
-	}
-	return nil
+	return validateCursorListPage(suite, page, func(c *openai.ChatCompletion) string { return c.ID })
 }
 
 func findStoredChatCompletionInList(ctx context.Context, client openai.Client, suite, wantID string) (*openai.ChatCompletion, error) {
