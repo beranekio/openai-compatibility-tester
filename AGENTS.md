@@ -172,6 +172,104 @@ Do not add suites for:
 - **Mock parity** — forgetting to update `mockserver` breaks CI even if suite code is correct.
 - **SDK version** — bump `github.com/openai/openai-go/v3` in `go.mod` only when needed; run `go test ./...` after.
 
+## PR review feedback
+
+When addressing Copilot, Codex, Gemini, or human review comments on a PR, **close the loop on every thread** before considering the work done.
+
+### Fixed feedback — resolve the thread
+
+After pushing a commit that addresses a comment, **resolve the corresponding GitHub review thread**. Do not leave fixed items open; stale unresolved threads create noise and make it hard to see what still needs attention.
+
+Use the GraphQL API (requires `gh` auth):
+
+```bash
+# Run from the PR branch (or set PR_NUMBER explicitly).
+PR_NUMBER=$(gh pr view --json number -q .number)
+OWNER=$(gh repo view --json owner -q .owner.login)
+REPO=$(gh repo view --json name -q .name)
+
+# List unresolved threads (first page only — GraphQL returns at most 100 per query)
+gh api graphql -f query='
+query($owner: String!, $repo: String!, $number: Int!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $number) {
+      reviewThreads(first: 100) {
+        nodes { id isResolved }
+      }
+    }
+  }
+}' -f owner="$OWNER" -f repo="$REPO" -F number="$PR_NUMBER" \
+  --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false) | .id'
+
+# Resolve a thread by ID (replace PRRT_... with an id from the list above)
+THREAD_ID=PRRT_...
+gh api graphql -f query='
+mutation($threadId: ID!) {
+  resolveReviewThread(input: {threadId: $threadId}) {
+    thread { isResolved }
+  }
+}' -f threadId="$THREAD_ID"
+```
+
+Resolve threads in the same PR pass as the fix (or immediately after a batch of fixes lands). If a comment was already fixed in an earlier commit on the branch, resolve it without re-implementing.
+
+### Declined feedback — reply with rationale
+
+When you **choose not to implement** a suggestion, do **not** silently ignore it or leave the thread **without a reply**. Post a short reply on that thread explaining why, for example:
+
+- out of scope for this PR (suggest a follow-up issue)
+- conflicts with suite design principles (e.g. lenient provider compatibility)
+- incorrect or based on stale code
+- acceptable trade-off with an explicit reason
+
+Then leave the thread **unresolved** so reviewers can see the decision, or resolve it only after the reviewer agrees in a follow-up reply.
+
+Keep replies factual and brief — one or two sentences on what was considered and why the current approach stays.
+
+### After a dependency PR merges
+
+When `main` gains suites another open PR must rebase onto, resolve any review threads on the rebased branch that are now stale (already fixed on `main` or superseded by the rebase).
+
+## Agent-authored issues and pull requests
+
+When **you** (an AI coding agent) open a GitHub issue or pull request in this repository, apply a label that identifies **which agent** opened it so maintainers can filter and audit automation output.
+
+### Required: `agent-<identity>` label
+
+Use one label per agent product, not a generic “agent-created” tag. The label name is **`agent-`** plus your agent identity in lowercase (e.g. `agent-grok`, `agent-copilot`, `agent-codex`, `agent-cursor`).
+
+Create your label the first time you need it (requires label-management permissions; if `gh label create` fails with a permission error, ask a maintainer to create the label once):
+
+```bash
+# Example for Grok (skip create when the label already exists)
+if ! gh label list --search agent-grok --json name -q '.[].name' | grep -qx agent-grok; then
+  gh label create agent-grok \
+    --description "Issue or PR opened by Grok" \
+    --color "5319E7"
+fi
+```
+
+When creating the item:
+
+```bash
+gh issue create ... --label agent-grok
+gh pr create ... --label agent-grok
+```
+
+Use **only** the label for the agent you are (do not stack multiple `agent-*` labels on one item). Do not add an `agent-*` label to issues or PRs opened by humans, even if you later comment or push commits to them.
+
+### Optional: record the model
+
+The agent label identifies the product; the **model** (when known) is extra detail. Optionally append a footer to the issue/PR body:
+
+```markdown
+---
+**Agent:** Grok
+**Model:** Composer 2.5
+```
+
+Use the agent name that matches your label (e.g. `Grok`) and the model name the user or runtime actually requested (e.g. `Composer 2.5`, `GPT-5.4`). Omit lines you cannot fill honestly. Do not create per-model labels unless a maintainer asks for them — the body footer is enough.
+
 ## PR checklist
 
 - [ ] `go test ./...` passes
@@ -180,4 +278,6 @@ Do not add suites for:
 - [ ] `runner_test.go` includes new suite in `TestRunAllPassesAgainstMockServer`
 - [ ] `config_test.go` updated if config parsing, validation, or presets changed
 - [ ] README updated for user-facing changes
+- [ ] Review threads addressed: **resolved** when fixed; **replied** with rationale when declined
+- [ ] If you opened the PR: **`agent-<identity>`** label applied (e.g. `agent-grok`); model noted in body footer when known
 - [ ] Focused diff — no unrelated changes
