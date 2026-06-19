@@ -100,6 +100,54 @@ func smallTextFileBytes() []byte {
 	return []byte(smallTextFileContent)
 }
 
+const smallSkillFileContent = `---
+name: compatibility-test-skill
+description: compatibility test skill
+---
+
+Compatibility test skill instructions.
+`
+
+const skillVersionUpdatedContent = `---
+name: compatibility-test-skill
+description: compatibility test skill v2
+---
+
+Compatibility test skill instructions v2.
+`
+
+type namedSkillFileReader struct {
+	r        *bytes.Reader
+	filename string
+}
+
+func (r *namedSkillFileReader) Read(p []byte) (int, error) {
+	return r.r.Read(p)
+}
+
+func (r *namedSkillFileReader) Filename() string {
+	return r.filename
+}
+
+func (r *namedSkillFileReader) ContentType() string {
+	return "text/markdown"
+}
+
+func smallSkillFileReader() io.Reader {
+	return skillFileReader(smallSkillFileContent)
+}
+
+func skillVersionFileReader() io.Reader {
+	return skillFileReader(skillVersionUpdatedContent)
+}
+
+func skillFileReader(content string) io.Reader {
+	return &namedSkillFileReader{
+		r:        bytes.NewReader([]byte(content)),
+		filename: skillBundleFolder + "/SKILL.md",
+	}
+}
+
 type namedJSONLReader struct {
 	r        *bytes.Reader
 	filename string

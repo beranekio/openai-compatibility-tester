@@ -20,6 +20,7 @@ type Server struct {
 	vectorStoreStore  *vectorStoreStore
 	containerStore    *containerStore
 	videoStore        *videoStore
+	skillStore        *skillStore
 }
 
 // New starts a mock OpenAI API server.
@@ -35,6 +36,7 @@ func New() *Server {
 		vectorStoreStore:  newVectorStoreStore(),
 		containerStore:    newContainerStore(),
 		videoStore:        newVideoStore(),
+		skillStore:        newSkillStore(),
 	}
 
 	mux.HandleFunc("GET /v1/models", handleModels)
@@ -109,6 +111,17 @@ func New() *Server {
 	mux.HandleFunc("GET /v1/videos/{id}", s.handleVideoGet)
 	mux.HandleFunc("DELETE /v1/videos/{id}", s.handleVideoDelete)
 	mux.HandleFunc("GET /v1/videos/{id}/content", s.handleVideoContent)
+	mux.HandleFunc("POST /v1/skills", s.handleSkillCreate)
+	mux.HandleFunc("GET /v1/skills", s.handleSkillList)
+	mux.HandleFunc("GET /v1/skills/{id}", s.handleSkillGet)
+	mux.HandleFunc("POST /v1/skills/{id}", s.handleSkillUpdate)
+	mux.HandleFunc("DELETE /v1/skills/{id}", s.handleSkillDelete)
+	mux.HandleFunc("GET /v1/skills/{id}/content", s.handleSkillContent)
+	mux.HandleFunc("POST /v1/skills/{id}/versions", s.handleSkillVersionCreate)
+	mux.HandleFunc("GET /v1/skills/{id}/versions", s.handleSkillVersionList)
+	mux.HandleFunc("GET /v1/skills/{id}/versions/{version}", s.handleSkillVersionGet)
+	mux.HandleFunc("DELETE /v1/skills/{id}/versions/{version}", s.handleSkillVersionDelete)
+	mux.HandleFunc("GET /v1/skills/{id}/versions/{version}/content", s.handleSkillVersionContent)
 
 	s.Server = httptest.NewServer(mux)
 	return s

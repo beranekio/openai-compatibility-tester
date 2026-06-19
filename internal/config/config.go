@@ -147,6 +147,8 @@ var FullSuites = []string{
 	"containers",
 	"container_files",
 	"videos",
+	"skills",
+	"skill_versions",
 }
 
 var knownSuites = map[string]struct{}{
@@ -203,6 +205,8 @@ var knownSuites = map[string]struct{}{
 	"containers":                    {},
 	"container_files":               {},
 	"videos":                        {},
+	"skills":                        {},
+	"skill_versions":                {},
 }
 
 // Config holds runtime settings for compatibility testing.

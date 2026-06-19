@@ -71,6 +71,8 @@ func All() []Suite {
 		Containers{},
 		ContainerFiles{},
 		Videos{},
+		Skills{},
+		SkillVersions{},
 	}
 }
 

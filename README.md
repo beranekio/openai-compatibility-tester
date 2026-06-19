@@ -99,6 +99,8 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `containers` | `client.Containers.New`, `Get`, `List`, `Delete` | `POST /v1/containers`, `GET /v1/containers`, `GET/DELETE /v1/containers/{id}` |
 | `container_files` | `client.Containers.Files.New`, `List`, `Get`, `Delete`; `client.Containers.Files.Content.Get` | `POST/GET /v1/containers/{id}/files`, `GET/DELETE /v1/containers/{id}/files/{file_id}`, `GET /v1/containers/{id}/files/{file_id}/content` |
 | `videos` | `client.Videos.New`, `PollStatus`, `Get`, `List`, `DownloadContent`, `Delete` | `POST/GET/DELETE /v1/videos`, `GET /v1/videos/{id}/content` |
+| `skills` | `client.Skills.New`, `Get`, `Update`, `List`, `Delete`; `client.Skills.Versions.New` | `POST /v1/skills`, `GET /v1/skills`, `GET/POST/DELETE /v1/skills/{id}`, `POST /v1/skills/{id}/versions` |
+| `skill_versions` | `client.Skills.Versions.New`, `Get`, `List`, `Delete`; `client.Skills.Content.Get`; `client.Skills.Versions.Content.Get` | `POST/GET /v1/skills/{id}/versions`, `GET/DELETE /v1/skills/{id}/versions/{version}`, `GET /v1/skills/{id}/content`, `GET /v1/skills/{id}/versions/{version}/content` |
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 

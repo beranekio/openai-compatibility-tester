@@ -84,6 +84,8 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"containers",
 			"container_files",
 			"videos",
+			"skills",
+			"skill_versions",
 		},
 	}
 
