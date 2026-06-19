@@ -165,6 +165,30 @@ func (r *namedJSONLReader) ContentType() string {
 	return "application/jsonl"
 }
 
+// smallFineTuneJSONLReader returns a minimal chat-format JSONL file for fine-tuning jobs.
+// OpenAI requires at least 10 training examples.
+func smallFineTuneJSONLReader() io.Reader {
+	line, err := json.Marshal(map[string]any{
+		"messages": []map[string]string{
+			{"role": "system", "content": "You are a helpful assistant."},
+			{"role": "user", "content": "Reply with exactly the word: pong"},
+			{"role": "assistant", "content": "pong"},
+		},
+	})
+	if err != nil {
+		panic(fmt.Sprintf("marshal fine-tune jsonl: %v", err))
+	}
+	var buf bytes.Buffer
+	for range 10 {
+		buf.Write(line)
+		buf.WriteByte('\n')
+	}
+	return &namedJSONLReader{
+		r:        bytes.NewReader(buf.Bytes()),
+		filename: "fine-tune.jsonl",
+	}
+}
+
 // smallBatchJSONLReader returns a minimal JSONL input file for chat completion batch jobs.
 func smallBatchJSONLReader(model string) io.Reader {
 	line, err := json.Marshal(map[string]any{

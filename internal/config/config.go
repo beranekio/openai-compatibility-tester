@@ -14,6 +14,7 @@ import (
 const (
 	EnvBaseURL            = "OPENAI_BASE_URL"
 	EnvAPIKey             = "OPENAI_API_KEY"
+	EnvAdminAPIKey        = "OPENAI_ADMIN_API_KEY"
 	EnvModel              = "OPENAI_MODEL"
 	EnvCompletionModel    = "OPENAI_COMPLETION_MODEL"
 	EnvEmbeddingModel     = "OPENAI_EMBEDDING_MODEL"
@@ -149,6 +150,7 @@ var FullSuites = []string{
 	"videos",
 	"skills",
 	"skill_versions",
+	"fine_tuning",
 }
 
 var knownSuites = map[string]struct{}{
@@ -207,12 +209,14 @@ var knownSuites = map[string]struct{}{
 	"videos":                        {},
 	"skills":                        {},
 	"skill_versions":                {},
+	"fine_tuning":                   {},
 }
 
 // Config holds runtime settings for compatibility testing.
 type Config struct {
 	BaseURL            string
 	APIKey             string
+	AdminAPIKey        string
 	Model              string
 	CompletionModel    string
 	EmbeddingModel     string
@@ -238,6 +242,7 @@ func Load(args []string) (*Config, error) {
 
 	baseURL := fs.String("base-url", envOrDefault(EnvBaseURL, ""), "OpenAI-compatible API base URL")
 	apiKey := fs.String("api-key", "", "API key for the endpoint (or set "+EnvAPIKey+")")
+	adminAPIKey := fs.String("admin-api-key", envOrDefault(EnvAdminAPIKey, ""), "Admin API key for fine_tuning checkpoint permissions (or set "+EnvAdminAPIKey+")")
 	model := fs.String("model", envOrDefault(EnvModel, "gpt-4o-mini"), "Model for chat completion and models_get suites")
 	completionModel := fs.String("completion-model", envOrDefault(EnvCompletionModel, ""), "Model for legacy completions suite (defaults to "+DefaultCompletionModel+" when completions is selected)")
 	embeddingModel := fs.String("embedding-model", envOrDefault(EnvEmbeddingModel, ""), "Model for embedding tests (required when embeddings or embeddings_batch suite is selected)")
@@ -269,6 +274,7 @@ func Load(args []string) (*Config, error) {
 	cfg := &Config{
 		BaseURL:            strings.TrimRight(strings.TrimSpace(*baseURL), "/"),
 		APIKey:             strings.TrimSpace(*apiKey),
+		AdminAPIKey:        strings.TrimSpace(*adminAPIKey),
 		Model:              strings.TrimSpace(*model),
 		CompletionModel:    strings.TrimSpace(*completionModel),
 		EmbeddingModel:     strings.TrimSpace(*embeddingModel),
@@ -414,7 +420,7 @@ func validateModelsForSuites(cfg *Config) error {
 	var needsVision, needsReasoning, needsImage, needsVideo, needsTTS, needsWhisper, needsTranscription, needsRealtime bool
 	for _, name := range cfg.Suites {
 		switch name {
-		case "chat_completions", "chat_completions_stream", "chat_completions_stream_usage", "chat_completions_logprobs", "chat_completions_json", "chat_completions_audio", "chat_completions_tools", "chat_completions_tools_stream", "chat_completions_multi_turn", "chat_completions_get", "chat_completions_list", "chat_completions_delete", "chat_completions_messages", "models_get", "batches_create", "batches_get", "batches_cancel":
+		case "chat_completions", "chat_completions_stream", "chat_completions_stream_usage", "chat_completions_logprobs", "chat_completions_json", "chat_completions_audio", "chat_completions_tools", "chat_completions_tools_stream", "chat_completions_multi_turn", "chat_completions_get", "chat_completions_list", "chat_completions_delete", "chat_completions_messages", "models_get", "batches_create", "batches_get", "batches_cancel", "fine_tuning":
 			needsChat = true
 		case "responses", "responses_stream", "responses_tools", "responses_tools_stream", "responses_json", "responses_get", "responses_delete", "responses_cancel", "responses_input_items", "responses_compact", "responses_input_tokens":
 			needsResponses = true

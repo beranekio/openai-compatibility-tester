@@ -18,6 +18,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 	cfg := &config.Config{
 		BaseURL:            server.BaseURL(),
 		APIKey:             "test-key",
+		AdminAPIKey:        "test-admin-key",
 		Model:              "gpt-4o-mini",
 		ResponsesModel:     "gpt-4o-mini",
 		CompletionModel:    config.DefaultCompletionModel,
@@ -86,6 +87,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"videos",
 			"skills",
 			"skill_versions",
+			"fine_tuning",
 		},
 	}
 

@@ -21,6 +21,7 @@ type Server struct {
 	containerStore    *containerStore
 	videoStore        *videoStore
 	skillStore        *skillStore
+	fineTuningStore   *fineTuningStore
 }
 
 // New starts a mock OpenAI API server.
@@ -37,6 +38,7 @@ func New() *Server {
 		containerStore:    newContainerStore(),
 		videoStore:        newVideoStore(),
 		skillStore:        newSkillStore(),
+		fineTuningStore:   newFineTuningStore(),
 	}
 
 	mux.HandleFunc("GET /v1/models", handleModels)
@@ -122,6 +124,12 @@ func New() *Server {
 	mux.HandleFunc("GET /v1/skills/{id}/versions/{version}", s.handleSkillVersionGet)
 	mux.HandleFunc("DELETE /v1/skills/{id}/versions/{version}", s.handleSkillVersionDelete)
 	mux.HandleFunc("GET /v1/skills/{id}/versions/{version}/content", s.handleSkillVersionContent)
+	mux.HandleFunc("POST /v1/fine_tuning/jobs", s.handleFineTuningJobCreate)
+	mux.HandleFunc("GET /v1/fine_tuning/jobs", s.handleFineTuningJobList)
+	mux.HandleFunc("GET /v1/fine_tuning/jobs/{id}", s.handleFineTuningJobGet)
+	mux.HandleFunc("POST /v1/fine_tuning/jobs/{id}/cancel", s.handleFineTuningJobCancel)
+	mux.HandleFunc("GET /v1/fine_tuning/jobs/{id}/checkpoints", s.handleFineTuningJobCheckpointList)
+	mux.HandleFunc("GET /v1/fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions", s.handleFineTuningCheckpointPermissionList)
 
 	s.Server = httptest.NewServer(mux)
 	return s
