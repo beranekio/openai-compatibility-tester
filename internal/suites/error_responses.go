@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
 
@@ -42,8 +43,11 @@ func (ErrorResponses) Run(ctx context.Context, client openai.Client, _ *config.C
 	if apiErr.Type == "" {
 		return fail("error_responses", "error missing type")
 	}
-	if apiErr.StatusCode < 400 || apiErr.StatusCode >= 500 {
-		return fail("error_responses", fmt.Sprintf("status code is %d, want 4xx", apiErr.StatusCode))
+	if apiErr.StatusCode != http.StatusBadRequest && apiErr.StatusCode != http.StatusNotFound {
+		return fail("error_responses", fmt.Sprintf("status code is %d, want 400 or 404 for invalid model", apiErr.StatusCode))
+	}
+	if apiErr.JSON.Param.Valid() && apiErr.Param != "model" {
+		return fail("error_responses", fmt.Sprintf("error param is %q, want model", apiErr.Param))
 	}
 	return nil
 }
