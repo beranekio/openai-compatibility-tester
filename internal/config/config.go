@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/beranekio/openai-compatibility-tester/internal/suitespec"
 )
 
 const (
@@ -165,69 +167,6 @@ var FullSuites = []string{
 	"error_responses",
 }
 
-var knownSuites = map[string]struct{}{
-	"models":                        {},
-	"models_get":                    {},
-	"chat_completions":              {},
-	"chat_completions_stream":       {},
-	"chat_completions_stream_usage": {},
-	"chat_completions_logprobs":     {},
-	"chat_completions_json":         {},
-	"chat_completions_vision":       {},
-	"chat_completions_reasoning":    {},
-	"chat_completions_audio":        {},
-	"chat_completions_tools":        {},
-	"chat_completions_tools_stream": {},
-	"chat_completions_multi_turn":   {},
-	"chat_completions_get":          {},
-	"chat_completions_list":         {},
-	"chat_completions_delete":       {},
-	"chat_completions_messages":     {},
-	"completions":                   {},
-	"completions_stream":            {},
-	"embeddings":                    {},
-	"embeddings_batch":              {},
-	"responses":                     {},
-	"responses_stream":              {},
-	"responses_tools":               {},
-	"responses_tools_stream":        {},
-	"responses_json":                {},
-	"responses_get":                 {},
-	"responses_delete":              {},
-	"responses_cancel":              {},
-	"responses_input_items":         {},
-	"responses_compact":             {},
-	"responses_input_tokens":        {},
-	"moderations":                   {},
-	"images_generations":            {},
-	"images_edits":                  {},
-	"images_variations":             {},
-	"audio_speech":                  {},
-	"audio_transcriptions":          {},
-	"audio_transcriptions_stream":   {},
-	"audio_translations":            {},
-	"files":                         {},
-	"uploads":                       {},
-	"batches_create":                {},
-	"batches_get":                   {},
-	"batches_cancel":                {},
-	"conversations":                 {},
-	"vector_stores":                 {},
-	"vector_store_files":            {},
-	"vector_store_file_batches":     {},
-	"realtime_client_secrets":       {},
-	"containers":                    {},
-	"container_files":               {},
-	"videos":                        {},
-	"skills":                        {},
-	"skill_versions":                {},
-	"fine_tuning":                   {},
-	"chatkit_sessions":              {},
-	"chatkit_threads":               {},
-	"assistants":                    {},
-	"assistants_threads":            {},
-	"error_responses":               {},
-}
 
 // Config holds runtime settings for compatibility testing.
 type Config struct {
@@ -378,8 +317,8 @@ func Load(args []string) (*Config, error) {
 	if len(cfg.Suites) == 0 {
 		return nil, fmt.Errorf("at least one test suite must be selected")
 	}
-	if err := validateSuiteNames(cfg.Suites); err != nil {
-		return nil, err
+	if err := suitespec.ValidateNames(cfg.Suites); err != nil {
+		return nil, fmt.Errorf("%w (use --list-suites to see options)", err)
 	}
 	if cfg.RequestTimeout <= 0 {
 		return nil, fmt.Errorf("request timeout must be greater than zero")
@@ -442,15 +381,6 @@ func suiteNeedsChatKitWorkflow(names []string) bool {
 		}
 	}
 	return false
-}
-
-func validateSuiteNames(names []string) error {
-	for _, name := range names {
-		if _, ok := knownSuites[name]; !ok {
-			return fmt.Errorf("unknown test suite %q (use --list-suites to see options)", name)
-		}
-	}
-	return nil
 }
 
 func validateModelsForSuites(cfg *Config) error {

@@ -61,6 +61,16 @@ func TestLoadAllowsErrorResponsesSuiteWithoutModel(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsUnknownSuiteName(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+
+	_, err := Load([]string{"--suites", "not-a-suite"})
+	if err == nil || !strings.Contains(err.Error(), "unknown test suite") {
+		t.Fatalf("expected unknown suite error, got %v", err)
+	}
+}
+
 func TestLoadRequiresBaseURL(t *testing.T) {
 	t.Setenv(EnvBaseURL, "")
 	t.Setenv(EnvAPIKey, "test-key")
