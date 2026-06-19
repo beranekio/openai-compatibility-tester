@@ -74,6 +74,8 @@ func All() []Suite {
 		Skills{},
 		SkillVersions{},
 		FineTuning{},
+		ChatKitSessions{},
+		ChatKitThreads{},
 	}
 }
 

@@ -810,3 +810,56 @@ func TestLoadAdminAPIKeyFromEnv(t *testing.T) {
 		t.Fatalf("AdminAPIKey = %q, want admin-key", cfg.AdminAPIKey)
 	}
 }
+
+func TestLoadChatKitWorkflowIDDefaultsWhenSessionsSelected(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvChatKitWorkflowID, "")
+
+	cfg, err := Load([]string{"--suites", "chatkit_sessions"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.ChatKitWorkflowID != DefaultChatKitWorkflowID {
+		t.Fatalf("ChatKitWorkflowID = %q, want %q", cfg.ChatKitWorkflowID, DefaultChatKitWorkflowID)
+	}
+}
+
+func TestLoadRejectsChatKitSessionsWithoutWorkflowID(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvChatKitWorkflowID, "")
+
+	_, err := Load([]string{"--suites", "chatkit_sessions", "--chatkit-workflow-id", ""})
+	if err == nil || !strings.Contains(err.Error(), EnvChatKitWorkflowID) {
+		t.Fatalf("expected missing chatkit workflow id error, got %v", err)
+	}
+}
+
+func TestLoadAllowsChatKitSessionsWithExplicitWorkflowID(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvChatKitWorkflowID, "wf_custom_test")
+
+	cfg, err := Load([]string{"--suites", "chatkit_sessions"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.ChatKitWorkflowID != "wf_custom_test" {
+		t.Fatalf("ChatKitWorkflowID = %q, want wf_custom_test", cfg.ChatKitWorkflowID)
+	}
+}
+
+func TestLoadChatKitTestThreadIDOptional(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvChatKitTestThreadID, "")
+
+	cfg, err := Load([]string{"--suites", "chatkit_threads"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.ChatKitTestThreadID != "" {
+		t.Fatalf("ChatKitTestThreadID = %q, want empty", cfg.ChatKitTestThreadID)
+	}
+}

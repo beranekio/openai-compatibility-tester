@@ -29,9 +29,11 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 		TTSModel:           "tts-1",
 		WhisperModel:       "whisper-1",
 		TranscriptionModel: "gpt-4o-mini-transcribe",
-		EmbeddingModel:     "text-embedding-3-small",
-		RealtimeModel:      "gpt-realtime",
-		RequestTimeout:     30 * time.Second,
+		EmbeddingModel:      "text-embedding-3-small",
+		RealtimeModel:       "gpt-realtime",
+		ChatKitWorkflowID:   config.DefaultChatKitWorkflowID,
+		ChatKitTestThreadID: "cthr_mock_1",
+		RequestTimeout:      30 * time.Second,
 		Suites: []string{
 			"models",
 			"models_get",
@@ -88,6 +90,8 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"skills",
 			"skill_versions",
 			"fine_tuning",
+			"chatkit_sessions",
+			"chatkit_threads",
 		},
 	}
 

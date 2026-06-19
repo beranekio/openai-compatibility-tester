@@ -95,6 +95,8 @@ Prefer extending shared helpers over duplicating validation logic across suites.
 | `OPENAI_EMBEDDING_MODEL` | Required when `embeddings` is selected |
 | `OPENAI_REALTIME_MODEL` | Realtime API suites (defaults to `gpt-realtime`) |
 | `OPENAI_VIDEO_MODEL` | Required when `videos` is selected |
+| `OPENAI_CHATKIT_WORKFLOW_ID` | ChatKit sessions workflow (default `wf_mock_compat_test` when `chatkit_sessions` selected) |
+| `OPENAI_CHATKIT_TEST_THREAD_ID` | Optional disposable thread for `chatkit_threads` delete test |
 | `TEST_SUITES` | Comma-separated names or `all` |
 | `REQUEST_TIMEOUT` | Per-suite timeout (default `2m`) |
 | `ALLOW_INSECURE_HTTP` | Allow non-loopback `http://` |

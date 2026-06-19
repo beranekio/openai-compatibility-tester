@@ -33,6 +33,8 @@ docker run --rm \
 | `OPENAI_TRANSCRIPTION_MODEL` | `--transcription-model` | when `audio_transcriptions_stream` is selected | — | Model for streaming transcription (e.g. `gpt-4o-mini-transcribe`) |
 | `OPENAI_REALTIME_MODEL` | `--realtime-model` | when `realtime_client_secrets` is selected | `gpt-realtime` | Model used for Realtime API suites |
 | `OPENAI_ADMIN_API_KEY` | `--admin-api-key` | no | — | Admin API key for `fine_tuning` checkpoint permissions (skipped when unset) |
+| `OPENAI_CHATKIT_WORKFLOW_ID` | `--chatkit-workflow-id` | no | `wf_mock_compat_test` (when `chatkit_sessions` is selected) | Workflow ID used by `chatkit_sessions`; set explicitly for real endpoints |
+| `OPENAI_CHATKIT_TEST_THREAD_ID` | `--chatkit-test-thread-id` | no | — | Disposable thread ID for `chatkit_threads` delete test; omit for read-only list/get/items checks |
 | `TEST_SUITES` | `--suites` | no | `all` | Comma-separated suite names, or preset: `all`/`default`, `extended`, `full` |
 | `REQUEST_TIMEOUT` | `--timeout` | no | `2m` | Per-suite request timeout (batch suites may need a longer value against real APIs while jobs finish) |
 | `ALLOW_INSECURE_HTTP` | `--allow-insecure-http` | no | `false` | Allow plaintext `http://` to non-loopback hosts (loopback HTTP is always permitted) |
@@ -103,6 +105,8 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `skills` | `client.Skills.New`, `Get`, `Update`, `List`, `Delete`; `client.Skills.Versions.New` | `POST /v1/skills`, `GET /v1/skills`, `GET/POST/DELETE /v1/skills/{id}`, `POST /v1/skills/{id}/versions` |
 | `skill_versions` | `client.Skills.Versions.New`, `Get`, `List`, `Delete`; `client.Skills.Content.Get`; `client.Skills.Versions.Content.Get` | `POST/GET /v1/skills/{id}/versions`, `GET/DELETE /v1/skills/{id}/versions/{version}`, `GET /v1/skills/{id}/content`, `GET /v1/skills/{id}/versions/{version}/content` |
 | `fine_tuning` | `client.FineTuning.Jobs.New`, `List`, `Get`, `Cancel`; `client.FineTuning.Jobs.Checkpoints.List`; `client.FineTuning.Checkpoints.Permissions.List` | `POST/GET /v1/fine_tuning/jobs`, `POST /v1/fine_tuning/jobs/{id}/cancel`, `GET /v1/fine_tuning/jobs/{id}/checkpoints`, `GET /v1/fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions` |
+| `chatkit_sessions` | `client.Beta.ChatKit.Sessions.New`, `Cancel` | `POST /v1/chatkit/sessions`, `POST /v1/chatkit/sessions/{id}/cancel` |
+| `chatkit_threads` | `client.Beta.ChatKit.Threads.List`, `Get`, `ListItems`[, `Delete`] | `GET /v1/chatkit/threads`, `GET /v1/chatkit/threads/{id}`, `GET /v1/chatkit/threads/{id}/items`[, `DELETE /v1/chatkit/threads/{id}`] |
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
@@ -272,6 +276,18 @@ docker run --rm \
   -e OPENAI_API_KEY=your-api-key \
   -e OPENAI_REASONING_MODEL=o3-mini \
   -e TEST_SUITES=chat_completions_reasoning \
+  ghcr.io/beranekio/openai-compatibility-tester:latest
+```
+
+**Beta ChatKit** — opt-in only (included in `full`, not `default` or `extended`). The SDK sends `OpenAI-Beta: chatkit_beta=v1` on these requests. `chatkit_threads` is read-only by default (list, get, list items). Set `OPENAI_CHATKIT_TEST_THREAD_ID` to a disposable thread ID to also exercise delete:
+
+```bash
+docker run --rm \
+  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
+  -e OPENAI_API_KEY=your-api-key \
+  -e OPENAI_CHATKIT_WORKFLOW_ID=your-workflow-id \
+  -e OPENAI_CHATKIT_TEST_THREAD_ID=your-disposable-thread-id \
+  -e TEST_SUITES=chatkit_sessions,chatkit_threads \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 
