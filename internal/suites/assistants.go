@@ -27,7 +27,7 @@ type Assistants struct{}
 
 func (Assistants) Name() string { return "assistants" }
 func (Assistants) Description() string {
-	return "Deprecated Assistants API CRUD (POST/GET/DELETE /v1/assistants)"
+	return "Deprecated Assistants API CRUD (GET/POST /v1/assistants, GET/POST/DELETE /v1/assistants/{id})"
 }
 func (Assistants) Deprecated() bool { return true }
 
@@ -70,6 +70,9 @@ func (Assistants) Run(ctx context.Context, client openai.Client, cfg *config.Con
 	}
 	if got.ID != assistantID {
 		return fail("assistants", fmt.Sprintf("get id is %q, want %q", got.ID, assistantID))
+	}
+	if got.Name != assistantCreateName {
+		return fail("assistants", fmt.Sprintf("get name is %q, want %q", got.Name, assistantCreateName))
 	}
 
 	updated, err := client.Beta.Assistants.Update(ctx, assistantID, openai.BetaAssistantUpdateParams{

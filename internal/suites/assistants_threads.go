@@ -27,7 +27,7 @@ type AssistantsThreads struct{}
 
 func (AssistantsThreads) Name() string { return "assistants_threads" }
 func (AssistantsThreads) Description() string {
-	return "Deprecated Assistants thread/message/run lifecycle (POST /v1/threads, /v1/threads/{id}/messages, /v1/threads/{id}/runs)"
+	return "Deprecated Assistants thread/message/run lifecycle (GET/POST/DELETE /v1/threads, GET/POST/DELETE /v1/threads/{id}, POST/GET /v1/threads/{id}/messages, GET /v1/threads/{id}/messages/{message_id}, POST/GET /v1/threads/{id}/runs, GET /v1/threads/{id}/runs/{run_id})"
 }
 func (AssistantsThreads) Deprecated() bool { return true }
 
@@ -70,10 +70,10 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 	if err != nil {
 		return fmt.Errorf("thread create failed: %w", err)
 	}
+	threadID = thread.ID
 	if err := validateThreadObject("assistants_threads", thread); err != nil {
 		return err
 	}
-	threadID = thread.ID
 
 	gotThread, err := client.Beta.Threads.Get(ctx, threadID)
 	if err != nil {
@@ -142,8 +142,8 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 	if err := validateThreadMessagePage("assistants_threads", messagePage, threadID); err != nil {
 		return err
 	}
-	if !threadMessagesContainText(messagePage.Data, assistantThreadUserMessage) {
-		return fail("assistants_threads", "list response missing user message text")
+	if !threadMessagesContainUserMessage(messagePage.Data, userMessage.ID, assistantThreadUserMessage) {
+		return fail("assistants_threads", "list response missing created user message")
 	}
 	if !threadMessagesHaveRunAssistantOutput(messagePage.Data, run.ID, assistantID) {
 		return fail("assistants_threads", "list response missing assistant message content or refusal for run")
@@ -159,6 +159,12 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 	if gotMessage.ID != userMessage.ID {
 		return fail("assistants_threads", fmt.Sprintf("get message id is %q, want %q", gotMessage.ID, userMessage.ID))
 	}
+	if gotMessage.Role != openai.MessageRoleUser {
+		return fail("assistants_threads", fmt.Sprintf("get message role is %q, want user", gotMessage.Role))
+	}
+	if !threadMessageContainsText(gotMessage, assistantThreadUserMessage) {
+		return fail("assistants_threads", "get message missing submitted text")
+	}
 
 	deletedThread, err := client.Beta.Threads.Delete(ctx, threadID)
 	if err != nil {
@@ -170,7 +176,6 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 	if deletedThread.ID != threadID {
 		return fail("assistants_threads", fmt.Sprintf("delete id is %q, want %q", deletedThread.ID, threadID))
 	}
-	threadDeleted = true
 
 	deletedAssistant, err := client.Beta.Assistants.Delete(ctx, assistantID)
 	if err != nil {
@@ -207,6 +212,7 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 	if threadAPIError.StatusCode != http.StatusNotFound {
 		return fail("assistants_threads", fmt.Sprintf("thread get after delete returned status %d, want 404", threadAPIError.StatusCode))
 	}
+	threadDeleted = true
 	return nil
 }
 
@@ -402,11 +408,16 @@ func threadMessageContainsText(message *openai.Message, want string) bool {
 	return false
 }
 
-func threadMessagesContainText(messages []openai.Message, want string) bool {
+func threadMessagesContainUserMessage(messages []openai.Message, messageID, wantText string) bool {
 	for i := range messages {
-		if threadMessageContainsText(&messages[i], want) {
-			return true
+		msg := &messages[i]
+		if msg.ID != messageID {
+			continue
 		}
+		if msg.Role != openai.MessageRoleUser {
+			return false
+		}
+		return threadMessageContainsText(msg, wantText)
 	}
 	return false
 }
