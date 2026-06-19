@@ -172,6 +172,53 @@ Do not add suites for:
 - **Mock parity** — forgetting to update `mockserver` breaks CI even if suite code is correct.
 - **SDK version** — bump `github.com/openai/openai-go/v3` in `go.mod` only when needed; run `go test ./...` after.
 
+## PR review feedback
+
+When addressing Copilot, Codex, Gemini, or human review comments on a PR, **close the loop on every thread** before considering the work done.
+
+### Fixed feedback — resolve the thread
+
+After pushing a commit that addresses a comment, **resolve the corresponding GitHub review thread**. Do not leave fixed items open; stale unresolved threads create noise and make it hard to see what still needs attention.
+
+Use the GraphQL API (requires `gh` auth):
+
+```bash
+# List unresolved threads for a PR
+gh api graphql -f query='
+query($owner: String!, $repo: String!, $number: Int!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $number) {
+      reviewThreads(first: 100) {
+        nodes { id isResolved }
+      }
+    }
+  }
+}' -f owner=beranekio -f repo=openai-compatibility-tester -F number=90 \
+  --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false) | .id'
+
+# Resolve a thread by ID
+gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "PRRT_..."}) { thread { isResolved } } }'
+```
+
+Resolve threads in the same PR pass as the fix (or immediately after a batch of fixes lands). If a comment was already fixed in an earlier commit on the branch, resolve it without re-implementing.
+
+### Declined feedback — reply with rationale
+
+When you **choose not to implement** a suggestion, do **not** silently ignore it or leave the thread unresolved. Post a short reply on that thread explaining why, for example:
+
+- out of scope for this PR (suggest a follow-up issue)
+- conflicts with suite design principles (e.g. lenient provider compatibility)
+- incorrect or based on stale code
+- acceptable trade-off with an explicit reason
+
+Then leave the thread **unresolved** so reviewers can see the decision, or resolve it only after the reviewer agrees in a follow-up reply.
+
+Keep replies factual and brief — one or two sentences on what was considered and why the current approach stays.
+
+### After a dependency PR merges
+
+When `main` gains suites another open PR must rebase onto, resolve any review threads on the rebased branch that are now stale (already fixed on `main` or superseded by the rebase).
+
 ## PR checklist
 
 - [ ] `go test ./...` passes
@@ -180,4 +227,5 @@ Do not add suites for:
 - [ ] `runner_test.go` includes new suite in `TestRunAllPassesAgainstMockServer`
 - [ ] `config_test.go` updated if config parsing, validation, or presets changed
 - [ ] README updated for user-facing changes
+- [ ] Review threads addressed: **resolved** when fixed; **replied** with rationale when declined
 - [ ] Focused diff — no unrelated changes
