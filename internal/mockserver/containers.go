@@ -61,7 +61,7 @@ func (s *Server) handleContainerDelete(w http.ResponseWriter, r *http.Request) {
 		writeNotFound(w, "Container not found", "container_id")
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *Server) handleContainerFileCreate(w http.ResponseWriter, r *http.Request) {
@@ -176,7 +176,7 @@ func (s *Server) handleContainerFileDelete(w http.ResponseWriter, r *http.Reques
 		writeNotFound(w, "Container file not found", "file_id")
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *Server) handleContainerFileContent(w http.ResponseWriter, r *http.Request) {

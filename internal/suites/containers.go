@@ -21,7 +21,7 @@ type Containers struct{}
 
 func (Containers) Name() string { return "containers" }
 func (Containers) Description() string {
-	return "Containers API lifecycle (POST/GET/DELETE /v1/containers)"
+	return "Containers API lifecycle (POST /v1/containers, GET /v1/containers, GET/DELETE /v1/containers/{id})"
 }
 
 func (Containers) Run(ctx context.Context, client openai.Client, _ *config.Config) error {

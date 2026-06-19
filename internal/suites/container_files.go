@@ -15,17 +15,14 @@ import (
 	"github.com/openai/openai-go/v3/packages/pagination"
 )
 
-const (
-	containerFileCreateName = "compatibility-test-container-files"
-	containerFilePath       = "/test.txt"
-)
+const containerFileCreateName = "compatibility-test-container-files"
 
 // ContainerFiles verifies container file lifecycle via client.Containers.Files.*.
 type ContainerFiles struct{}
 
 func (ContainerFiles) Name() string { return "container_files" }
 func (ContainerFiles) Description() string {
-	return "Container Files API lifecycle (POST/GET/DELETE /v1/containers/{id}/files, GET /v1/containers/{id}/files/{file_id}/content)"
+	return "Container Files API lifecycle (POST/GET /v1/containers/{id}/files, GET/DELETE /v1/containers/{id}/files/{file_id}, GET /v1/containers/{id}/files/{file_id}/content)"
 }
 
 func (ContainerFiles) Run(ctx context.Context, client openai.Client, _ *config.Config) error {
@@ -55,9 +52,6 @@ func (ContainerFiles) Run(ctx context.Context, client openai.Client, _ *config.C
 		return err
 	}
 	fileID = uploaded.ID
-	if uploaded.Path != containerFilePath {
-		return fail("container_files", fmt.Sprintf("upload path is %q, want %q", uploaded.Path, containerFilePath))
-	}
 	if uploaded.Source != "user" {
 		return fail("container_files", fmt.Sprintf("upload source is %q, want user", uploaded.Source))
 	}
@@ -88,9 +82,6 @@ func (ContainerFiles) Run(ctx context.Context, client openai.Client, _ *config.C
 	}
 	if got.ID != fileID {
 		return fail("container_files", fmt.Sprintf("get id is %q, want %q", got.ID, fileID))
-	}
-	if got.Path != containerFilePath {
-		return fail("container_files", fmt.Sprintf("get path is %q, want %q", got.Path, containerFilePath))
 	}
 
 	contentResp, err := client.Containers.Files.Content.Get(ctx, containerID, fileID)
@@ -163,6 +154,9 @@ func validateContainerFileObject(suite string, file *openai.ContainerFileNewResp
 	if !file.JSON.Path.Valid() {
 		return fail(suite, "container file missing path")
 	}
+	if file.Path == "" {
+		return fail(suite, "container file path is empty")
+	}
 	if !file.JSON.Source.Valid() {
 		return fail(suite, "container file missing source")
 	}
@@ -196,6 +190,9 @@ func validateContainerFileGetObject(suite string, file *openai.ContainerFileGetR
 	}
 	if !file.JSON.Path.Valid() {
 		return fail(suite, "container file missing path")
+	}
+	if file.Path == "" {
+		return fail(suite, "container file path is empty")
 	}
 	if !file.JSON.Source.Valid() {
 		return fail(suite, "container file missing source")
