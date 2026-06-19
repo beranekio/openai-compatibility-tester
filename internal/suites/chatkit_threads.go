@@ -2,6 +2,7 @@ package suites
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -126,6 +127,46 @@ func validateChatKitThread(suite string, thread *openai.ChatKitThread) error {
 	return nil
 }
 
+func validateChatKitListEnvelope(suite, context, pageRaw, firstDataID, lastDataID string) error {
+	var envelope struct {
+		Object  string `json:"object"`
+		FirstID string `json:"first_id"`
+		LastID  string `json:"last_id"`
+	}
+	if err := json.Unmarshal([]byte(pageRaw), &envelope); err != nil {
+		return fail(suite, context+" response is not valid JSON")
+	}
+	if envelope.Object != "list" {
+		return fail(suite, fmt.Sprintf("%s object is %q, want list", context, envelope.Object))
+	}
+	if firstDataID == "" {
+		return nil
+	}
+	if envelope.FirstID == "" {
+		return fail(suite, context+" missing first_id")
+	}
+	if envelope.LastID == "" {
+		return fail(suite, context+" missing last_id")
+	}
+	if envelope.FirstID != firstDataID {
+		return fail(suite, fmt.Sprintf("%s first_id is %q, want %q", context, envelope.FirstID, firstDataID))
+	}
+	if envelope.LastID != lastDataID {
+		return fail(suite, fmt.Sprintf("%s last_id is %q, want %q", context, envelope.LastID, lastDataID))
+	}
+	return nil
+}
+
+func isValidChatKitThreadItemType(itemType string) bool {
+	switch itemType {
+	case "chatkit.user_message", "chatkit.assistant_message", "chatkit.widget",
+		"chatkit.client_tool_call", "chatkit.task", "chatkit.task_group":
+		return true
+	default:
+		return false
+	}
+}
+
 func isValidChatKitThreadStatus(statusType string) bool {
 	switch statusType {
 	case "active", "locked", "closed":
@@ -145,9 +186,21 @@ func validateChatKitThreadPage(suite string, page *pagination.ConversationCursor
 	if !page.JSON.HasMore.Valid() {
 		return fail(suite, "thread page missing has_more")
 	}
+	firstID := ""
+	lastID := ""
+	if len(page.Data) > 0 {
+		firstID = page.Data[0].ID
+		lastID = page.Data[len(page.Data)-1].ID
+	}
+	if err := validateChatKitListEnvelope(suite, "thread list", page.RawJSON(), firstID, lastID); err != nil {
+		return err
+	}
 	for i := range page.Data {
 		if err := validateChatKitThread(suite, &page.Data[i]); err != nil {
 			return err
+		}
+		if page.Data[i].User != chatkitThreadUser {
+			return fail(suite, fmt.Sprintf("thread user is %q, want %q", page.Data[i].User, chatkitThreadUser))
 		}
 	}
 	return nil
@@ -162,6 +215,15 @@ func validateChatKitThreadItemPage(suite string, threadID string, page *paginati
 	}
 	if !page.JSON.HasMore.Valid() {
 		return fail(suite, "thread item page missing has_more")
+	}
+	firstID := ""
+	lastID := ""
+	if len(page.Data) > 0 {
+		firstID = page.Data[0].ID
+		lastID = page.Data[len(page.Data)-1].ID
+	}
+	if err := validateChatKitListEnvelope(suite, "thread item list", page.RawJSON(), firstID, lastID); err != nil {
+		return err
 	}
 	for i := range page.Data {
 		if err := validateChatKitThreadItem(suite, threadID, &page.Data[i]); err != nil {
@@ -180,6 +242,21 @@ func validateChatKitThreadItem(suite string, threadID string, item *openai.ChatK
 	}
 	if item.Type == "" {
 		return fail(suite, "thread item missing type")
+	}
+	if !isValidChatKitThreadItemType(item.Type) {
+		return fail(suite, fmt.Sprintf("thread item type is %q, want a known chatkit item discriminator", item.Type))
+	}
+	if item.AsAny() == nil {
+		return fail(suite, fmt.Sprintf("thread item type %q did not parse into a known variant", item.Type))
+	}
+	if !item.JSON.Object.Valid() {
+		return fail(suite, "thread item missing object")
+	}
+	if string(item.Object) != "chatkit.thread_item" {
+		return fail(suite, fmt.Sprintf("thread item object is %q, want chatkit.thread_item", item.Object))
+	}
+	if !item.JSON.CreatedAt.Valid() {
+		return fail(suite, "thread item missing created_at")
 	}
 	if item.ThreadID == "" {
 		return fail(suite, "thread item missing thread_id")

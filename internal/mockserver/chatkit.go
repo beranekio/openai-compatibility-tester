@@ -53,15 +53,21 @@ func (s *Server) handleChatKitThreadList(w http.ResponseWriter, r *http.Request)
 	user := r.URL.Query().Get("user")
 	threads := s.chatKitStore.listThreads(user)
 	data := make([]map[string]any, len(threads))
+	firstID := ""
 	lastID := ""
 	for i, thread := range threads {
 		data[i] = chatKitThreadPayload(thread)
+		if i == 0 {
+			firstID = thread.id
+		}
 		lastID = thread.id
 	}
 	writeJSON(w, map[string]any{
+		"object":   "list",
 		"data":     data,
-		"has_more": false,
+		"first_id": firstID,
 		"last_id":  lastID,
+		"has_more": false,
 	})
 }
 
@@ -86,15 +92,21 @@ func (s *Server) handleChatKitThreadListItems(w http.ResponseWriter, r *http.Req
 		return
 	}
 	data := make([]map[string]any, len(thread.items))
+	firstID := ""
 	lastID := ""
 	for i, item := range thread.items {
 		data[i] = chatKitThreadItemPayload(threadID, item)
+		if i == 0 {
+			firstID = item.id
+		}
 		lastID = item.id
 	}
 	writeJSON(w, map[string]any{
+		"object":   "list",
 		"data":     data,
-		"has_more": false,
+		"first_id": firstID,
 		"last_id":  lastID,
+		"has_more": false,
 	})
 }
 
