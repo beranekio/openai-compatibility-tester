@@ -97,6 +97,7 @@ var ExtendedSuites = []string{
 	"audio_transcriptions",
 	"audio_transcriptions_stream",
 	"audio_translations",
+	"error_responses",
 }
 
 // FullSuites lists every registered suite name. Keep in sync with suites.All().
@@ -161,6 +162,7 @@ var FullSuites = []string{
 	"chatkit_threads",
 	"assistants",
 	"assistants_threads",
+	"error_responses",
 }
 
 var knownSuites = map[string]struct{}{
@@ -224,6 +226,7 @@ var knownSuites = map[string]struct{}{
 	"chatkit_threads":               {},
 	"assistants":                    {},
 	"assistants_threads":            {},
+	"error_responses":               {},
 }
 
 // Config holds runtime settings for compatibility testing.

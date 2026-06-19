@@ -32,6 +32,35 @@ func TestLoadDefaults(t *testing.T) {
 	}
 }
 
+func TestLoadDefaultSuitesExcludeErrorResponses(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+
+	cfg, err := Load([]string{})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	for _, name := range cfg.Suites {
+		if name == "error_responses" {
+			t.Fatal("default suites must not include error_responses")
+		}
+	}
+}
+
+func TestLoadAllowsErrorResponsesSuiteWithoutModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvModel, "")
+
+	cfg, err := Load([]string{"--suites", "error_responses", "--model", ""})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if len(cfg.Suites) != 1 || cfg.Suites[0] != "error_responses" {
+		t.Fatalf("Suites = %v, want [error_responses]", cfg.Suites)
+	}
+}
+
 func TestLoadRequiresBaseURL(t *testing.T) {
 	t.Setenv(EnvBaseURL, "")
 	t.Setenv(EnvAPIKey, "test-key")

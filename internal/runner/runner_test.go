@@ -94,6 +94,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"chatkit_threads",
 			"assistants",
 			"assistants_threads",
+			"error_responses",
 		},
 	}
 
@@ -106,6 +107,54 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 	}
 	if code := ExitCode(results); code != 0 {
 		t.Fatalf("ExitCode() = %d, want 0; summary:\n%s", code, FormatSummary(results))
+	}
+}
+
+func TestErrorResponsesPassesAgainstMockServer(t *testing.T) {
+	server := mockserver.New()
+	t.Cleanup(server.Close)
+
+	cfg := &config.Config{
+		BaseURL:        server.BaseURL(),
+		APIKey:         "test-key",
+		Model:          "gpt-4o-mini",
+		RequestTimeout: 30 * time.Second,
+		Suites:         []string{"error_responses"},
+	}
+
+	runner := New(cfg)
+	runner.Output = &bytes.Buffer{}
+
+	results, err := runner.Run(context.Background())
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if code := ExitCode(results); code != 0 {
+		t.Fatalf("ExitCode() = %d, want 0; summary:\n%s", code, FormatSummary(results))
+	}
+}
+
+func TestErrorResponsesFailsOnBrokenServer(t *testing.T) {
+	server := mockserver.BrokenServer()
+	t.Cleanup(server.Close)
+
+	cfg := &config.Config{
+		BaseURL:        server.BaseURL(),
+		APIKey:         "test-key",
+		Model:          "gpt-4o-mini",
+		RequestTimeout: 30 * time.Second,
+		Suites:         []string{"error_responses"},
+	}
+
+	runner := New(cfg)
+	runner.Output = &bytes.Buffer{}
+
+	results, err := runner.Run(context.Background())
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if code := ExitCode(results); code != 1 {
+		t.Fatalf("ExitCode() = %d, want 1; summary:\n%s", code, FormatSummary(results))
 	}
 }
 

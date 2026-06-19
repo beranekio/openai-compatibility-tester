@@ -90,6 +90,7 @@ func All() []Suite {
 		ChatKitThreads{},
 		Assistants{},
 		AssistantsThreads{},
+		ErrorResponses{},
 	}
 }
 
