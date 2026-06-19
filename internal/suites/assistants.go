@@ -53,10 +53,10 @@ func (Assistants) Run(ctx context.Context, client openai.Client, cfg *config.Con
 	if err != nil {
 		return fmt.Errorf("assistant create failed: %w", err)
 	}
+	assistantID = created.ID
 	if err := validateAssistantObject("assistants", created); err != nil {
 		return err
 	}
-	assistantID = created.ID
 	if created.Name != assistantCreateName {
 		return fail("assistants", fmt.Sprintf("create name is %q, want %q", created.Name, assistantCreateName))
 	}
@@ -226,6 +226,21 @@ func validateAssistantListPage(suite string, page *pagination.CursorPage[openai.
 	}
 	if envelope.Object != "list" {
 		return fail(suite, fmt.Sprintf("list object is %q, want list", envelope.Object))
+	}
+	if len(page.Data) == 0 {
+		return nil
+	}
+	if envelope.FirstID == "" {
+		return fail(suite, "list missing first_id")
+	}
+	if envelope.LastID == "" {
+		return fail(suite, "list missing last_id")
+	}
+	if envelope.FirstID != page.Data[0].ID {
+		return fail(suite, fmt.Sprintf("list first_id is %q, want %q", envelope.FirstID, page.Data[0].ID))
+	}
+	if envelope.LastID != page.Data[len(page.Data)-1].ID {
+		return fail(suite, fmt.Sprintf("list last_id is %q, want %q", envelope.LastID, page.Data[len(page.Data)-1].ID))
 	}
 	for i := range page.Data {
 		if err := validateAssistantObject(suite, &page.Data[i]); err != nil {

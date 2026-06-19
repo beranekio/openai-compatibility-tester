@@ -57,10 +57,10 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 	if err != nil {
 		return fmt.Errorf("assistant create failed: %w", err)
 	}
+	assistantID = assistant.ID
 	if err := validateAssistantObject("assistants_threads", assistant); err != nil {
 		return err
 	}
-	assistantID = assistant.ID
 
 	thread, err := client.Beta.Threads.New(ctx, openai.BetaThreadNewParams{
 		Metadata: shared.Metadata{
@@ -95,7 +95,7 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 	if err != nil {
 		return fmt.Errorf("thread message create failed: %w", err)
 	}
-	if err := validateThreadMessageObject("assistants_threads", userMessage); err != nil {
+	if err := validateThreadMessageObject("assistants_threads", userMessage, threadID); err != nil {
 		return err
 	}
 	if userMessage.Role != openai.MessageRoleUser {
@@ -139,21 +139,21 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 	if err != nil {
 		return fmt.Errorf("thread message list failed: %w", err)
 	}
-	if err := validateThreadMessagePage("assistants_threads", messagePage); err != nil {
+	if err := validateThreadMessagePage("assistants_threads", messagePage, threadID); err != nil {
 		return err
 	}
 	if !threadMessagesContainText(messagePage.Data, assistantThreadUserMessage) {
 		return fail("assistants_threads", "list response missing user message text")
 	}
-	if !threadMessagesHaveAssistantOutput(messagePage.Data) {
-		return fail("assistants_threads", "list response missing assistant message content or refusal")
+	if !threadMessagesHaveRunAssistantOutput(messagePage.Data, run.ID, assistantID) {
+		return fail("assistants_threads", "list response missing assistant message content or refusal for run")
 	}
 
 	gotMessage, err := client.Beta.Threads.Messages.Get(ctx, threadID, userMessage.ID)
 	if err != nil {
 		return fmt.Errorf("thread message get failed: %w", err)
 	}
-	if err := validateThreadMessageObject("assistants_threads", gotMessage); err != nil {
+	if err := validateThreadMessageObject("assistants_threads", gotMessage, threadID); err != nil {
 		return err
 	}
 	if gotMessage.ID != userMessage.ID {
@@ -166,6 +166,9 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 	}
 	if err := validateThreadDeleted("assistants_threads", deletedThread); err != nil {
 		return err
+	}
+	if deletedThread.ID != threadID {
+		return fail("assistants_threads", fmt.Sprintf("delete id is %q, want %q", deletedThread.ID, threadID))
 	}
 	threadDeleted = true
 
@@ -251,7 +254,7 @@ func validateThreadDeleted(suite string, deleted *openai.ThreadDeleted) error {
 	return nil
 }
 
-func validateThreadMessageObject(suite string, message *openai.Message) error {
+func validateThreadMessageObject(suite string, message *openai.Message, wantThreadID string) error {
 	if message == nil {
 		return fail(suite, "message is nil")
 	}
@@ -282,10 +285,13 @@ func validateThreadMessageObject(suite string, message *openai.Message) error {
 	if !message.JSON.ThreadID.Valid() {
 		return fail(suite, "message missing thread_id")
 	}
+	if message.ThreadID != wantThreadID {
+		return fail(suite, fmt.Sprintf("message thread_id is %q, want %q", message.ThreadID, wantThreadID))
+	}
 	return nil
 }
 
-func validateThreadMessagePage(suite string, page *pagination.CursorPage[openai.Message]) error {
+func validateThreadMessagePage(suite string, page *pagination.CursorPage[openai.Message], wantThreadID string) error {
 	if page == nil {
 		return fail(suite, "message page is nil")
 	}
@@ -293,7 +299,9 @@ func validateThreadMessagePage(suite string, page *pagination.CursorPage[openai.
 		return fail(suite, "message page missing has_more")
 	}
 	var envelope struct {
-		Object string `json:"object"`
+		Object  string `json:"object"`
+		FirstID string `json:"first_id"`
+		LastID  string `json:"last_id"`
 	}
 	if err := json.Unmarshal([]byte(page.RawJSON()), &envelope); err != nil {
 		return fail(suite, "message list response is not valid JSON")
@@ -301,8 +309,23 @@ func validateThreadMessagePage(suite string, page *pagination.CursorPage[openai.
 	if envelope.Object != "list" {
 		return fail(suite, fmt.Sprintf("message list object is %q, want list", envelope.Object))
 	}
+	if len(page.Data) == 0 {
+		return nil
+	}
+	if envelope.FirstID == "" {
+		return fail(suite, "message list missing first_id")
+	}
+	if envelope.LastID == "" {
+		return fail(suite, "message list missing last_id")
+	}
+	if envelope.FirstID != page.Data[0].ID {
+		return fail(suite, fmt.Sprintf("message list first_id is %q, want %q", envelope.FirstID, page.Data[0].ID))
+	}
+	if envelope.LastID != page.Data[len(page.Data)-1].ID {
+		return fail(suite, fmt.Sprintf("message list last_id is %q, want %q", envelope.LastID, page.Data[len(page.Data)-1].ID))
+	}
 	for i := range page.Data {
-		if err := validateThreadMessageObject(suite, &page.Data[i]); err != nil {
+		if err := validateThreadMessageObject(suite, &page.Data[i], wantThreadID); err != nil {
 			return err
 		}
 	}
@@ -349,11 +372,17 @@ func waitForThreadRunCompleted(ctx context.Context, client openai.Client, suite,
 		if err := validateThreadRunObject(suite, gotRun); err != nil {
 			return nil, err
 		}
+		if gotRun.ID != runID {
+			return nil, fail(suite, fmt.Sprintf("run id is %q, want %q", gotRun.ID, runID))
+		}
 		switch gotRun.Status {
 		case openai.RunStatusCompleted:
 			return gotRun, nil
+		case openai.RunStatusQueued, openai.RunStatusInProgress:
 		case openai.RunStatusFailed, openai.RunStatusCancelled, openai.RunStatusExpired, openai.RunStatusIncomplete:
 			return nil, fail(suite, fmt.Sprintf("run failed with terminal status %q", gotRun.Status))
+		default:
+			return nil, fail(suite, fmt.Sprintf("run status is %q, want queued, in_progress, completed, or terminal failure", gotRun.Status))
 		}
 		select {
 		case <-ctx.Done():
@@ -396,12 +425,19 @@ func threadMessageHasOutput(message *openai.Message) bool {
 	return false
 }
 
-func threadMessagesHaveAssistantOutput(messages []openai.Message) bool {
+func threadMessagesHaveRunAssistantOutput(messages []openai.Message, runID, assistantID string) bool {
 	for i := range messages {
-		if messages[i].Role != openai.MessageRoleAssistant {
+		msg := &messages[i]
+		if msg.Role != openai.MessageRoleAssistant {
 			continue
 		}
-		if threadMessageHasOutput(&messages[i]) {
+		if msg.RunID != runID {
+			continue
+		}
+		if msg.AssistantID != assistantID {
+			continue
+		}
+		if threadMessageHasOutput(msg) {
 			return true
 		}
 	}
