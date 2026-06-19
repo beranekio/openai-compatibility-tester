@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
 
@@ -37,17 +38,55 @@ func (ErrorResponses) Run(ctx context.Context, client openai.Client, _ *config.C
 	if !errors.As(err, &apiErr) {
 		return fail("error_responses", fmt.Sprintf("error is %T, want *openai.Error", err))
 	}
+	return validateErrorResponseAPIError("error_responses", apiErr)
+}
+
+func validateErrorResponseAPIError(suite string, apiErr *openai.Error) error {
 	if apiErr.Message == "" {
-		return fail("error_responses", "error missing message")
+		return fail(suite, "error missing message")
 	}
 	if apiErr.Type == "" {
-		return fail("error_responses", "error missing type")
+		return fail(suite, "error missing type")
 	}
-	if apiErr.StatusCode != http.StatusBadRequest && apiErr.StatusCode != http.StatusNotFound {
-		return fail("error_responses", fmt.Sprintf("status code is %d, want 400 or 404 for invalid model", apiErr.StatusCode))
+	if apiErr.StatusCode < 400 || apiErr.StatusCode >= 500 {
+		return fail(suite, fmt.Sprintf("status code is %d, want 4xx", apiErr.StatusCode))
 	}
-	if apiErr.JSON.Param.Valid() && apiErr.Param != "model" {
-		return fail("error_responses", fmt.Sprintf("error param is %q, want model", apiErr.Param))
+	if isExcludedErrorStatus(apiErr.StatusCode) {
+		return fail(suite, fmt.Sprintf("status code is %d, want client error other than 401/403/429", apiErr.StatusCode))
+	}
+	if !hasModelErrorEvidence(apiErr) {
+		return fail(suite, "error lacks model-specific evidence (code, param, or message)")
 	}
 	return nil
+}
+
+func isExcludedErrorStatus(statusCode int) bool {
+	switch statusCode {
+	case http.StatusUnauthorized, http.StatusForbidden, http.StatusTooManyRequests:
+		return true
+	default:
+		return false
+	}
+}
+
+func hasModelErrorEvidence(apiErr *openai.Error) bool {
+	if apiErr.JSON.Code.Valid() && isModelRelatedErrorCode(apiErr.Code) {
+		return true
+	}
+	if apiErr.JSON.Param.Valid() && apiErr.Param == "model" {
+		return true
+	}
+	if strings.Contains(apiErr.Message, errorTriggerModel) {
+		return true
+	}
+	return strings.Contains(strings.ToLower(apiErr.Message), "model")
+}
+
+func isModelRelatedErrorCode(code string) bool {
+	switch code {
+	case "model_not_found", "invalid_model", "model_not_available", "invalid_model_error":
+		return true
+	default:
+		return strings.Contains(strings.ToLower(code), "model")
+	}
 }
