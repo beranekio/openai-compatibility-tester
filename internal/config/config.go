@@ -318,7 +318,7 @@ func Load(args []string) (*Config, error) {
 		return nil, fmt.Errorf("at least one test suite must be selected")
 	}
 	if err := suitespec.ValidateNames(cfg.Suites); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w (use --list-suites to see options)", err)
 	}
 	if cfg.RequestTimeout <= 0 {
 		return nil, fmt.Errorf("request timeout must be greater than zero")

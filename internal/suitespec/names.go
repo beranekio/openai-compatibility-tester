@@ -2,7 +2,7 @@ package suitespec
 
 func init() {
 	for _, name := range allNames {
-		Register(name)
+		register(name)
 	}
 }
 

@@ -11,8 +11,7 @@ var (
 	names = make(map[string]struct{})
 )
 
-// Register records a suite name in the canonical registry.
-func Register(name string) {
+func register(name string) {
 	mu.Lock()
 	defer mu.Unlock()
 	names[name] = struct{}{}
@@ -36,7 +35,7 @@ func ValidateNames(selected []string) error {
 	defer mu.RUnlock()
 	for _, name := range selected {
 		if _, ok := names[name]; !ok {
-			return fmt.Errorf("unknown test suite %q (use --list-suites to see options)", name)
+			return fmt.Errorf("unknown test suite %q", name)
 		}
 	}
 	return nil

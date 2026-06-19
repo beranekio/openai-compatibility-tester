@@ -3,8 +3,7 @@ package suitespec
 import "testing"
 
 func TestValidateNamesRejectsUnknown(t *testing.T) {
-	Register("known-suite")
-	if err := ValidateNames([]string{"known-suite"}); err != nil {
+	if err := ValidateNames([]string{"models"}); err != nil {
 		t.Fatalf("ValidateNames() error = %v", err)
 	}
 	if err := ValidateNames([]string{"not-a-suite"}); err == nil {

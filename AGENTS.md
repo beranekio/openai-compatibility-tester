@@ -45,7 +45,7 @@ type Suite interface {
 }
 ```
 
-Register new suites in `internal/suites/suite.go` (`All()`, plus `internal/suitespec/names.go` and `config.FullSuites` — keep all three in sync via tests), `RequiredModels()` / `validateModelsForSuites()` when model config is required). For deprecated APIs, implement `DeprecatedSuite` and ensure `printSuites()` labels them `(deprecated)`.
+Register new suites in `internal/suites/suite.go` (`All()`), `internal/suitespec/names.go`, and `config.FullSuites` — keep all three in sync via tests. Update `RequiredModels()` and `validateModelsForSuites()` when model config is required. For deprecated APIs, implement `DeprecatedSuite` and ensure `printSuites()` labels them `(deprecated)`.
 
 ## Adding a new test suite
 
