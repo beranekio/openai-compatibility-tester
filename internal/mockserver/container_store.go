@@ -156,8 +156,9 @@ func (s *containerStore) listFiles(containerID string) ([]storedContainerFile, b
 }
 
 func cloneContainer(container storedContainer) storedContainer {
-	container.files = make(map[string]storedContainerFile, len(container.files))
-	for id, file := range container.files {
+	origFiles := container.files
+	container.files = make(map[string]storedContainerFile, len(origFiles))
+	for id, file := range origFiles {
 		container.files[id] = cloneContainerFile(file)
 	}
 	return container
