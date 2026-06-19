@@ -33,16 +33,14 @@ func (ChatKitThreads) Run(ctx context.Context, client openai.Client, cfg *config
 	if err := validateChatKitThreadPage("chatkit_threads", listPage); err != nil {
 		return err
 	}
+	if cfg.ChatKitTestThreadID != "" {
+		return runChatKitThreadsWithDelete(ctx, client, cfg.ChatKitTestThreadID)
+	}
 	if len(listPage.Data) == 0 {
 		return nil
 	}
 
-	threadID := cfg.ChatKitTestThreadID
-	if threadID == "" {
-		threadID = listPage.Data[0].ID
-		return runChatKitThreadsReadOnly(ctx, client, threadID)
-	}
-	return runChatKitThreadsWithDelete(ctx, client, threadID)
+	return runChatKitThreadsReadOnly(ctx, client, listPage.Data[0].ID)
 }
 
 func runChatKitThreadsReadOnly(ctx context.Context, client openai.Client, threadID string) error {

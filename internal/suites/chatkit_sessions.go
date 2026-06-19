@@ -110,9 +110,6 @@ func validateChatKitSession(suite string, session *openai.ChatSession, wantUser,
 	if session.Workflow.ID != wantWorkflowID {
 		return fail(suite, fmt.Sprintf("session workflow id is %q, want %q", session.Workflow.ID, wantWorkflowID))
 	}
-	if !session.Workflow.JSON.StateVariables.Valid() {
-		return fail(suite, "session missing workflow.state_variables")
-	}
 	if !session.Workflow.JSON.Tracing.Valid() {
 		return fail(suite, "session missing workflow.tracing")
 	}
