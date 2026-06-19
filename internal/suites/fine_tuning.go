@@ -46,10 +46,13 @@ func (FineTuning) Run(ctx context.Context, client openai.Client, cfg *config.Con
 	if err != nil {
 		return fmt.Errorf("fine-tuning job create failed: %w", err)
 	}
-	jobID = created.ID
 	if err := validateFineTuningJobEnvelope("fine_tuning", created); err != nil {
+		if created != nil && created.ID != "" {
+			jobID = created.ID
+		}
 		return err
 	}
+	jobID = created.ID
 	if created.TrainingFile != uploaded.ID {
 		return fail("fine_tuning", fmt.Sprintf("job training_file is %q, want %q", created.TrainingFile, uploaded.ID))
 	}
@@ -145,9 +148,15 @@ func uploadFineTuneTrainingFile(ctx context.Context, client openai.Client) (*ope
 		return nil, fmt.Errorf("fine-tune training file upload failed: %w", err)
 	}
 	if err := validateFileObject("fine_tuning", uploaded); err != nil {
+		if uploaded != nil && uploaded.ID != "" {
+			deleteFineTuneTrainingFile(client, uploaded.ID)
+		}
 		return nil, err
 	}
 	if string(uploaded.Purpose) != string(openai.FilePurposeFineTune) {
+		if uploaded.ID != "" {
+			deleteFineTuneTrainingFile(client, uploaded.ID)
+		}
 		return nil, fail("fine_tuning", fmt.Sprintf("upload purpose is %q, want fine-tune", uploaded.Purpose))
 	}
 	return uploaded, nil
