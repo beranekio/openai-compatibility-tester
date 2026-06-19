@@ -88,6 +88,8 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"skills",
 			"skill_versions",
 			"fine_tuning",
+			"chatkit_sessions",
+			"chatkit_threads",
 		},
 	}
 

@@ -151,6 +151,8 @@ var FullSuites = []string{
 	"skills",
 	"skill_versions",
 	"fine_tuning",
+	"chatkit_sessions",
+	"chatkit_threads",
 }
 
 var knownSuites = map[string]struct{}{
@@ -210,6 +212,8 @@ var knownSuites = map[string]struct{}{
 	"skills":                        {},
 	"skill_versions":                {},
 	"fine_tuning":                   {},
+	"chatkit_sessions":              {},
+	"chatkit_threads":               {},
 }
 
 // Config holds runtime settings for compatibility testing.

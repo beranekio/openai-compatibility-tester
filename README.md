@@ -103,6 +103,8 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `skills` | `client.Skills.New`, `Get`, `Update`, `List`, `Delete`; `client.Skills.Versions.New` | `POST /v1/skills`, `GET /v1/skills`, `GET/POST/DELETE /v1/skills/{id}`, `POST /v1/skills/{id}/versions` |
 | `skill_versions` | `client.Skills.Versions.New`, `Get`, `List`, `Delete`; `client.Skills.Content.Get`; `client.Skills.Versions.Content.Get` | `POST/GET /v1/skills/{id}/versions`, `GET/DELETE /v1/skills/{id}/versions/{version}`, `GET /v1/skills/{id}/content`, `GET /v1/skills/{id}/versions/{version}/content` |
 | `fine_tuning` | `client.FineTuning.Jobs.New`, `List`, `Get`, `Cancel`; `client.FineTuning.Jobs.Checkpoints.List`; `client.FineTuning.Checkpoints.Permissions.List` | `POST/GET /v1/fine_tuning/jobs`, `POST /v1/fine_tuning/jobs/{id}/cancel`, `GET /v1/fine_tuning/jobs/{id}/checkpoints`, `GET /v1/fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions` |
+| `chatkit_sessions` | `client.Beta.ChatKit.Sessions.New`, `Cancel` | `POST /v1/chatkit/sessions`, `POST /v1/chatkit/sessions/{id}/cancel` |
+| `chatkit_threads` | `client.Beta.ChatKit.Threads.Get`, `List`, `Delete`, `ListItems` | `GET/DELETE /v1/chatkit/threads`, `GET /v1/chatkit/threads/{id}/items` |
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
@@ -272,6 +274,16 @@ docker run --rm \
   -e OPENAI_API_KEY=your-api-key \
   -e OPENAI_REASONING_MODEL=o3-mini \
   -e TEST_SUITES=chat_completions_reasoning \
+  ghcr.io/beranekio/openai-compatibility-tester:latest
+```
+
+**Beta ChatKit** — opt-in only (included in `full`, not `default` or `extended`). The SDK sends `OpenAI-Beta: chatkit_beta=v1` on these requests:
+
+```bash
+docker run --rm \
+  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
+  -e OPENAI_API_KEY=your-api-key \
+  -e TEST_SUITES=chatkit_sessions,chatkit_threads \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 
