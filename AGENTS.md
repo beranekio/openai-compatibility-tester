@@ -219,6 +219,59 @@ Keep replies factual and brief — one or two sentences on what was considered a
 
 When `main` gains suites another open PR must rebase onto, resolve any review threads on the rebased branch that are now stale (already fixed on `main` or superseded by the rebase).
 
+## Agent-authored issues and pull requests
+
+When **you** (an AI coding agent) open a GitHub issue or pull request in this repository, mark it as agent-authored so maintainers can filter and audit automation output.
+
+### Required: `agent-created` label
+
+Apply the **`agent-created`** label to every issue and PR you open. Create the label first if it does not exist:
+
+```bash
+gh label create agent-created \
+  --description "Issue or PR opened by an AI coding agent" \
+  --color "5319E7" \
+  2>/dev/null || true
+```
+
+When creating the item:
+
+```bash
+gh issue create ... --label agent-created
+gh pr create ... --label agent-created
+```
+
+Do not add this label to issues or PRs opened by humans, even if you later comment or push commits to them.
+
+### Optional: record the model
+
+When useful for traceability, also document which model produced the issue or PR. Prefer **both** of these when the model is known:
+
+1. **Description footer** — append a short block at the end of the issue/PR body:
+
+   ```markdown
+   ---
+   **Agent-authored:** yes
+   **Model:** Composer 2.5
+   ```
+
+   Use the model name the user or runtime actually requested (e.g. `Composer 2.5`, `GPT-5.4`, `Claude Opus 4.6`). Omit the footer lines you cannot fill honestly.
+
+2. **Model label** (optional) — create and apply a repo label slugged from the model, e.g. `agent-model-composer-2-5` for Composer 2.5:
+
+   ```bash
+   gh label create agent-model-composer-2-5 \
+     --description "Agent-authored item; model: Composer 2.5" \
+     --color "BFD4F2" \
+     2>/dev/null || true
+
+   gh pr edit <number> --add-label agent-model-composer-2-5
+   ```
+
+   Slug rules: lowercase, non-alphanumeric characters → `-`, collapse repeated `-`. One model label per item is enough.
+
+If the model is unknown, still apply `agent-created`; skip the model footer and model label.
+
 ## PR checklist
 
 - [ ] `go test ./...` passes
@@ -228,4 +281,5 @@ When `main` gains suites another open PR must rebase onto, resolve any review th
 - [ ] `config_test.go` updated if config parsing, validation, or presets changed
 - [ ] README updated for user-facing changes
 - [ ] Review threads addressed: **resolved** when fixed; **replied** with rationale when declined
+- [ ] If you opened the PR: **`agent-created`** label applied; model noted in body footer and/or `agent-model-*` label when known
 - [ ] Focused diff — no unrelated changes
