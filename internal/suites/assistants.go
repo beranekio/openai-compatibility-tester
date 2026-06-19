@@ -86,6 +86,9 @@ func (Assistants) Run(ctx context.Context, client openai.Client, cfg *config.Con
 	if err := validateAssistantObject("assistants", updated); err != nil {
 		return err
 	}
+	if updated.ID != assistantID {
+		return fail("assistants", fmt.Sprintf("update id is %q, want %q", updated.ID, assistantID))
+	}
 	if updated.Name != assistantUpdateName {
 		return fail("assistants", fmt.Sprintf("update name is %q, want %q", updated.Name, assistantUpdateName))
 	}
@@ -188,11 +191,30 @@ func validateAssistantDeleted(suite string, deleted *openai.AssistantDeleted) er
 }
 
 func assistantListContains(page *pagination.CursorPage[openai.Assistant], assistantID string) (bool, error) {
+	for page != nil {
+		if err := validateAssistantListPage("assistants", page); err != nil {
+			return false, err
+		}
+		for i := range page.Data {
+			if page.Data[i].ID == assistantID {
+				return true, nil
+			}
+		}
+		next, err := page.GetNextPage()
+		if err != nil {
+			return false, fmt.Errorf("assistant list next page failed: %w", err)
+		}
+		page = next
+	}
+	return false, nil
+}
+
+func validateAssistantListPage(suite string, page *pagination.CursorPage[openai.Assistant]) error {
 	if page == nil {
-		return false, fail("assistants", "list page is nil")
+		return fail(suite, "list page is nil")
 	}
 	if !page.JSON.HasMore.Valid() {
-		return false, fail("assistants", "list missing has_more")
+		return fail(suite, "list missing has_more")
 	}
 	var envelope struct {
 		Object  string `json:"object"`
@@ -200,18 +222,15 @@ func assistantListContains(page *pagination.CursorPage[openai.Assistant], assist
 		LastID  string `json:"last_id"`
 	}
 	if err := json.Unmarshal([]byte(page.RawJSON()), &envelope); err != nil {
-		return false, fail("assistants", "list response is not valid JSON")
+		return fail(suite, "list response is not valid JSON")
 	}
 	if envelope.Object != "list" {
-		return false, fail("assistants", fmt.Sprintf("list object is %q, want list", envelope.Object))
+		return fail(suite, fmt.Sprintf("list object is %q, want list", envelope.Object))
 	}
 	for i := range page.Data {
-		if err := validateAssistantObject("assistants", &page.Data[i]); err != nil {
-			return false, err
-		}
-		if page.Data[i].ID == assistantID {
-			return true, nil
+		if err := validateAssistantObject(suite, &page.Data[i]); err != nil {
+			return err
 		}
 	}
-	return false, nil
+	return nil
 }

@@ -146,7 +146,7 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 		return fail("assistants_threads", "list response missing user message text")
 	}
 	if !threadMessagesHaveAssistantOutput(messagePage.Data) {
-		return fail("assistants_threads", "list response missing assistant message text")
+		return fail("assistants_threads", "list response missing assistant message content or refusal")
 	}
 
 	gotMessage, err := client.Beta.Threads.Messages.Get(ctx, threadID, userMessage.ID)
@@ -175,6 +175,21 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 	}
 	if err := validateAssistantDeleted("assistants_threads", deletedAssistant); err != nil {
 		return err
+	}
+	if deletedAssistant.ID != assistantID {
+		return fail("assistants_threads", fmt.Sprintf("delete id is %q, want %q", deletedAssistant.ID, assistantID))
+	}
+
+	_, assistantGetErr := client.Beta.Assistants.Get(ctx, assistantID)
+	if assistantGetErr == nil {
+		return fail("assistants_threads", "assistant get after delete succeeded; assistant still exists")
+	}
+	var assistantAPIError *openai.Error
+	if !errors.As(assistantGetErr, &assistantAPIError) {
+		return fmt.Errorf("assistant get after delete failed: %w", assistantGetErr)
+	}
+	if assistantAPIError.StatusCode != http.StatusNotFound {
+		return fail("assistants_threads", fmt.Sprintf("assistant get after delete returned status %d, want 404", assistantAPIError.StatusCode))
 	}
 	assistantDeleted = true
 
@@ -367,10 +382,14 @@ func threadMessagesContainText(messages []openai.Message, want string) bool {
 	return false
 }
 
-func threadMessageHasTextOutput(message *openai.Message) bool {
+func threadMessageHasOutput(message *openai.Message) bool {
 	for _, content := range message.Content {
 		text := content.AsText()
 		if text.Text.Value != "" {
+			return true
+		}
+		refusal := content.AsRefusal()
+		if refusal.Refusal != "" {
 			return true
 		}
 	}
@@ -382,7 +401,7 @@ func threadMessagesHaveAssistantOutput(messages []openai.Message) bool {
 		if messages[i].Role != openai.MessageRoleAssistant {
 			continue
 		}
-		if threadMessageHasTextOutput(&messages[i]) {
+		if threadMessageHasOutput(&messages[i]) {
 			return true
 		}
 	}
