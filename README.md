@@ -251,7 +251,7 @@ docker run --rm \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 
-**Fine-tuning** — strictly opt-in (`full` preset only). The `fine_tuning` suite uploads a minimal training JSONL file, creates a job, lists/gets it, lists checkpoints, smoke-tests checkpoint permissions, and cancels the job. It does **not** wait for a full training run, but against real OpenAI endpoints it can still incur **cost and take minutes** if the provider runs actual fine-tuning. Use only when you intend to test fine-tuning compatibility:
+**Fine-tuning** — opt-in only (included in `full`, not `default` or `extended`). The `fine_tuning` suite uploads a minimal training JSONL file, creates a job, lists/gets it, lists checkpoints, smoke-tests checkpoint permissions, and cancels the job. It does **not** wait for a full training run, but against real OpenAI endpoints it can still incur **cost and take minutes** if the provider runs actual fine-tuning. Use only when you intend to test fine-tuning compatibility:
 
 ```bash
 docker run --rm \

@@ -134,7 +134,7 @@ func (FineTuning) Run(ctx context.Context, client openai.Client, cfg *config.Con
 		return fail("fine_tuning", fmt.Sprintf("cancel id is %q, want %q", cancelled.ID, jobID))
 	}
 	if !isFineTuningCancelStatusOK(string(cancelled.Status)) {
-		return fail("fine_tuning", fmt.Sprintf("cancel status is %q, want cancelling or cancelled", cancelled.Status))
+		return fail("fine_tuning", fmt.Sprintf("cancel status is %q, want cancelled", cancelled.Status))
 	}
 	return nil
 }
@@ -188,7 +188,7 @@ func isFineTuningTerminalFailure(status string) bool {
 }
 
 func isFineTuningCancelStatusOK(status string) bool {
-	return status == "cancelled" || status == "cancelling"
+	return status == "cancelled"
 }
 
 func isFineTuningCancelAlreadyTerminalError(apiErr *openai.Error) bool {
@@ -226,6 +226,9 @@ func waitForFineTuningCheckpoints(ctx context.Context, client openai.Client, sui
 		got, err := client.FineTuning.Jobs.Get(ctx, jobID)
 		if err != nil {
 			return nil, fmt.Errorf("fine-tuning job get failed: %w", err)
+		}
+		if err := validateFineTuningJobEnvelope(suite, got); err != nil {
+			return nil, err
 		}
 		status := string(got.Status)
 		switch status {
@@ -361,6 +364,9 @@ func validateFineTuningCheckpointPermissionPage(suite string, page *pagination.C
 	}
 	if !page.JSON.HasMore.Valid() {
 		return fail(suite, "fine-tuning checkpoint permission list missing has_more")
+	}
+	if !page.JSON.Data.Valid() {
+		return fail(suite, "fine-tuning checkpoint permission list missing data")
 	}
 	var envelope struct {
 		Object string `json:"object"`
