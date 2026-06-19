@@ -28,7 +28,7 @@ func (ChatKitSessions) Run(ctx context.Context, client openai.Client, cfg *confi
 	if err != nil {
 		return fmt.Errorf("chatkit session create failed: %w", err)
 	}
-	if err := validateChatKitSession("chatkit_sessions", created, chatkitSessionUser, cfg.ChatKitWorkflowID, openai.ChatSessionStatusActive); err != nil {
+	if err := validateChatKitSessionCreate("chatkit_sessions", created, chatkitSessionUser, cfg.ChatKitWorkflowID); err != nil {
 		return err
 	}
 	sessionID := created.ID
@@ -37,7 +37,7 @@ func (ChatKitSessions) Run(ctx context.Context, client openai.Client, cfg *confi
 	if err != nil {
 		return fmt.Errorf("chatkit session cancel failed: %w", err)
 	}
-	if err := validateChatKitSession("chatkit_sessions", cancelled, chatkitSessionUser, cfg.ChatKitWorkflowID, openai.ChatSessionStatusCancelled); err != nil {
+	if err := validateChatKitSessionCancelled("chatkit_sessions", cancelled, cfg.ChatKitWorkflowID); err != nil {
 		return err
 	}
 	if cancelled.ID != sessionID {
@@ -46,7 +46,7 @@ func (ChatKitSessions) Run(ctx context.Context, client openai.Client, cfg *confi
 	return nil
 }
 
-func validateChatKitSession(suite string, session *openai.ChatSession, wantUser, wantWorkflowID string, wantStatus openai.ChatSessionStatus) error {
+func validateChatKitSessionCreate(suite string, session *openai.ChatSession, wantUser, wantWorkflowID string) error {
 	if session == nil {
 		return fail(suite, "session is nil")
 	}
@@ -74,8 +74,8 @@ func validateChatKitSession(suite string, session *openai.ChatSession, wantUser,
 	if !session.JSON.Status.Valid() {
 		return fail(suite, "session missing status")
 	}
-	if session.Status != wantStatus {
-		return fail(suite, fmt.Sprintf("session status is %q, want %q", session.Status, wantStatus))
+	if session.Status != openai.ChatSessionStatusActive {
+		return fail(suite, fmt.Sprintf("session status is %q, want %q", session.Status, openai.ChatSessionStatusActive))
 	}
 	if !session.JSON.User.Valid() {
 		return fail(suite, "session missing user")
@@ -112,6 +112,36 @@ func validateChatKitSession(suite string, session *openai.ChatSession, wantUser,
 	}
 	if !session.Workflow.JSON.Tracing.Valid() {
 		return fail(suite, "session missing workflow.tracing")
+	}
+	return nil
+}
+
+func validateChatKitSessionCancelled(suite string, session *openai.ChatSession, wantWorkflowID string) error {
+	if session == nil {
+		return fail(suite, "session is nil")
+	}
+	if session.ID == "" {
+		return fail(suite, "session missing id")
+	}
+	if !session.JSON.Object.Valid() {
+		return fail(suite, "session missing object")
+	}
+	if string(session.Object) != "chatkit.session" {
+		return fail(suite, fmt.Sprintf("session object is %q, want chatkit.session", session.Object))
+	}
+	if !session.JSON.Status.Valid() {
+		return fail(suite, "session missing status")
+	}
+	if session.Status != openai.ChatSessionStatusCancelled {
+		return fail(suite, fmt.Sprintf("session status is %q, want %q", session.Status, openai.ChatSessionStatusCancelled))
+	}
+	if session.JSON.Workflow.Valid() {
+		if !session.Workflow.JSON.ID.Valid() {
+			return fail(suite, "session workflow missing id")
+		}
+		if session.Workflow.ID != wantWorkflowID {
+			return fail(suite, fmt.Sprintf("session workflow id is %q, want %q", session.Workflow.ID, wantWorkflowID))
+		}
 	}
 	return nil
 }

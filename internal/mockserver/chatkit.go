@@ -36,7 +36,7 @@ func (s *Server) handleChatKitSessionCancel(w http.ResponseWriter, r *http.Reque
 		writeNotFound(w, "ChatKit session not found", "session_id")
 		return
 	}
-	writeJSON(w, chatKitSessionPayload(session))
+	writeJSON(w, chatKitSessionCancelPayload(session))
 }
 
 func (s *Server) handleChatKitThreadGet(w http.ResponseWriter, r *http.Request) {
@@ -96,6 +96,17 @@ func (s *Server) handleChatKitThreadListItems(w http.ResponseWriter, r *http.Req
 		"has_more": false,
 		"last_id":  lastID,
 	})
+}
+
+func chatKitSessionCancelPayload(session storedChatKitSession) map[string]any {
+	return map[string]any{
+		"id":     session.id,
+		"object": "chatkit.session",
+		"status": session.status,
+		"workflow": map[string]any{
+			"id": session.workflowID,
+		},
+	}
 }
 
 func chatKitSessionPayload(session storedChatKitSession) map[string]any {

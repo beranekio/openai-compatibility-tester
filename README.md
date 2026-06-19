@@ -33,7 +33,7 @@ docker run --rm \
 | `OPENAI_TRANSCRIPTION_MODEL` | `--transcription-model` | when `audio_transcriptions_stream` is selected | — | Model for streaming transcription (e.g. `gpt-4o-mini-transcribe`) |
 | `OPENAI_REALTIME_MODEL` | `--realtime-model` | when `realtime_client_secrets` is selected | `gpt-realtime` | Model used for Realtime API suites |
 | `OPENAI_ADMIN_API_KEY` | `--admin-api-key` | no | — | Admin API key for `fine_tuning` checkpoint permissions (skipped when unset) |
-| `OPENAI_CHATKIT_WORKFLOW_ID` | `--chatkit-workflow-id` | when `chatkit_sessions` is selected | `wf_mock_compat_test` | Workflow ID used by `chatkit_sessions` |
+| `OPENAI_CHATKIT_WORKFLOW_ID` | `--chatkit-workflow-id` | no | `wf_mock_compat_test` (when `chatkit_sessions` is selected) | Workflow ID used by `chatkit_sessions`; set explicitly for real endpoints |
 | `OPENAI_CHATKIT_TEST_THREAD_ID` | `--chatkit-test-thread-id` | no | — | Disposable thread ID for `chatkit_threads` delete test; omit for read-only list/get/items checks |
 | `TEST_SUITES` | `--suites` | no | `all` | Comma-separated suite names, or preset: `all`/`default`, `extended`, `full` |
 | `REQUEST_TIMEOUT` | `--timeout` | no | `2m` | Per-suite request timeout (batch suites may need a longer value against real APIs while jobs finish) |
