@@ -27,6 +27,7 @@ func TestPrintSuitesMarksDeprecatedSuites(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		os.Stdout = oldStdout
+		_ = w.Close()
 		_ = r.Close()
 	})
 	os.Stdout = w

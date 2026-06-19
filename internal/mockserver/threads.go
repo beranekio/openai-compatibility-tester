@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 )
 
 func (s *Server) handleThreadCreate(w http.ResponseWriter, r *http.Request) {
@@ -249,6 +250,19 @@ func threadMessageTextFromContent(content any) string {
 		if text, ok := value["value"].(string); ok {
 			return text
 		}
+		if textObj, ok := value["text"].(map[string]any); ok {
+			if text, ok := textObj["value"].(string); ok {
+				return text
+			}
+		}
+	case []any:
+		var parts []string
+		for _, part := range value {
+			if text := threadMessageTextFromContent(part); text != "" {
+				parts = append(parts, text)
+			}
+		}
+		return strings.Join(parts, "")
 	}
 	return ""
 }
