@@ -729,15 +729,19 @@ func writeResponsesToolCallStream(w http.ResponseWriter) {
 }
 
 func writeJSON(w http.ResponseWriter, payload any) {
+	writeJSONStatus(w, http.StatusOK, payload)
+}
+
+func writeJSONStatus(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)
 	_ = enc.Encode(payload)
 }
 
 func brokenIncompatibleHandler(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusBadRequest)
-	writeJSON(w, map[string]any{
+	writeJSONStatus(w, http.StatusBadRequest, map[string]any{
 		"error": map[string]any{
 			"message": "incompatible",
 		},
