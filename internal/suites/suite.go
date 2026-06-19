@@ -67,6 +67,7 @@ func All() []Suite {
 		VectorStores{},
 		VectorStoreFiles{},
 		VectorStoreFileBatches{},
+		RealtimeClientSecrets{},
 	}
 }
 
@@ -90,6 +91,7 @@ type ModelRequirements struct {
 	TTS           bool
 	Whisper       bool
 	Transcription bool
+	Realtime      bool
 }
 
 // RequiredModels returns which model settings must be configured for the suites.
@@ -115,6 +117,8 @@ func RequiredModels(names []string) ModelRequirements {
 			req.Whisper = true
 		case "audio_transcriptions_stream":
 			req.Transcription = true
+		case "realtime_client_secrets":
+			req.Realtime = true
 		}
 	}
 	return req

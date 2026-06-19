@@ -28,6 +28,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 		WhisperModel:       "whisper-1",
 		TranscriptionModel: "gpt-4o-mini-transcribe",
 		EmbeddingModel:     "text-embedding-3-small",
+		RealtimeModel:      "gpt-realtime",
 		RequestTimeout:     30 * time.Second,
 		Suites: []string{
 			"models",
@@ -78,6 +79,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"vector_stores",
 			"vector_store_files",
 			"vector_store_file_batches",
+			"realtime_client_secrets",
 		},
 	}
 

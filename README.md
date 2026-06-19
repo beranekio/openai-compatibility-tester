@@ -30,6 +30,7 @@ docker run --rm \
 | `OPENAI_TTS_MODEL` | `--tts-model` | when `audio_speech` is selected | — | Model used for text-to-speech suites |
 | `OPENAI_WHISPER_MODEL` | `--whisper-model` | when `audio_transcriptions` or `audio_translations` is selected | — | Model for non-streaming transcription and translation (e.g. `whisper-1`) |
 | `OPENAI_TRANSCRIPTION_MODEL` | `--transcription-model` | when `audio_transcriptions_stream` is selected | — | Model for streaming transcription (e.g. `gpt-4o-mini-transcribe`) |
+| `OPENAI_REALTIME_MODEL` | `--realtime-model` | when `realtime_client_secrets` is selected | `gpt-realtime` | Model used for Realtime API suites |
 | `TEST_SUITES` | `--suites` | no | `all` | Comma-separated suite names, or preset: `all`/`default`, `extended`, `full` |
 | `REQUEST_TIMEOUT` | `--timeout` | no | `2m` | Per-suite request timeout (batch suites may need a longer value against real APIs while jobs finish) |
 | `ALLOW_INSECURE_HTTP` | `--allow-insecure-http` | no | `false` | Allow plaintext `http://` to non-loopback hosts (loopback HTTP is always permitted) |
@@ -93,6 +94,7 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `vector_stores` | `client.VectorStores.New`, `Get`, `Update`, `List`, `Search`, `Delete` | `POST/GET/DELETE /v1/vector_stores`, `POST /v1/vector_stores/{id}/search` |
 | `vector_store_files` | `client.VectorStores.Files.New`, `List`, `Get`, `Delete` | `POST/GET/DELETE /v1/vector_stores/{id}/files` |
 | `vector_store_file_batches` | `client.VectorStores.FileBatches.New`, `Get`, `ListFiles`, `Cancel` | `POST/GET /v1/vector_stores/{id}/file_batches`, `POST /v1/vector_stores/{id}/file_batches/{batch_id}/cancel` |
+| `realtime_client_secrets` | `client.Realtime.ClientSecrets.New` | `POST /v1/realtime/client_secrets` (WebSocket sessions not exercised) |
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 
@@ -216,6 +218,17 @@ docker run --rm \
   -e OPENAI_API_KEY=your-api-key \
   -e OPENAI_MODEL=your-vision-model \
   -e TEST_SUITES=chat_completions_vision \
+  ghcr.io/beranekio/openai-compatibility-tester:latest
+```
+
+**Realtime API** — opt-in HTTP smoke test for client secret creation (`realtime_client_secrets`). WebSocket sessions are not exercised. Uses `OPENAI_REALTIME_MODEL` (defaults to `gpt-realtime`):
+
+```bash
+docker run --rm \
+  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
+  -e OPENAI_API_KEY=your-api-key \
+  -e OPENAI_REALTIME_MODEL=gpt-4o-realtime-preview \
+  -e TEST_SUITES=realtime_client_secrets \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 
