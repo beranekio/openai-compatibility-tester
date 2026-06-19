@@ -57,7 +57,9 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 	if err != nil {
 		return fmt.Errorf("assistant create failed: %w", err)
 	}
-	assistantID = assistant.ID
+	if assistant != nil && assistant.ID != "" {
+		assistantID = assistant.ID
+	}
 	if err := validateAssistantObject("assistants_threads", assistant); err != nil {
 		return err
 	}
@@ -70,7 +72,9 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 	if err != nil {
 		return fmt.Errorf("thread create failed: %w", err)
 	}
-	threadID = thread.ID
+	if thread != nil && thread.ID != "" {
+		threadID = thread.ID
+	}
 	if err := validateThreadObject("assistants_threads", thread); err != nil {
 		return err
 	}
@@ -84,6 +88,22 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 	}
 	if gotThread.ID != threadID {
 		return fail("assistants_threads", fmt.Sprintf("get id is %q, want %q", gotThread.ID, threadID))
+	}
+
+	updatedThread, err := client.Beta.Threads.Update(ctx, threadID, openai.BetaThreadUpdateParams{
+		Metadata: shared.Metadata{
+			"suite":  "assistants_threads",
+			"status": "updated",
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("thread update failed: %w", err)
+	}
+	if err := validateThreadObject("assistants_threads", updatedThread); err != nil {
+		return err
+	}
+	if updatedThread.ID != threadID {
+		return fail("assistants_threads", fmt.Sprintf("update id is %q, want %q", updatedThread.ID, threadID))
 	}
 
 	userMessage, err := client.Beta.Threads.Messages.New(ctx, threadID, openai.BetaThreadMessageNewParams{

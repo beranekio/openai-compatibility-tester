@@ -53,7 +53,9 @@ func (Assistants) Run(ctx context.Context, client openai.Client, cfg *config.Con
 	if err != nil {
 		return fmt.Errorf("assistant create failed: %w", err)
 	}
-	assistantID = created.ID
+	if created != nil && created.ID != "" {
+		assistantID = created.ID
+	}
 	if err := validateAssistantObject("assistants", created); err != nil {
 		return err
 	}
