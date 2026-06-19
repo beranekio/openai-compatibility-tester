@@ -18,7 +18,7 @@ type ChatKitThreads struct{}
 
 func (ChatKitThreads) Name() string { return "chatkit_threads" }
 func (ChatKitThreads) Description() string {
-	return "Beta ChatKit threads (GET /v1/chatkit/threads, GET /v1/chatkit/threads/{id}, GET /v1/chatkit/threads/{id}/items[, DELETE when OPENAI_CHATKIT_TEST_THREAD_ID is set])"
+	return "Beta ChatKit threads (GET /v1/chatkit/threads; get/items when a thread is listed or OPENAI_CHATKIT_TEST_THREAD_ID is set; DELETE only with OPENAI_CHATKIT_TEST_THREAD_ID)"
 }
 
 func (ChatKitThreads) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
@@ -62,7 +62,7 @@ func runChatKitThreadsReadOnly(ctx context.Context, client openai.Client, thread
 	if err != nil {
 		return fmt.Errorf("chatkit thread item list failed: %w", err)
 	}
-	return validateChatKitThreadItemPage("chatkit_threads", itemPage)
+	return validateChatKitThreadItemPage("chatkit_threads", threadID, itemPage)
 }
 
 func runChatKitThreadsWithDelete(ctx context.Context, client openai.Client, threadID string) error {
@@ -153,7 +153,7 @@ func validateChatKitThreadPage(suite string, page *pagination.ConversationCursor
 	return nil
 }
 
-func validateChatKitThreadItemPage(suite string, page *pagination.ConversationCursorPage[openai.ChatKitThreadItemListDataUnion]) error {
+func validateChatKitThreadItemPage(suite string, threadID string, page *pagination.ConversationCursorPage[openai.ChatKitThreadItemListDataUnion]) error {
 	if page == nil {
 		return fail(suite, "thread item page is nil")
 	}
@@ -164,14 +164,14 @@ func validateChatKitThreadItemPage(suite string, page *pagination.ConversationCu
 		return fail(suite, "thread item page missing has_more")
 	}
 	for i := range page.Data {
-		if err := validateChatKitThreadItem(suite, &page.Data[i]); err != nil {
+		if err := validateChatKitThreadItem(suite, threadID, &page.Data[i]); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func validateChatKitThreadItem(suite string, item *openai.ChatKitThreadItemListDataUnion) error {
+func validateChatKitThreadItem(suite string, threadID string, item *openai.ChatKitThreadItemListDataUnion) error {
 	if item == nil {
 		return fail(suite, "thread item is nil")
 	}
@@ -183,6 +183,9 @@ func validateChatKitThreadItem(suite string, item *openai.ChatKitThreadItemListD
 	}
 	if item.ThreadID == "" {
 		return fail(suite, "thread item missing thread_id")
+	}
+	if item.ThreadID != threadID {
+		return fail(suite, fmt.Sprintf("thread item thread_id is %q, want %q", item.ThreadID, threadID))
 	}
 	return nil
 }
