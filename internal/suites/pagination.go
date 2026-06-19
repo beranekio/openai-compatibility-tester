@@ -16,7 +16,7 @@ type cursorListEnvelope struct {
 // validateCursorListPage checks common fields on pagination.CursorPage list responses:
 // non-nil page, valid data and has_more fields, object=="list", and optionally
 // first_id/last_id cursor fields when data is non-empty and id is provided.
-func validateCursorListPage[T any](suite string, page *pagination.CursorPage[T], id func(T) string) error {
+func validateCursorListPage[T any](suite string, page *pagination.CursorPage[T], id func(*T) string) error {
 	if page == nil {
 		return fail(suite, "list page is nil")
 	}
@@ -36,8 +36,8 @@ func validateCursorListPage[T any](suite string, page *pagination.CursorPage[T],
 	if len(page.Data) == 0 || id == nil {
 		return nil
 	}
-	firstID := id(page.Data[0])
-	lastID := id(page.Data[len(page.Data)-1])
+	firstID := id(&page.Data[0])
+	lastID := id(&page.Data[len(page.Data)-1])
 	if envelope.FirstID == "" {
 		return fail(suite, "list missing first_id")
 	}

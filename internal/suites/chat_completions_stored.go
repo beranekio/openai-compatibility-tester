@@ -33,7 +33,7 @@ func createStoredChatCompletion(ctx context.Context, client openai.Client, cfg *
 }
 
 func validateChatCompletionListPage(suite string, page *pagination.CursorPage[openai.ChatCompletion]) error {
-	return validateCursorListPage(suite, page, func(c openai.ChatCompletion) string { return c.ID })
+	return validateCursorListPage(suite, page, func(c *openai.ChatCompletion) string { return c.ID })
 }
 
 func findStoredChatCompletionInList(ctx context.Context, client openai.Client, suite, wantID string) (*openai.ChatCompletion, error) {

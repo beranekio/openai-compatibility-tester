@@ -153,7 +153,7 @@ func validateFileEnvelope(suite string, file *openai.FileObject) error {
 }
 
 func validateFileListPage(suite string, page *pagination.CursorPage[openai.FileObject]) error {
-	return validateCursorListPage(suite, page, nil)
+	return validateCursorListPage(suite, page, func(f *openai.FileObject) string { return f.ID })
 }
 
 func validateFileContentResponse(suite string, resp *http.Response, want []byte) error {

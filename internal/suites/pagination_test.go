@@ -98,7 +98,7 @@ func TestValidateCursorListPageRequiresFirstIDWithData(t *testing.T) {
 		"has_more": false
 	}`)
 
-	err := validateCursorListPage("chat_completions", page, func(c openai.ChatCompletion) string { return c.ID })
+	err := validateCursorListPage("chat_completions", page, func(c *openai.ChatCompletion) string { return c.ID })
 	if err == nil || !strings.Contains(err.Error(), "list missing first_id") {
 		t.Fatalf("expected missing first_id validation error, got %v", err)
 	}
@@ -118,7 +118,7 @@ func TestValidateCursorListPageRequiresLastIDWithData(t *testing.T) {
 		"has_more": false
 	}`)
 
-	err := validateCursorListPage("chat_completions", page, func(c openai.ChatCompletion) string { return c.ID })
+	err := validateCursorListPage("chat_completions", page, func(c *openai.ChatCompletion) string { return c.ID })
 	if err == nil || !strings.Contains(err.Error(), "list missing last_id") {
 		t.Fatalf("expected missing last_id validation error, got %v", err)
 	}
@@ -139,7 +139,7 @@ func TestValidateCursorListPageRejectsMismatchedLastID(t *testing.T) {
 		"has_more": false
 	}`)
 
-	err := validateCursorListPage("chat_completions", page, func(c openai.ChatCompletion) string { return c.ID })
+	err := validateCursorListPage("chat_completions", page, func(c *openai.ChatCompletion) string { return c.ID })
 	if err == nil || !strings.Contains(err.Error(), `list last_id is "chatcmpl_other"`) {
 		t.Fatalf("expected wrong last_id validation error, got %v", err)
 	}
@@ -160,7 +160,7 @@ func TestValidateCursorListPageAcceptsValidCursorFields(t *testing.T) {
 		"has_more": false
 	}`)
 
-	if err := validateCursorListPage("chat_completions", page, func(c openai.ChatCompletion) string { return c.ID }); err != nil {
+	if err := validateCursorListPage("chat_completions", page, func(c *openai.ChatCompletion) string { return c.ID }); err != nil {
 		t.Fatalf("validateCursorListPage() error = %v", err)
 	}
 }
