@@ -100,6 +100,32 @@ func smallTextFileBytes() []byte {
 	return []byte(smallTextFileContent)
 }
 
+const smallSkillFileContent = "# compatibility test skill\n"
+
+type namedSkillFileReader struct {
+	r *bytes.Reader
+}
+
+func (r *namedSkillFileReader) Read(p []byte) (int, error) {
+	return r.r.Read(p)
+}
+
+func (r *namedSkillFileReader) Filename() string {
+	return "SKILL.md"
+}
+
+func (r *namedSkillFileReader) ContentType() string {
+	return "text/markdown"
+}
+
+func smallSkillFileReader() io.Reader {
+	return &namedSkillFileReader{r: bytes.NewReader([]byte(smallSkillFileContent))}
+}
+
+func smallSkillFileBytes() []byte {
+	return []byte(smallSkillFileContent)
+}
+
 type namedJSONLReader struct {
 	r        *bytes.Reader
 	filename string
