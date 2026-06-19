@@ -468,6 +468,34 @@ func TestLoadRejectsImagesEditsSuiteWithoutImageModel(t *testing.T) {
 	}
 }
 
+func TestLoadDefaultsRealtimeModelForRealtimeClientSecretsSuite(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvRealtimeModel, "")
+
+	cfg, err := Load([]string{"--suites", "realtime_client_secrets"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.RealtimeModel != DefaultRealtimeModel {
+		t.Fatalf("RealtimeModel = %q, want %q", cfg.RealtimeModel, DefaultRealtimeModel)
+	}
+}
+
+func TestLoadUsesRealtimeModelFromEnv(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvRealtimeModel, "gpt-4o-realtime-preview")
+
+	cfg, err := Load([]string{"--suites", "realtime_client_secrets"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.RealtimeModel != "gpt-4o-realtime-preview" {
+		t.Fatalf("RealtimeModel = %q, want gpt-4o-realtime-preview", cfg.RealtimeModel)
+	}
+}
+
 func TestLoadRejectsAudioTranscriptionsStreamWithoutTranscriptionModel(t *testing.T) {
 	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")

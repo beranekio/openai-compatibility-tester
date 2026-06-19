@@ -20,11 +20,11 @@ func (RealtimeClientSecrets) Description() string {
 	return "Realtime API client secret creation (POST /v1/realtime/client_secrets). WebSocket session behavior is not exercised."
 }
 
-func (RealtimeClientSecrets) Run(ctx context.Context, client openai.Client, _ *config.Config) error {
+func (RealtimeClientSecrets) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
 	created, err := client.Realtime.ClientSecrets.New(ctx, realtime.ClientSecretNewParams{
 		Session: realtime.ClientSecretNewParamsSessionUnion{
 			OfRealtime: &realtime.RealtimeSessionCreateRequestParam{
-				Model: realtime.RealtimeSessionCreateRequestModelGPTRealtime,
+				Model: realtime.RealtimeSessionCreateRequestModel(cfg.RealtimeModel),
 			},
 		},
 	})
@@ -53,6 +53,9 @@ func validateRealtimeClientSecretResponse(suite string, resp *realtime.ClientSec
 	session := resp.Session.AsRealtime()
 	if session.ID == "" {
 		return fail(suite, "session id is empty")
+	}
+	if strings.TrimSpace(string(session.Model)) == "" {
+		return fail(suite, "session model is empty")
 	}
 	if string(session.Object) != "realtime.session" {
 		return fail(suite, fmt.Sprintf("session object is %q, want realtime.session", session.Object))

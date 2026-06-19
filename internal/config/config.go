@@ -24,6 +24,7 @@ const (
 	EnvTTSModel           = "OPENAI_TTS_MODEL"
 	EnvWhisperModel       = "OPENAI_WHISPER_MODEL"
 	EnvTranscriptionModel = "OPENAI_TRANSCRIPTION_MODEL"
+	EnvRealtimeModel      = "OPENAI_REALTIME_MODEL"
 	EnvTestSuites         = "TEST_SUITES"
 	EnvRequestTimeout     = "REQUEST_TIMEOUT"
 	EnvAllowInsecureHTTP  = "ALLOW_INSECURE_HTTP"
@@ -31,6 +32,10 @@ const (
 	// DefaultCompletionModel is used when the completions suite is selected without
 	// an explicit completion model. Legacy /v1/completions expects instruct models.
 	DefaultCompletionModel = "gpt-3.5-turbo-instruct"
+
+	// DefaultRealtimeModel is used when the realtime_client_secrets suite is selected
+	// without an explicit realtime model.
+	DefaultRealtimeModel = "gpt-realtime"
 )
 
 // DefaultSuites are run when TEST_SUITES is unset or set to "all" or "default".
@@ -207,6 +212,7 @@ type Config struct {
 	TTSModel           string
 	WhisperModel       string
 	TranscriptionModel string
+	RealtimeModel      string
 	Suites             []string
 	RequestTimeout     time.Duration
 	AllowInsecureHTTP  bool
@@ -230,6 +236,7 @@ func Load(args []string) (*Config, error) {
 	ttsModel := fs.String("tts-model", envOrDefault(EnvTTSModel, ""), "Model for text-to-speech suites")
 	whisperModel := fs.String("whisper-model", envOrDefault(EnvWhisperModel, ""), "Model for audio transcription and translation suites")
 	transcriptionModel := fs.String("transcription-model", envOrDefault(EnvTranscriptionModel, ""), "Model for streaming audio transcription suite")
+	realtimeModel := fs.String("realtime-model", envOrDefault(EnvRealtimeModel, ""), "Model for Realtime API suites (defaults to "+DefaultRealtimeModel+" when realtime_client_secrets is selected)")
 	allowInsecureHTTP := fs.Bool("allow-insecure-http", envBoolOrDefault(EnvAllowInsecureHTTP, false), "Allow plaintext HTTP to non-loopback hosts")
 	suiteList := fs.String("suites", envOrDefault(EnvTestSuites, "all"), "Comma-separated suite names, or preset: all, default, extended, full")
 	timeout := fs.Duration("timeout", 2*time.Minute, "Per-request timeout")
@@ -259,6 +266,7 @@ func Load(args []string) (*Config, error) {
 		TTSModel:           strings.TrimSpace(*ttsModel),
 		WhisperModel:       strings.TrimSpace(*whisperModel),
 		TranscriptionModel: strings.TrimSpace(*transcriptionModel),
+		RealtimeModel:      strings.TrimSpace(*realtimeModel),
 		RequestTimeout:     *timeout,
 		AllowInsecureHTTP:  *allowInsecureHTTP,
 		ListSuites:         *listSuites,
@@ -296,6 +304,9 @@ func Load(args []string) (*Config, error) {
 	}
 	if cfg.VisionModel == "" {
 		cfg.VisionModel = cfg.Model
+	}
+	if cfg.RealtimeModel == "" && suiteNeedsRealtime(cfg.Suites) {
+		cfg.RealtimeModel = DefaultRealtimeModel
 	}
 
 	if !timeoutFlagExplicit(args) {
@@ -366,6 +377,15 @@ func suiteNeedsCompletion(names []string) bool {
 	return false
 }
 
+func suiteNeedsRealtime(names []string) bool {
+	for _, name := range names {
+		if name == "realtime_client_secrets" {
+			return true
+		}
+	}
+	return false
+}
+
 func validateSuiteNames(names []string) error {
 	for _, name := range names {
 		if _, ok := knownSuites[name]; !ok {
@@ -377,7 +397,7 @@ func validateSuiteNames(names []string) error {
 
 func validateModelsForSuites(cfg *Config) error {
 	var needsChat, needsResponses, needsCompletion, needsEmbedding bool
-	var needsVision, needsReasoning, needsImage, needsTTS, needsWhisper, needsTranscription bool
+	var needsVision, needsReasoning, needsImage, needsTTS, needsWhisper, needsTranscription, needsRealtime bool
 	for _, name := range cfg.Suites {
 		switch name {
 		case "chat_completions", "chat_completions_stream", "chat_completions_stream_usage", "chat_completions_logprobs", "chat_completions_json", "chat_completions_audio", "chat_completions_tools", "chat_completions_tools_stream", "chat_completions_multi_turn", "chat_completions_get", "chat_completions_list", "chat_completions_delete", "chat_completions_messages", "models_get", "batches_create", "batches_get", "batches_cancel":
@@ -400,6 +420,8 @@ func validateModelsForSuites(cfg *Config) error {
 			needsWhisper = true
 		case "audio_transcriptions_stream":
 			needsTranscription = true
+		case "realtime_client_secrets":
+			needsRealtime = true
 		}
 	}
 	if needsChat && cfg.Model == "" {
@@ -431,6 +453,9 @@ func validateModelsForSuites(cfg *Config) error {
 	}
 	if needsTranscription && cfg.TranscriptionModel == "" {
 		return fmt.Errorf("%s or --transcription-model is required for selected suites", EnvTranscriptionModel)
+	}
+	if needsRealtime && cfg.RealtimeModel == "" {
+		return fmt.Errorf("%s or --realtime-model is required for selected suites", EnvRealtimeModel)
 	}
 	return nil
 }

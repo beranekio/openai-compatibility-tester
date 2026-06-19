@@ -28,6 +28,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 		WhisperModel:       "whisper-1",
 		TranscriptionModel: "gpt-4o-mini-transcribe",
 		EmbeddingModel:     "text-embedding-3-small",
+		RealtimeModel:      "gpt-realtime",
 		RequestTimeout:     30 * time.Second,
 		Suites: []string{
 			"models",
