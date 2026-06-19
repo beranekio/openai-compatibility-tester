@@ -34,11 +34,8 @@ func validateBinaryHTTPResponse(suite string, resp *http.Response, minBytes int)
 	if err != nil {
 		return fail(suite, fmt.Sprintf("Content-Type %q is invalid: %v", contentType, err))
 	}
-	if !strings.HasPrefix(mediaType, "audio/") &&
-		mediaType != "application/octet-stream" &&
-		mediaType != "application/zip" &&
-		mediaType != "application/binary" {
-		return fail(suite, fmt.Sprintf("Content-Type is %q, want audio/*, application/octet-stream, application/zip, or application/binary", mediaType))
+	if !strings.HasPrefix(mediaType, "audio/") && mediaType != "application/octet-stream" {
+		return fail(suite, fmt.Sprintf("Content-Type is %q, want audio/* or application/octet-stream", mediaType))
 	}
 	return nil
 }

@@ -87,8 +87,23 @@ func (Skills) Run(ctx context.Context, client openai.Client, _ *config.Config) e
 		return fail("skills", "created skill missing from list response")
 	}
 
+	newVersion, err := client.Skills.Versions.New(ctx, skillID, openai.SkillVersionNewParams{
+		Files: openai.SkillVersionNewParamsFilesUnion{
+			OfFileArray: []io.Reader{skillVersionFileReader()},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("skill version create failed: %w", err)
+	}
+	if err := validateSkillVersionObject("skills", newVersion); err != nil {
+		return err
+	}
+	if newVersion.Version == created.DefaultVersion {
+		return fail("skills", fmt.Sprintf("new version is %q, want a version after %q", newVersion.Version, created.DefaultVersion))
+	}
+
 	updated, err := client.Skills.Update(ctx, skillID, openai.SkillUpdateParams{
-		DefaultVersion: created.DefaultVersion,
+		DefaultVersion: newVersion.Version,
 	})
 	if err != nil {
 		return fmt.Errorf("skill update failed: %w", err)
@@ -99,8 +114,8 @@ func (Skills) Run(ctx context.Context, client openai.Client, _ *config.Config) e
 	if updated.ID != skillID {
 		return fail("skills", fmt.Sprintf("update id is %q, want %q", updated.ID, skillID))
 	}
-	if updated.DefaultVersion != created.DefaultVersion {
-		return fail("skills", fmt.Sprintf("update default_version is %q, want %q", updated.DefaultVersion, created.DefaultVersion))
+	if updated.DefaultVersion != newVersion.Version {
+		return fail("skills", fmt.Sprintf("update default_version is %q, want %q", updated.DefaultVersion, newVersion.Version))
 	}
 
 	deletedResp, err := client.Skills.Delete(ctx, skillID)

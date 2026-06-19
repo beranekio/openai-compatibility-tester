@@ -1,15 +1,12 @@
 package suites
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"mime"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
@@ -17,8 +14,6 @@ import (
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/packages/pagination"
 )
-
-const skillVersionUpdatedContent = "# compatibility test skill v2\n"
 
 // SkillVersions verifies skill version lifecycle and content retrieval via
 // client.Skills.Versions.* and client.Skills.Content.*.
@@ -98,7 +93,7 @@ func (SkillVersions) Run(ctx context.Context, client openai.Client, _ *config.Co
 	if err != nil {
 		return fmt.Errorf("skill content get failed: %w", err)
 	}
-	if err := validateSkillContentResponse("skill_versions", skillContentResp, smallSkillFileBytes()); err != nil {
+	if err := validateSkillZipContentResponse("skill_versions", skillContentResp, skillContentMarker); err != nil {
 		return err
 	}
 
@@ -106,7 +101,7 @@ func (SkillVersions) Run(ctx context.Context, client openai.Client, _ *config.Co
 	if err != nil {
 		return fmt.Errorf("skill version content get failed: %w", err)
 	}
-	if err := validateSkillContentResponse("skill_versions", versionContentResp, []byte(skillVersionUpdatedContent)); err != nil {
+	if err := validateSkillZipContentResponse("skill_versions", versionContentResp, skillVersionContentMarker); err != nil {
 		return err
 	}
 
@@ -231,61 +226,4 @@ func validateSkillVersionDeleteResponse(suite string, deleted *openai.DeletedSki
 		return fail(suite, fmt.Sprintf("delete version is %q, want %q", deleted.Version, wantVersion))
 	}
 	return nil
-}
-
-func validateSkillContentResponse(suite string, resp *http.Response, want []byte) error {
-	if resp == nil {
-		return fail(suite, "response is nil")
-	}
-	if resp.Body == nil {
-		return fail(suite, "response body is nil")
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("%s: read response body: %w", suite, err)
-	}
-	if len(body) < len(want) {
-		return fail(suite, fmt.Sprintf("response body has %d bytes, want at least %d", len(body), len(want)))
-	}
-	if !bytes.Equal(body, want) {
-		return fail(suite, "content body does not match uploaded skill files")
-	}
-
-	contentType := resp.Header.Get("Content-Type")
-	if strings.TrimSpace(contentType) == "" {
-		return fail(suite, "response missing Content-Type")
-	}
-	mediaType, _, err := mime.ParseMediaType(contentType)
-	if err != nil {
-		return fail(suite, fmt.Sprintf("Content-Type %q is invalid: %v", contentType, err))
-	}
-	if !strings.HasPrefix(mediaType, "audio/") &&
-		mediaType != "application/octet-stream" &&
-		mediaType != "application/zip" &&
-		mediaType != "application/binary" {
-		return fail(suite, fmt.Sprintf("Content-Type is %q, want audio/*, application/octet-stream, application/zip, or application/binary", mediaType))
-	}
-	return nil
-}
-
-type namedSkillVersionFileReader struct {
-	r *bytes.Reader
-}
-
-func (r *namedSkillVersionFileReader) Read(p []byte) (int, error) {
-	return r.r.Read(p)
-}
-
-func (r *namedSkillVersionFileReader) Filename() string {
-	return "SKILL.md"
-}
-
-func (r *namedSkillVersionFileReader) ContentType() string {
-	return "text/markdown"
-}
-
-func skillVersionFileReader() io.Reader {
-	return &namedSkillVersionFileReader{r: bytes.NewReader([]byte(skillVersionUpdatedContent))}
 }

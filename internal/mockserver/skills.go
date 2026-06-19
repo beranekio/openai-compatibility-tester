@@ -1,6 +1,8 @@
 package mockserver
 
 import (
+	"archive/zip"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -8,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 )
+
+const skillBundleFolder = "compatibility-test-skill"
 
 func (s *Server) handleSkillCreate(w http.ResponseWriter, r *http.Request) {
 	content, err := readSkillMultipartFiles(r)
@@ -91,9 +95,14 @@ func (s *Server) handleSkillContent(w http.ResponseWriter, r *http.Request) {
 		writeNotFound(w, "Skill not found", "skill_id")
 		return
 	}
-	w.Header().Set("Content-Type", "application/octet-stream")
+	zipBytes, err := skillBundleZip(content)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/zip")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(content)
+	_, _ = w.Write(zipBytes)
 }
 
 func (s *Server) handleSkillVersionCreate(w http.ResponseWriter, r *http.Request) {
@@ -172,9 +181,14 @@ func (s *Server) handleSkillVersionContent(w http.ResponseWriter, r *http.Reques
 		writeNotFound(w, "Skill version not found", "version")
 		return
 	}
-	w.Header().Set("Content-Type", "application/octet-stream")
+	zipBytes, err := skillBundleZip(versionRecord.content)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/zip")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(versionRecord.content)
+	_, _ = w.Write(zipBytes)
 }
 
 func readSkillMultipartFiles(r *http.Request) ([]byte, error) {
@@ -224,4 +238,20 @@ func readSkillVersionMultipart(r *http.Request) ([]byte, bool, error) {
 		}
 	}
 	return nil, false, errors.New("missing files")
+}
+
+func skillBundleZip(skillMD []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	entry, err := zw.Create(skillBundleFolder + "/SKILL.md")
+	if err != nil {
+		return nil, err
+	}
+	if _, err := entry.Write(skillMD); err != nil {
+		return nil, err
+	}
+	if err := zw.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
