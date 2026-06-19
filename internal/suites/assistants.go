@@ -62,6 +62,12 @@ func (Assistants) Run(ctx context.Context, client openai.Client, cfg *config.Con
 	if created.Name != assistantCreateName {
 		return fail("assistants", fmt.Sprintf("create name is %q, want %q", created.Name, assistantCreateName))
 	}
+	if err := validateAssistantInstructions("assistants", created, assistantCreateInstructions); err != nil {
+		return err
+	}
+	if err := validateMetadataValues("assistants", created.Metadata, map[string]string{"suite": "assistants"}); err != nil {
+		return err
+	}
 
 	got, err := client.Beta.Assistants.Get(ctx, assistantID)
 	if err != nil {
@@ -75,6 +81,12 @@ func (Assistants) Run(ctx context.Context, client openai.Client, cfg *config.Con
 	}
 	if got.Name != assistantCreateName {
 		return fail("assistants", fmt.Sprintf("get name is %q, want %q", got.Name, assistantCreateName))
+	}
+	if err := validateAssistantInstructions("assistants", got, assistantCreateInstructions); err != nil {
+		return err
+	}
+	if err := validateMetadataValues("assistants", got.Metadata, map[string]string{"suite": "assistants"}); err != nil {
+		return err
 	}
 
 	updated, err := client.Beta.Assistants.Update(ctx, assistantID, openai.BetaAssistantUpdateParams{
@@ -96,6 +108,15 @@ func (Assistants) Run(ctx context.Context, client openai.Client, cfg *config.Con
 	}
 	if updated.Name != assistantUpdateName {
 		return fail("assistants", fmt.Sprintf("update name is %q, want %q", updated.Name, assistantUpdateName))
+	}
+	if err := validateAssistantInstructions("assistants", updated, assistantUpdateInstructions); err != nil {
+		return err
+	}
+	if err := validateMetadataValues("assistants", updated.Metadata, map[string]string{
+		"suite":  "assistants",
+		"status": "updated",
+	}); err != nil {
+		return err
 	}
 
 	listPage, err := client.Beta.Assistants.List(ctx, openai.BetaAssistantListParams{
@@ -161,6 +182,9 @@ func validateAssistantObject(suite string, assistant *openai.Assistant) error {
 	if !assistant.JSON.Name.Valid() {
 		return fail(suite, "assistant missing name")
 	}
+	if !assistant.JSON.Instructions.Valid() {
+		return fail(suite, "assistant missing instructions")
+	}
 	if !assistant.JSON.Object.Valid() {
 		return fail(suite, "assistant missing object")
 	}
@@ -169,6 +193,29 @@ func validateAssistantObject(suite string, assistant *openai.Assistant) error {
 	}
 	if !assistant.JSON.Tools.Valid() {
 		return fail(suite, "assistant missing tools")
+	}
+	return nil
+}
+
+func validateAssistantInstructions(suite string, assistant *openai.Assistant, want string) error {
+	if !assistant.JSON.Instructions.Valid() {
+		return fail(suite, "assistant missing instructions")
+	}
+	if assistant.Instructions != want {
+		return fail(suite, fmt.Sprintf("assistant instructions is %q, want %q", assistant.Instructions, want))
+	}
+	return nil
+}
+
+func validateMetadataValues(suite string, metadata shared.Metadata, want map[string]string) error {
+	for key, value := range want {
+		got, ok := metadata[key]
+		if !ok {
+			return fail(suite, fmt.Sprintf("metadata missing key %q", key))
+		}
+		if got != value {
+			return fail(suite, fmt.Sprintf("metadata[%q] is %q, want %q", key, got, value))
+		}
 	}
 	return nil
 }

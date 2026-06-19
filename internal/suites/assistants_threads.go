@@ -78,6 +78,9 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 	if err := validateThreadObject("assistants_threads", thread); err != nil {
 		return err
 	}
+	if err := validateMetadataValues("assistants_threads", thread.Metadata, map[string]string{"suite": "assistants_threads"}); err != nil {
+		return err
+	}
 
 	gotThread, err := client.Beta.Threads.Get(ctx, threadID)
 	if err != nil {
@@ -88,6 +91,9 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 	}
 	if gotThread.ID != threadID {
 		return fail("assistants_threads", fmt.Sprintf("get id is %q, want %q", gotThread.ID, threadID))
+	}
+	if err := validateMetadataValues("assistants_threads", gotThread.Metadata, map[string]string{"suite": "assistants_threads"}); err != nil {
+		return err
 	}
 
 	updatedThread, err := client.Beta.Threads.Update(ctx, threadID, openai.BetaThreadUpdateParams{
@@ -104,6 +110,12 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 	}
 	if updatedThread.ID != threadID {
 		return fail("assistants_threads", fmt.Sprintf("update id is %q, want %q", updatedThread.ID, threadID))
+	}
+	if err := validateMetadataValues("assistants_threads", updatedThread.Metadata, map[string]string{
+		"suite":  "assistants_threads",
+		"status": "updated",
+	}); err != nil {
+		return err
 	}
 
 	userMessage, err := client.Beta.Threads.Messages.New(ctx, threadID, openai.BetaThreadMessageNewParams{
@@ -308,6 +320,9 @@ func validateThreadMessageObject(suite string, message *openai.Message, wantThre
 	if !message.JSON.Status.Valid() {
 		return fail(suite, "message missing status")
 	}
+	if err := validateThreadMessageStatus(suite, message.Status); err != nil {
+		return err
+	}
 	if !message.JSON.ThreadID.Valid() {
 		return fail(suite, "message missing thread_id")
 	}
@@ -315,6 +330,15 @@ func validateThreadMessageObject(suite string, message *openai.Message, wantThre
 		return fail(suite, fmt.Sprintf("message thread_id is %q, want %q", message.ThreadID, wantThreadID))
 	}
 	return nil
+}
+
+func validateThreadMessageStatus(suite string, status openai.MessageStatus) error {
+	switch status {
+	case openai.MessageStatusInProgress, openai.MessageStatusIncomplete, openai.MessageStatusCompleted:
+		return nil
+	default:
+		return fail(suite, fmt.Sprintf("message status is %q, want in_progress, incomplete, or completed", status))
+	}
 }
 
 func validateThreadMessagePage(suite string, page *pagination.CursorPage[openai.Message], wantThreadID string) error {
