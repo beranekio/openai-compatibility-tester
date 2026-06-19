@@ -95,6 +95,8 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `vector_store_files` | `client.VectorStores.Files.New`, `List`, `Get`, `Delete` | `POST/GET/DELETE /v1/vector_stores/{id}/files` |
 | `vector_store_file_batches` | `client.VectorStores.FileBatches.New`, `Get`, `ListFiles`, `Cancel` | `POST/GET /v1/vector_stores/{id}/file_batches`, `POST /v1/vector_stores/{id}/file_batches/{batch_id}/cancel` |
 | `realtime_client_secrets` | `client.Realtime.ClientSecrets.New` | `POST /v1/realtime/client_secrets` (WebSocket sessions not exercised) |
+| `containers` | `client.Containers.New`, `Get`, `List`, `Delete` | `POST/GET/DELETE /v1/containers` |
+| `container_files` | `client.Containers.Files.New`, `List`, `Get`, `Delete`; `client.Containers.Files.Content.Get` | `POST/GET/DELETE /v1/containers/{id}/files`, `GET /v1/containers/{id}/files/{file_id}/content` |
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 

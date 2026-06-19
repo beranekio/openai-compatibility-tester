@@ -18,6 +18,7 @@ type Server struct {
 	batchStore        *batchStore
 	conversationStore *conversationStore
 	vectorStoreStore  *vectorStoreStore
+	containerStore    *containerStore
 }
 
 // New starts a mock OpenAI API server.
@@ -31,6 +32,7 @@ func New() *Server {
 		batchStore:        newBatchStore(),
 		conversationStore: newConversationStore(),
 		vectorStoreStore:  newVectorStoreStore(),
+		containerStore:    newContainerStore(),
 	}
 
 	mux.HandleFunc("GET /v1/models", handleModels)
@@ -91,6 +93,15 @@ func New() *Server {
 	mux.HandleFunc("POST /v1/vector_stores/{id}/file_batches/{batchID}/cancel", s.handleVectorStoreFileBatchCancel)
 	mux.HandleFunc("GET /v1/vector_stores/{id}/file_batches/{batchID}/files", s.handleVectorStoreFileBatchListFiles)
 	mux.HandleFunc("POST /v1/realtime/client_secrets", handleRealtimeClientSecretCreate)
+	mux.HandleFunc("POST /v1/containers", s.handleContainerCreate)
+	mux.HandleFunc("GET /v1/containers", s.handleContainerList)
+	mux.HandleFunc("GET /v1/containers/{id}", s.handleContainerGet)
+	mux.HandleFunc("DELETE /v1/containers/{id}", s.handleContainerDelete)
+	mux.HandleFunc("POST /v1/containers/{id}/files", s.handleContainerFileCreate)
+	mux.HandleFunc("GET /v1/containers/{id}/files", s.handleContainerFileList)
+	mux.HandleFunc("GET /v1/containers/{id}/files/{fileID}", s.handleContainerFileGet)
+	mux.HandleFunc("DELETE /v1/containers/{id}/files/{fileID}", s.handleContainerFileDelete)
+	mux.HandleFunc("GET /v1/containers/{id}/files/{fileID}/content", s.handleContainerFileContent)
 
 	s.Server = httptest.NewServer(mux)
 	return s

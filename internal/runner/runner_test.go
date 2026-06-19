@@ -80,6 +80,8 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"vector_store_files",
 			"vector_store_file_batches",
 			"realtime_client_secrets",
+			"containers",
+			"container_files",
 		},
 	}
 
