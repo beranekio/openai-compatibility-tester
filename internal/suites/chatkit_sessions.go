@@ -65,6 +65,18 @@ func validateChatKitSessionCreate(suite string, session *openai.ChatSession, wan
 	if !session.JSON.MaxRequestsPer1Minute.Valid() {
 		return fail(suite, "session missing max_requests_per_1_minute")
 	}
+	if session.JSON.RateLimits.Valid() {
+		if !session.RateLimits.JSON.MaxRequestsPer1Minute.Valid() {
+			return fail(suite, "session rate_limits missing max_requests_per_1_minute")
+		}
+		if session.RateLimits.MaxRequestsPer1Minute != session.MaxRequestsPer1Minute {
+			return fail(suite, fmt.Sprintf(
+				"session rate_limits.max_requests_per_1_minute is %d, want %d",
+				session.RateLimits.MaxRequestsPer1Minute,
+				session.MaxRequestsPer1Minute,
+			))
+		}
+	}
 	if !session.JSON.Object.Valid() {
 		return fail(suite, "session missing object")
 	}

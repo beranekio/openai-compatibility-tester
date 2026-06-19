@@ -127,32 +127,52 @@ func validateChatKitThread(suite string, thread *openai.ChatKitThread) error {
 	return nil
 }
 
-func validateChatKitListEnvelope(suite, context, pageRaw, firstDataID, lastDataID string) error {
+func validateChatKitListEnvelope(suite, listContext, pageRaw, firstDataID, lastDataID string) error {
 	var envelope struct {
 		Object  string `json:"object"`
 		FirstID string `json:"first_id"`
 		LastID  string `json:"last_id"`
 	}
 	if err := json.Unmarshal([]byte(pageRaw), &envelope); err != nil {
-		return fail(suite, context+" response is not valid JSON")
+		return fail(suite, listContext+" response is not valid JSON")
 	}
 	if envelope.Object != "list" {
-		return fail(suite, fmt.Sprintf("%s object is %q, want list", context, envelope.Object))
+		return fail(suite, fmt.Sprintf("%s object is %q, want list", listContext, envelope.Object))
 	}
 	if firstDataID == "" {
 		return nil
 	}
 	if envelope.FirstID == "" {
-		return fail(suite, context+" missing first_id")
+		return fail(suite, listContext+" missing first_id")
 	}
 	if envelope.LastID == "" {
-		return fail(suite, context+" missing last_id")
+		return fail(suite, listContext+" missing last_id")
 	}
 	if envelope.FirstID != firstDataID {
-		return fail(suite, fmt.Sprintf("%s first_id is %q, want %q", context, envelope.FirstID, firstDataID))
+		return fail(suite, fmt.Sprintf("%s first_id is %q, want %q", listContext, envelope.FirstID, firstDataID))
 	}
 	if envelope.LastID != lastDataID {
-		return fail(suite, fmt.Sprintf("%s last_id is %q, want %q", context, envelope.LastID, lastDataID))
+		return fail(suite, fmt.Sprintf("%s last_id is %q, want %q", listContext, envelope.LastID, lastDataID))
+	}
+	return nil
+}
+
+func validateCreatedAtOrder(suite, listContext string, timestamps []int64, descending bool) error {
+	if len(timestamps) < 2 {
+		return nil
+	}
+	for i := 1; i < len(timestamps); i++ {
+		prev := timestamps[i-1]
+		curr := timestamps[i]
+		if descending {
+			if curr > prev {
+				return fail(suite, fmt.Sprintf("%s created_at is not in descending order", listContext))
+			}
+			continue
+		}
+		if curr < prev {
+			return fail(suite, fmt.Sprintf("%s created_at is not in ascending order", listContext))
+		}
 	}
 	return nil
 }
@@ -195,6 +215,7 @@ func validateChatKitThreadPage(suite string, page *pagination.ConversationCursor
 	if err := validateChatKitListEnvelope(suite, "thread list", page.RawJSON(), firstID, lastID); err != nil {
 		return err
 	}
+	createdAts := make([]int64, len(page.Data))
 	for i := range page.Data {
 		if err := validateChatKitThread(suite, &page.Data[i]); err != nil {
 			return err
@@ -202,8 +223,9 @@ func validateChatKitThreadPage(suite string, page *pagination.ConversationCursor
 		if page.Data[i].User != chatkitThreadUser {
 			return fail(suite, fmt.Sprintf("thread user is %q, want %q", page.Data[i].User, chatkitThreadUser))
 		}
+		createdAts[i] = page.Data[i].CreatedAt
 	}
-	return nil
+	return validateCreatedAtOrder(suite, "thread list", createdAts, true)
 }
 
 func validateChatKitThreadItemPage(suite string, threadID string, page *pagination.ConversationCursorPage[openai.ChatKitThreadItemListDataUnion]) error {
@@ -225,10 +247,15 @@ func validateChatKitThreadItemPage(suite string, threadID string, page *paginati
 	if err := validateChatKitListEnvelope(suite, "thread item list", page.RawJSON(), firstID, lastID); err != nil {
 		return err
 	}
+	createdAts := make([]int64, len(page.Data))
 	for i := range page.Data {
 		if err := validateChatKitThreadItem(suite, threadID, &page.Data[i]); err != nil {
 			return err
 		}
+		createdAts[i] = page.Data[i].CreatedAt
+	}
+	if err := validateCreatedAtOrder(suite, "thread item list", createdAts, false); err != nil {
+		return err
 	}
 	return nil
 }
@@ -263,6 +290,28 @@ func validateChatKitThreadItem(suite string, threadID string, item *openai.ChatK
 	}
 	if item.ThreadID != threadID {
 		return fail(suite, fmt.Sprintf("thread item thread_id is %q, want %q", item.ThreadID, threadID))
+	}
+	return validateChatKitThreadItemVariant(suite, item)
+}
+
+func validateChatKitThreadItemVariant(suite string, item *openai.ChatKitThreadItemListDataUnion) error {
+	switch item.Type {
+	case "chatkit.user_message":
+		msg := item.AsChatKitUserMessage()
+		if !msg.JSON.Content.Valid() {
+			return fail(suite, "user_message item missing content")
+		}
+		if len(msg.Content) == 0 {
+			return fail(suite, "user_message item content is empty")
+		}
+	case "chatkit.assistant_message":
+		msg := item.AsChatKitAssistantMessage()
+		if !msg.JSON.Content.Valid() {
+			return fail(suite, "assistant_message item missing content")
+		}
+		if len(msg.Content) == 0 {
+			return fail(suite, "assistant_message item content is empty")
+		}
 	}
 	return nil
 }

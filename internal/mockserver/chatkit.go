@@ -5,10 +5,31 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
+const chatKitBetaHeaderValue = "chatkit_beta=v1"
+
+func requireChatKitBetaHeader(w http.ResponseWriter, r *http.Request) bool {
+	if strings.TrimSpace(r.Header.Get("OpenAI-Beta")) != chatKitBetaHeaderValue {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"error": map[string]any{
+				"message": "missing or invalid OpenAI-Beta header",
+				"type":    "invalid_request_error",
+			},
+		})
+		return false
+	}
+	return true
+}
+
 func (s *Server) handleChatKitSessionCreate(w http.ResponseWriter, r *http.Request) {
+	if !requireChatKitBetaHeader(w, r) {
+		return
+	}
 	var req struct {
 		User     string `json:"user"`
 		Workflow struct {
@@ -30,6 +51,9 @@ func (s *Server) handleChatKitSessionCreate(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *Server) handleChatKitSessionCancel(w http.ResponseWriter, r *http.Request) {
+	if !requireChatKitBetaHeader(w, r) {
+		return
+	}
 	id := r.PathValue("id")
 	session, ok := s.chatKitStore.cancelSession(id)
 	if !ok {
@@ -40,6 +64,9 @@ func (s *Server) handleChatKitSessionCancel(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *Server) handleChatKitThreadGet(w http.ResponseWriter, r *http.Request) {
+	if !requireChatKitBetaHeader(w, r) {
+		return
+	}
 	id := r.PathValue("id")
 	thread, ok := s.chatKitStore.getThread(id)
 	if !ok {
@@ -50,6 +77,9 @@ func (s *Server) handleChatKitThreadGet(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s *Server) handleChatKitThreadList(w http.ResponseWriter, r *http.Request) {
+	if !requireChatKitBetaHeader(w, r) {
+		return
+	}
 	user := r.URL.Query().Get("user")
 	threads := s.chatKitStore.listThreads(user)
 	data := make([]map[string]any, len(threads))
@@ -72,6 +102,9 @@ func (s *Server) handleChatKitThreadList(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *Server) handleChatKitThreadDelete(w http.ResponseWriter, r *http.Request) {
+	if !requireChatKitBetaHeader(w, r) {
+		return
+	}
 	id := r.PathValue("id")
 	if !s.chatKitStore.deleteThread(id) {
 		writeNotFound(w, "ChatKit thread not found", "thread_id")
@@ -85,6 +118,9 @@ func (s *Server) handleChatKitThreadDelete(w http.ResponseWriter, r *http.Reques
 }
 
 func (s *Server) handleChatKitThreadListItems(w http.ResponseWriter, r *http.Request) {
+	if !requireChatKitBetaHeader(w, r) {
+		return
+	}
 	threadID := r.PathValue("id")
 	thread, ok := s.chatKitStore.getThread(threadID)
 	if !ok {
