@@ -128,15 +128,16 @@ func (s *threadStore) listMessages(threadID string) ([]storedThreadMessage, bool
 	if !ok {
 		return nil, false
 	}
-	ids := make([]string, 0, len(thread.messages))
-	for id := range thread.messages {
-		ids = append(ids, id)
+	messages := make([]storedThreadMessage, 0, len(thread.messages))
+	for _, message := range thread.messages {
+		messages = append(messages, message)
 	}
-	sort.Strings(ids)
-	messages := make([]storedThreadMessage, len(ids))
-	for i, id := range ids {
-		messages[i] = thread.messages[id]
-	}
+	sort.Slice(messages, func(i, j int) bool {
+		if messages[i].createdAt != messages[j].createdAt {
+			return messages[i].createdAt < messages[j].createdAt
+		}
+		return messages[i].id < messages[j].id
+	})
 	return messages, true
 }
 
@@ -202,12 +203,14 @@ func (s *threadStore) getRun(threadID, runID string) (storedThreadRun, bool) {
 
 func cloneThread(thread storedThread) storedThread {
 	thread.metadata = cloneMap(thread.metadata)
-	thread.messages = make(map[string]storedThreadMessage, len(thread.messages))
-	for id, message := range thread.messages {
+	origMessages := thread.messages
+	thread.messages = make(map[string]storedThreadMessage, len(origMessages))
+	for id, message := range origMessages {
 		thread.messages[id] = message
 	}
-	thread.runs = make(map[string]storedThreadRun, len(thread.runs))
-	for id, run := range thread.runs {
+	origRuns := thread.runs
+	thread.runs = make(map[string]storedThreadRun, len(origRuns))
+	for id, run := range origRuns {
 		thread.runs[id] = run
 	}
 	return thread

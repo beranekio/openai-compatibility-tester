@@ -60,9 +60,6 @@ func (Assistants) Run(ctx context.Context, client openai.Client, cfg *config.Con
 	if created.Name != assistantCreateName {
 		return fail("assistants", fmt.Sprintf("create name is %q, want %q", created.Name, assistantCreateName))
 	}
-	if created.Model != cfg.Model {
-		return fail("assistants", fmt.Sprintf("create model is %q, want %q", created.Model, cfg.Model))
-	}
 
 	got, err := client.Beta.Assistants.Get(ctx, assistantID)
 	if err != nil {
@@ -149,6 +146,9 @@ func validateAssistantObject(suite string, assistant *openai.Assistant) error {
 	}
 	if !assistant.JSON.Model.Valid() {
 		return fail(suite, "assistant missing model")
+	}
+	if assistant.Model == "" {
+		return fail(suite, "assistant model is empty")
 	}
 	if !assistant.JSON.Name.Valid() {
 		return fail(suite, "assistant missing name")

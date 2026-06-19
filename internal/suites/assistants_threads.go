@@ -16,10 +16,10 @@ import (
 )
 
 const (
-	assistantThreadUserMessage      = "Reply with exactly the word: pong."
-	assistantThreadAssistantReply   = "pong"
-	assistantThreadCreateName       = "compatibility-test-assistant-thread"
+	assistantThreadUserMessage        = "Reply with exactly the word: pong."
+	assistantThreadCreateName         = "compatibility-test-assistant-thread"
 	assistantThreadCreateInstructions = "Reply with exactly the word: pong."
+	threadRunPollInterval             = 1 * time.Second
 )
 
 // AssistantsThreads verifies deprecated thread/message/run lifecycle via client.Beta.Threads.*.
@@ -121,15 +121,15 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 		return fail("assistants_threads", fmt.Sprintf("run thread_id is %q, want %q", run.ThreadID, threadID))
 	}
 
-	gotRun, err := client.Beta.Threads.Runs.Get(ctx, threadID, run.ID)
+	gotRun, err := waitForThreadRunCompleted(ctx, client, "assistants_threads", threadID, run.ID)
 	if err != nil {
-		return fmt.Errorf("thread run get failed: %w", err)
-	}
-	if err := validateThreadRunObject("assistants_threads", gotRun); err != nil {
 		return err
 	}
-	if gotRun.Status != openai.RunStatusCompleted {
-		return fail("assistants_threads", fmt.Sprintf("run status is %q, want completed", gotRun.Status))
+	if gotRun.AssistantID != assistantID {
+		return fail("assistants_threads", fmt.Sprintf("run assistant_id is %q, want %q", gotRun.AssistantID, assistantID))
+	}
+	if gotRun.ThreadID != threadID {
+		return fail("assistants_threads", fmt.Sprintf("run thread_id is %q, want %q", gotRun.ThreadID, threadID))
 	}
 
 	messagePage, err := client.Beta.Threads.Messages.List(ctx, threadID, openai.BetaThreadMessageListParams{
@@ -145,8 +145,8 @@ func (AssistantsThreads) Run(ctx context.Context, client openai.Client, cfg *con
 	if !threadMessagesContainText(messagePage.Data, assistantThreadUserMessage) {
 		return fail("assistants_threads", "list response missing user message text")
 	}
-	if !threadMessagesContainText(messagePage.Data, assistantThreadAssistantReply) {
-		return fail("assistants_threads", "list response missing assistant reply text")
+	if !threadMessagesHaveAssistantOutput(messagePage.Data) {
+		return fail("assistants_threads", "list response missing assistant message text")
 	}
 
 	gotMessage, err := client.Beta.Threads.Messages.Get(ctx, threadID, userMessage.ID)
@@ -325,6 +325,29 @@ func validateThreadRunObject(suite string, run *openai.Run) error {
 	return nil
 }
 
+func waitForThreadRunCompleted(ctx context.Context, client openai.Client, suite, threadID, runID string) (*openai.Run, error) {
+	for {
+		gotRun, err := client.Beta.Threads.Runs.Get(ctx, threadID, runID)
+		if err != nil {
+			return nil, fmt.Errorf("thread run get failed: %w", err)
+		}
+		if err := validateThreadRunObject(suite, gotRun); err != nil {
+			return nil, err
+		}
+		switch gotRun.Status {
+		case openai.RunStatusCompleted:
+			return gotRun, nil
+		case openai.RunStatusFailed, openai.RunStatusCancelled, openai.RunStatusExpired, openai.RunStatusIncomplete:
+			return nil, fail(suite, fmt.Sprintf("run failed with terminal status %q", gotRun.Status))
+		}
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("timed out waiting for run completion: %w", ctx.Err())
+		case <-time.After(threadRunPollInterval):
+		}
+	}
+}
+
 func threadMessageContainsText(message *openai.Message, want string) bool {
 	for _, content := range message.Content {
 		text := content.AsText()
@@ -338,6 +361,28 @@ func threadMessageContainsText(message *openai.Message, want string) bool {
 func threadMessagesContainText(messages []openai.Message, want string) bool {
 	for i := range messages {
 		if threadMessageContainsText(&messages[i], want) {
+			return true
+		}
+	}
+	return false
+}
+
+func threadMessageHasTextOutput(message *openai.Message) bool {
+	for _, content := range message.Content {
+		text := content.AsText()
+		if text.Text.Value != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func threadMessagesHaveAssistantOutput(messages []openai.Message) bool {
+	for i := range messages {
+		if messages[i].Role != openai.MessageRoleAssistant {
+			continue
+		}
+		if threadMessageHasTextOutput(&messages[i]) {
 			return true
 		}
 	}

@@ -25,12 +25,17 @@ func TestPrintSuitesMarksDeprecatedSuites(t *testing.T) {
 	if err != nil {
 		t.Fatalf("os.Pipe() error = %v", err)
 	}
+	t.Cleanup(func() {
+		os.Stdout = oldStdout
+		_ = r.Close()
+	})
 	os.Stdout = w
 
 	printSuites()
 
-	_ = w.Close()
-	os.Stdout = oldStdout
+	if err := w.Close(); err != nil {
+		t.Fatalf("close stdout pipe error = %v", err)
+	}
 
 	var buf bytes.Buffer
 	if _, err := io.Copy(&buf, r); err != nil {
