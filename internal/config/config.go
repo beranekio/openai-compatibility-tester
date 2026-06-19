@@ -14,6 +14,7 @@ import (
 const (
 	EnvBaseURL            = "OPENAI_BASE_URL"
 	EnvAPIKey             = "OPENAI_API_KEY"
+	EnvAdminAPIKey        = "OPENAI_ADMIN_API_KEY"
 	EnvModel              = "OPENAI_MODEL"
 	EnvCompletionModel    = "OPENAI_COMPLETION_MODEL"
 	EnvEmbeddingModel     = "OPENAI_EMBEDDING_MODEL"
@@ -215,6 +216,7 @@ var knownSuites = map[string]struct{}{
 type Config struct {
 	BaseURL            string
 	APIKey             string
+	AdminAPIKey        string
 	Model              string
 	CompletionModel    string
 	EmbeddingModel     string
@@ -240,6 +242,7 @@ func Load(args []string) (*Config, error) {
 
 	baseURL := fs.String("base-url", envOrDefault(EnvBaseURL, ""), "OpenAI-compatible API base URL")
 	apiKey := fs.String("api-key", "", "API key for the endpoint (or set "+EnvAPIKey+")")
+	adminAPIKey := fs.String("admin-api-key", envOrDefault(EnvAdminAPIKey, ""), "Admin API key for fine_tuning checkpoint permissions (or set "+EnvAdminAPIKey+")")
 	model := fs.String("model", envOrDefault(EnvModel, "gpt-4o-mini"), "Model for chat completion and models_get suites")
 	completionModel := fs.String("completion-model", envOrDefault(EnvCompletionModel, ""), "Model for legacy completions suite (defaults to "+DefaultCompletionModel+" when completions is selected)")
 	embeddingModel := fs.String("embedding-model", envOrDefault(EnvEmbeddingModel, ""), "Model for embedding tests (required when embeddings or embeddings_batch suite is selected)")
@@ -271,6 +274,7 @@ func Load(args []string) (*Config, error) {
 	cfg := &Config{
 		BaseURL:            strings.TrimRight(strings.TrimSpace(*baseURL), "/"),
 		APIKey:             strings.TrimSpace(*apiKey),
+		AdminAPIKey:        strings.TrimSpace(*adminAPIKey),
 		Model:              strings.TrimSpace(*model),
 		CompletionModel:    strings.TrimSpace(*completionModel),
 		EmbeddingModel:     strings.TrimSpace(*embeddingModel),

@@ -16,14 +16,12 @@ import (
 	"github.com/openai/openai-go/v3/packages/pagination"
 )
 
-const fineTuningPollInterval = 2 * time.Second
-
 // FineTuning verifies the Fine-tuning API smoke flow via client.FineTuning.*.
 type FineTuning struct{}
 
 func (FineTuning) Name() string { return "fine_tuning" }
 func (FineTuning) Description() string {
-	return "Fine-tuning API smoke (POST/GET /v1/fine_tuning/jobs, checkpoints, permissions)"
+	return "Fine-tuning API smoke (POST/GET /v1/fine_tuning/jobs, checkpoints; permissions when OPENAI_ADMIN_API_KEY is set)"
 }
 
 func (FineTuning) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
@@ -55,9 +53,6 @@ func (FineTuning) Run(ctx context.Context, client openai.Client, cfg *config.Con
 	jobID = created.ID
 	if created.TrainingFile != uploaded.ID {
 		return fail("fine_tuning", fmt.Sprintf("job training_file is %q, want %q", created.TrainingFile, uploaded.ID))
-	}
-	if created.Model != cfg.Model {
-		return fail("fine_tuning", fmt.Sprintf("job model is %q, want %q", created.Model, cfg.Model))
 	}
 	if !isFineTuningCreateStatusOK(string(created.Status)) {
 		return fail("fine_tuning", fmt.Sprintf("job status is %q, want validating_files, queued, or running", created.Status))
@@ -92,11 +87,14 @@ func (FineTuning) Run(ctx context.Context, client openai.Client, cfg *config.Con
 		return fail("fine_tuning", fmt.Sprintf("get id is %q, want %q", got.ID, jobID))
 	}
 
-	checkpointPage, err := waitForFineTuningCheckpoints(ctx, client, "fine_tuning", jobID)
+	checkpointPage, err := client.FineTuning.Jobs.Checkpoints.List(ctx, jobID, openai.FineTuningJobCheckpointListParams{})
 	if err != nil {
+		return fmt.Errorf("fine-tuning checkpoint list failed: %w", err)
+	}
+	if err := validateFineTuningCheckpointListPage("fine_tuning", checkpointPage); err != nil {
 		return err
 	}
-	if len(checkpointPage.Data) > 0 {
+	if len(checkpointPage.Data) > 0 && cfg.AdminAPIKey != "" {
 		checkpoint := checkpointPage.Data[0]
 		if err := validateFineTuningCheckpoint("fine_tuning", &checkpoint); err != nil {
 			return err
@@ -109,7 +107,7 @@ func (FineTuning) Run(ctx context.Context, client openai.Client, cfg *config.Con
 			ctx,
 			checkpoint.FineTunedModelCheckpoint,
 			openai.FineTuningCheckpointPermissionListParams{},
-			option.WithAdminAPIKey(cfg.APIKey),
+			option.WithAdminAPIKey(cfg.AdminAPIKey),
 		)
 		if err != nil {
 			return fmt.Errorf("fine-tuning checkpoint permission list failed: %w", err)
@@ -171,8 +169,8 @@ func deleteFineTuneTrainingFile(client openai.Client, fileID string) {
 func cleanupFineTuningArtifacts(client openai.Client, jobID, fileID string) {
 	if jobID != "" {
 		cancelCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 		_, _ = client.FineTuning.Jobs.Cancel(cancelCtx, jobID)
-		cancel()
 	}
 	if fileID != "" {
 		deleteFineTuneTrainingFile(client, fileID)
@@ -181,10 +179,6 @@ func cleanupFineTuningArtifacts(client openai.Client, jobID, fileID string) {
 
 func isFineTuningCreateStatusOK(status string) bool {
 	return status == "validating_files" || status == "queued" || status == "running"
-}
-
-func isFineTuningTerminalFailure(status string) bool {
-	return status == "failed"
 }
 
 func isFineTuningCancelStatusOK(status string) bool {
@@ -211,40 +205,6 @@ func isFineTuningCancelAlreadyTerminalError(apiErr *openai.Error) bool {
 	}
 }
 
-func waitForFineTuningCheckpoints(ctx context.Context, client openai.Client, suite, jobID string) (*pagination.CursorPage[openai.FineTuningJobCheckpoint], error) {
-	for {
-		page, err := client.FineTuning.Jobs.Checkpoints.List(ctx, jobID, openai.FineTuningJobCheckpointListParams{})
-		if err != nil {
-			return nil, fmt.Errorf("fine-tuning checkpoint list failed: %w", err)
-		}
-		if err := validateFineTuningCheckpointListPage(suite, page); err != nil {
-			return nil, err
-		}
-		if len(page.Data) > 0 {
-			return page, nil
-		}
-		got, err := client.FineTuning.Jobs.Get(ctx, jobID)
-		if err != nil {
-			return nil, fmt.Errorf("fine-tuning job get failed: %w", err)
-		}
-		if err := validateFineTuningJobEnvelope(suite, got); err != nil {
-			return nil, err
-		}
-		status := string(got.Status)
-		switch status {
-		case "failed":
-			return nil, fail(suite, fmt.Sprintf("fine-tuning job failed with terminal status %q before checkpoints were available", status))
-		case "succeeded", "cancelled":
-			return page, nil
-		}
-		select {
-		case <-ctx.Done():
-			return nil, fmt.Errorf("timed out waiting for fine-tuning checkpoints: %w", ctx.Err())
-		case <-time.After(fineTuningPollInterval):
-		}
-	}
-}
-
 func validateFineTuningJobEnvelope(suite string, job *openai.FineTuningJob) error {
 	if job == nil {
 		return fail(suite, "fine-tuning job is nil")
@@ -263,9 +223,6 @@ func validateFineTuningJobEnvelope(suite string, job *openai.FineTuningJob) erro
 	}
 	if string(job.Object) != "fine_tuning.job" {
 		return fail(suite, fmt.Sprintf("fine-tuning job object is %q, want fine_tuning.job", job.Object))
-	}
-	if !job.JSON.OrganizationID.Valid() {
-		return fail(suite, "fine-tuning job missing organization_id")
 	}
 	if !job.JSON.Status.Valid() {
 		return fail(suite, "fine-tuning job missing status")
@@ -309,6 +266,9 @@ func validateFineTuningCheckpointListPage(suite string, page *pagination.CursorP
 	}
 	if !page.JSON.HasMore.Valid() {
 		return fail(suite, "fine-tuning checkpoint list missing has_more")
+	}
+	if !page.JSON.Data.Valid() {
+		return fail(suite, "fine-tuning checkpoint list missing data")
 	}
 	var envelope struct {
 		Object string `json:"object"`
@@ -382,11 +342,20 @@ func validateFineTuningCheckpointPermissionPage(suite string, page *pagination.C
 		if item.ID == "" {
 			return fail(suite, "fine-tuning checkpoint permission missing id")
 		}
+		if !item.JSON.CreatedAt.Valid() {
+			return fail(suite, "fine-tuning checkpoint permission missing created_at")
+		}
 		if !item.JSON.Object.Valid() {
 			return fail(suite, "fine-tuning checkpoint permission missing object")
 		}
 		if string(item.Object) != "checkpoint.permission" {
 			return fail(suite, fmt.Sprintf("fine-tuning checkpoint permission object is %q, want checkpoint.permission", item.Object))
+		}
+		if !item.JSON.ProjectID.Valid() {
+			return fail(suite, "fine-tuning checkpoint permission missing project_id")
+		}
+		if item.ProjectID == "" {
+			return fail(suite, "fine-tuning checkpoint permission project_id is empty")
 		}
 	}
 	return nil

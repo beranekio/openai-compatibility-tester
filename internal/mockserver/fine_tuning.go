@@ -118,7 +118,7 @@ func (s *Server) handleFineTuningJobCancel(w http.ResponseWriter, r *http.Reques
 
 func (s *Server) handleFineTuningJobCheckpointList(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	job, ok := s.fineTuningStore.get(id)
+	job, ok := s.fineTuningStore.advanceStatus(id)
 	if !ok {
 		writeNotFound(w, "Fine tuning job not found", "id")
 		return

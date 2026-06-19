@@ -32,6 +32,7 @@ docker run --rm \
 | `OPENAI_WHISPER_MODEL` | `--whisper-model` | when `audio_transcriptions` or `audio_translations` is selected | — | Model for non-streaming transcription and translation (e.g. `whisper-1`) |
 | `OPENAI_TRANSCRIPTION_MODEL` | `--transcription-model` | when `audio_transcriptions_stream` is selected | — | Model for streaming transcription (e.g. `gpt-4o-mini-transcribe`) |
 | `OPENAI_REALTIME_MODEL` | `--realtime-model` | when `realtime_client_secrets` is selected | `gpt-realtime` | Model used for Realtime API suites |
+| `OPENAI_ADMIN_API_KEY` | `--admin-api-key` | no | — | Admin API key for `fine_tuning` checkpoint permissions (skipped when unset) |
 | `TEST_SUITES` | `--suites` | no | `all` | Comma-separated suite names, or preset: `all`/`default`, `extended`, `full` |
 | `REQUEST_TIMEOUT` | `--timeout` | no | `2m` | Per-suite request timeout (batch suites may need a longer value against real APIs while jobs finish) |
 | `ALLOW_INSECURE_HTTP` | `--allow-insecure-http` | no | `false` | Allow plaintext `http://` to non-loopback hosts (loopback HTTP is always permitted) |
@@ -251,12 +252,13 @@ docker run --rm \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 
-**Fine-tuning** — opt-in only (included in `full`, not `default` or `extended`). The `fine_tuning` suite uploads a minimal training JSONL file, creates a job, lists/gets it, lists checkpoints, smoke-tests checkpoint permissions, and cancels the job. It does **not** wait for a full training run, but against real OpenAI endpoints it can still incur **cost and take minutes** if the provider runs actual fine-tuning. Use only when you intend to test fine-tuning compatibility:
+**Fine-tuning** — opt-in only (included in `full`, not `default` or `extended`). The `fine_tuning` suite uploads a minimal training JSONL file (10 examples), creates a job, lists/gets it, lists checkpoints once, optionally smoke-tests checkpoint permissions when `OPENAI_ADMIN_API_KEY` is set, and cancels the job. It does **not** poll for training completion; an empty checkpoint list is valid. Job create/cancel can still incur **cost** on real endpoints. Set `OPENAI_ADMIN_API_KEY` only when you also want to exercise the admin-only permissions endpoint:
 
 ```bash
 docker run --rm \
   -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
   -e OPENAI_API_KEY=your-api-key \
+  -e OPENAI_ADMIN_API_KEY=your-admin-api-key \
   -e OPENAI_MODEL=gpt-4o-mini \
   -e TEST_SUITES=fine_tuning \
   ghcr.io/beranekio/openai-compatibility-tester:latest

@@ -796,3 +796,17 @@ func TestLoadAllowsReasoningSuiteWithExplicitReasoningModel(t *testing.T) {
 		t.Fatalf("ReasoningModel = %q, want o3-mini", cfg.ReasoningModel)
 	}
 }
+
+func TestLoadAdminAPIKeyFromEnv(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvAdminAPIKey, "admin-key")
+
+	cfg, err := Load([]string{})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.AdminAPIKey != "admin-key" {
+		t.Fatalf("AdminAPIKey = %q, want admin-key", cfg.AdminAPIKey)
+	}
+}
