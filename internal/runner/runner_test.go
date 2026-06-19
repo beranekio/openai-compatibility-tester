@@ -286,12 +286,87 @@ func TestRunnerSendsOrgAndProjectHeaders(t *testing.T) {
 	if code := ExitCode(results); code != 0 {
 		t.Fatalf("ExitCode() = %d, want 0; summary:\n%s", code, FormatSummary(results))
 	}
-	got := <-headers
+	var got struct {
+		org     string
+		project string
+	}
+	select {
+	case got = <-headers:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for models request headers")
+	}
 	if got.org != wantOrg {
 		t.Fatalf("OpenAI-Organization = %q, want %q", got.org, wantOrg)
 	}
 	if got.project != wantProject {
 		t.Fatalf("OpenAI-Project = %q, want %q", got.project, wantProject)
+	}
+}
+
+func TestRunnerClearsOrgAndProjectHeadersWhenUnset(t *testing.T) {
+	t.Setenv("OPENAI_ORG_ID", "org-env")
+	t.Setenv("OPENAI_PROJECT_ID", "proj-env")
+
+	headers := make(chan struct {
+		org     string
+		project string
+	}, 1)
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/models", func(w http.ResponseWriter, r *http.Request) {
+		headers <- struct {
+			org     string
+			project string
+		}{
+			org:     r.Header.Get("OpenAI-Organization"),
+			project: r.Header.Get("OpenAI-Project"),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"object": "list",
+			"data": []map[string]any{{
+				"id":       "gpt-4o-mini",
+				"object":   "model",
+				"created":  1700000000,
+				"owned_by": "mock",
+			}},
+		})
+	})
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	cfg := &config.Config{
+		BaseURL:        server.URL + "/v1",
+		APIKey:         "test-key",
+		Model:          "gpt-4o-mini",
+		RequestTimeout: 30 * time.Second,
+		Suites:         []string{"models"},
+	}
+
+	runner := New(cfg)
+	runner.Output = &bytes.Buffer{}
+
+	results, err := runner.Run(context.Background())
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if code := ExitCode(results); code != 0 {
+		t.Fatalf("ExitCode() = %d, want 0; summary:\n%s", code, FormatSummary(results))
+	}
+
+	var got struct {
+		org     string
+		project string
+	}
+	select {
+	case got = <-headers:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for models request headers")
+	}
+	if got.org != "" {
+		t.Fatalf("OpenAI-Organization = %q, want empty", got.org)
+	}
+	if got.project != "" {
+		t.Fatalf("OpenAI-Project = %q, want empty", got.project)
 	}
 }
 

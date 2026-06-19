@@ -107,6 +107,24 @@ func TestLoadOrgAndProjectIDFlagsOverrideEnvironment(t *testing.T) {
 	}
 }
 
+func TestLoadOrgAndProjectIDEmptyFlagsClearEnvironment(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvOrgID, "org-env")
+	t.Setenv(EnvProjectID, "proj-env")
+
+	cfg, err := Load([]string{"--org-id", "", "--project-id", ""})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.OrgID != "" {
+		t.Fatalf("OrgID = %q, want empty", cfg.OrgID)
+	}
+	if cfg.ProjectID != "" {
+		t.Fatalf("ProjectID = %q, want empty", cfg.ProjectID)
+	}
+}
+
 func TestLoadRequiresBaseURL(t *testing.T) {
 	t.Setenv(EnvBaseURL, "")
 	t.Setenv(EnvAPIKey, "test-key")

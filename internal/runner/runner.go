@@ -38,9 +38,13 @@ func New(cfg *config.Config) *Runner {
 	}
 	if cfg.OrgID != "" {
 		opts = append(opts, option.WithOrganization(cfg.OrgID))
+	} else {
+		opts = append(opts, option.WithHeaderDel("OpenAI-Organization"))
 	}
 	if cfg.ProjectID != "" {
 		opts = append(opts, option.WithProject(cfg.ProjectID))
+	} else {
+		opts = append(opts, option.WithHeaderDel("OpenAI-Project"))
 	}
 	client := openai.NewClient(opts...)
 
