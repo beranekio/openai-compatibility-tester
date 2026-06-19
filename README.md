@@ -108,7 +108,7 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `chatkit_sessions` | `client.Beta.ChatKit.Sessions.New`, `Cancel` | `POST /v1/chatkit/sessions`, `POST /v1/chatkit/sessions/{id}/cancel` |
 | `chatkit_threads` | `client.Beta.ChatKit.Threads.List`, `Get`, `ListItems`[, `Delete`] | `GET /v1/chatkit/threads`, `GET /v1/chatkit/threads/{id}`, `GET /v1/chatkit/threads/{id}/items`[, `DELETE /v1/chatkit/threads/{id}`] |
 | `(deprecated) assistants` | `client.Beta.Assistants.New`, `Get`, `Update`, `List`, `Delete` | `GET/POST /v1/assistants`, `GET/POST/DELETE /v1/assistants/{id}` |
-| `(deprecated) assistants_threads` | `client.Beta.Threads.New`, `Get`, `Update`, `Delete`; `client.Beta.Threads.Messages.New`, `List`, `Get`; `client.Beta.Threads.Runs.New`, `Get` | `POST /v1/threads`, `GET/POST/DELETE /v1/threads/{id}`, `POST/GET /v1/threads/{id}/messages`, `GET /v1/threads/{id}/messages/{message_id}`, `POST/GET /v1/threads/{id}/runs`, `GET /v1/threads/{id}/runs/{run_id}` |
+| `(deprecated) assistants_threads` | `client.Beta.Threads.New`, `Get`, `Update`, `Delete`; `client.Beta.Threads.Messages.New`, `List`, `Get`; `client.Beta.Threads.Runs.New`, `Get` | `POST /v1/threads`, `GET/POST/DELETE /v1/threads/{id}`, `POST/GET /v1/threads/{id}/messages`, `GET /v1/threads/{id}/messages/{message_id}`, `POST /v1/threads/{id}/runs`, `GET /v1/threads/{id}/runs/{run_id}` |
 
 Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
 

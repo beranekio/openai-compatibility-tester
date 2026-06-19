@@ -27,7 +27,7 @@ type AssistantsThreads struct{}
 
 func (AssistantsThreads) Name() string { return "assistants_threads" }
 func (AssistantsThreads) Description() string {
-	return "Deprecated Assistants thread/message/run lifecycle (POST /v1/threads, GET/POST/DELETE /v1/threads/{id}, POST/GET /v1/threads/{id}/messages, GET /v1/threads/{id}/messages/{message_id}, POST/GET /v1/threads/{id}/runs, GET /v1/threads/{id}/runs/{run_id})"
+	return "Deprecated Assistants thread/message/run lifecycle (POST /v1/threads, GET/POST/DELETE /v1/threads/{id}, POST/GET /v1/threads/{id}/messages, GET /v1/threads/{id}/messages/{message_id}, POST /v1/threads/{id}/runs, GET /v1/threads/{id}/runs/{run_id})"
 }
 func (AssistantsThreads) Deprecated() bool { return true }
 
