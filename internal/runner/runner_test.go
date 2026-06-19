@@ -239,11 +239,19 @@ func TestRunnerSendsOrgAndProjectHeaders(t *testing.T) {
 		wantProject = "proj-header-test"
 	)
 
-	var gotOrg, gotProject string
+	headers := make(chan struct {
+		org     string
+		project string
+	}, 1)
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/models", func(w http.ResponseWriter, r *http.Request) {
-		gotOrg = r.Header.Get("OpenAI-Organization")
-		gotProject = r.Header.Get("OpenAI-Project")
+		headers <- struct {
+			org     string
+			project string
+		}{
+			org:     r.Header.Get("OpenAI-Organization"),
+			project: r.Header.Get("OpenAI-Project"),
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"object": "list",
@@ -278,11 +286,12 @@ func TestRunnerSendsOrgAndProjectHeaders(t *testing.T) {
 	if code := ExitCode(results); code != 0 {
 		t.Fatalf("ExitCode() = %d, want 0; summary:\n%s", code, FormatSummary(results))
 	}
-	if gotOrg != wantOrg {
-		t.Fatalf("OpenAI-Organization = %q, want %q", gotOrg, wantOrg)
+	got := <-headers
+	if got.org != wantOrg {
+		t.Fatalf("OpenAI-Organization = %q, want %q", got.org, wantOrg)
 	}
-	if gotProject != wantProject {
-		t.Fatalf("OpenAI-Project = %q, want %q", gotProject, wantProject)
+	if got.project != wantProject {
+		t.Fatalf("OpenAI-Project = %q, want %q", got.project, wantProject)
 	}
 }
 
