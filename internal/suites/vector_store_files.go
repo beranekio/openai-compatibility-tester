@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
+	"github.com/beranekio/openai-compatibility-tester/internal/testutil"
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/packages/pagination"
@@ -230,7 +231,7 @@ func createVectorStoreForSuite(ctx context.Context, client openai.Client, suite,
 
 func uploadVectorStoreSourceFile(ctx context.Context, client openai.Client, suite string) (*openai.FileObject, error) {
 	uploaded, err := client.Files.New(ctx, openai.FileNewParams{
-		File:    smallTextFileReader(),
+		File:    testutil.SmallTextFileReader(),
 		Purpose: openai.FilePurposeAssistants,
 	})
 	if err != nil {

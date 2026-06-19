@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
+	"github.com/beranekio/openai-compatibility-tester/internal/testutil"
 
 	"github.com/openai/openai-go/v3"
 )
@@ -20,7 +21,7 @@ func (Uploads) Description() string {
 }
 
 func (Uploads) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
-	content := smallTextFileBytes()
+	content := testutil.SmallTextFileBytes()
 	deleted := false
 	var uploadID string
 	var fileID string

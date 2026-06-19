@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
+	"github.com/beranekio/openai-compatibility-tester/internal/testutil"
 
 	"github.com/openai/openai-go/v3"
 )
@@ -20,7 +21,7 @@ func (ImagesEdits) Run(ctx context.Context, client openai.Client, cfg *config.Co
 		Model:  openai.ImageModel(cfg.ImageModel),
 		Prompt: "Add a blue border.",
 		Image: openai.ImageEditParamsImageUnion{
-			OfFile: smallPNGReader(),
+			OfFile: testutil.SmallPNGReader(),
 		},
 		N: openai.Int(1),
 	})

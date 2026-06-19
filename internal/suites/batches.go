@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
+	"github.com/beranekio/openai-compatibility-tester/internal/testutil"
 
 	"github.com/openai/openai-go/v3"
 )
@@ -16,7 +17,7 @@ const batchPollInterval = 2 * time.Second
 
 func uploadBatchInputFile(ctx context.Context, client openai.Client, cfg *config.Config) (*openai.FileObject, error) {
 	uploaded, err := client.Files.New(ctx, openai.FileNewParams{
-		File:    smallBatchJSONLReader(cfg.Model),
+		File:    testutil.SmallBatchJSONLReader(cfg.Model),
 		Purpose: openai.FilePurposeBatch,
 	})
 	if err != nil {

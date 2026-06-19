@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	multiTurnToolCallID      = "call_mock_weather"
-	multiTurnToolResultJSON  = `{"temperature": 72, "unit": "fahrenheit", "condition": "sunny"}`
-	multiTurnExpectedTempF   = "72"
+	multiTurnToolCallID     = "call_mock_weather"
+	multiTurnToolResultJSON = `{"temperature": 72, "unit": "fahrenheit", "condition": "sunny"}`
+	multiTurnExpectedTempF  = "72"
 )
 
 // ChatCompletionsMultiTurn verifies multi-turn POST /v1/chat/completions with

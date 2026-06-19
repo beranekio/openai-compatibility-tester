@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
+	"github.com/beranekio/openai-compatibility-tester/internal/testutil"
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
@@ -22,7 +23,7 @@ func (AudioTranscriptionsStream) Description() string {
 func (AudioTranscriptionsStream) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
 	var httpResp *http.Response
 	stream := client.Audio.Transcriptions.NewStreaming(ctx, openai.AudioTranscriptionNewParams{
-		File:           smallWAVReader(),
+		File:           testutil.SmallWAVReader(),
 		Model:          openai.AudioModel(cfg.TranscriptionModel),
 		ResponseFormat: openai.AudioResponseFormatJSON,
 	}, option.WithResponseInto(&httpResp))

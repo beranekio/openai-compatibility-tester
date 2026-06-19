@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
+	"github.com/beranekio/openai-compatibility-tester/internal/testutil"
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/packages/pagination"
@@ -35,7 +36,7 @@ func (Files) Run(ctx context.Context, client openai.Client, cfg *config.Config) 
 	}()
 
 	uploaded, err := client.Files.New(ctx, openai.FileNewParams{
-		File:    smallTextFileReader(),
+		File:    testutil.SmallTextFileReader(),
 		Purpose: openai.FilePurposeUserData,
 	})
 	if err != nil {
@@ -85,7 +86,7 @@ func (Files) Run(ctx context.Context, client openai.Client, cfg *config.Config) 
 	if err != nil {
 		return fmt.Errorf("file content failed: %w", err)
 	}
-	if err := validateFileContentResponse("files", contentResp, smallTextFileBytes()); err != nil {
+	if err := validateFileContentResponse("files", contentResp, testutil.SmallTextFileBytes()); err != nil {
 		return err
 	}
 

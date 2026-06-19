@@ -12,8 +12,10 @@ import (
 // ImagesGenerations verifies POST /v1/images/generations via client.Images.Generate.
 type ImagesGenerations struct{}
 
-func (ImagesGenerations) Name() string        { return "images_generations" }
-func (ImagesGenerations) Description() string { return "Image generation (POST /v1/images/generations)" }
+func (ImagesGenerations) Name() string { return "images_generations" }
+func (ImagesGenerations) Description() string {
+	return "Image generation (POST /v1/images/generations)"
+}
 
 func (ImagesGenerations) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
 	resp, err := client.Images.Generate(ctx, openai.ImageGenerateParams{

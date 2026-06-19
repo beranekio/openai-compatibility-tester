@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
+	"github.com/beranekio/openai-compatibility-tester/internal/testutil"
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/packages/pagination"
@@ -38,7 +39,7 @@ func (Skills) Run(ctx context.Context, client openai.Client, _ *config.Config) e
 
 	created, err := client.Skills.New(ctx, openai.SkillNewParams{
 		Files: openai.SkillNewParamsFilesUnion{
-			OfFileArray: []io.Reader{smallSkillFileReader()},
+			OfFileArray: []io.Reader{testutil.SmallSkillFileReader()},
 		},
 	})
 	if err != nil {
@@ -89,7 +90,7 @@ func (Skills) Run(ctx context.Context, client openai.Client, _ *config.Config) e
 
 	newVersion, err := client.Skills.Versions.New(ctx, skillID, openai.SkillVersionNewParams{
 		Files: openai.SkillVersionNewParamsFilesUnion{
-			OfFileArray: []io.Reader{skillVersionFileReader()},
+			OfFileArray: []io.Reader{testutil.SkillVersionFileReader()},
 		},
 	})
 	if err != nil {
@@ -254,7 +255,7 @@ func validateSkillDeleteResponse(suite string, deleted *openai.DeletedSkill, wan
 func createSkillForSuite(ctx context.Context, client openai.Client, suite string) (*openai.Skill, error) {
 	created, err := client.Skills.New(ctx, openai.SkillNewParams{
 		Files: openai.SkillNewParamsFilesUnion{
-			OfFileArray: []io.Reader{smallSkillFileReader()},
+			OfFileArray: []io.Reader{testutil.SmallSkillFileReader()},
 		},
 	})
 	if err != nil {
