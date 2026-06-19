@@ -38,6 +38,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"models",
 			"models_get",
 			"chat_completions",
+			"chat_completions_stream",
 			"chat_completions_stream_usage",
 			"chat_completions_logprobs",
 			"chat_completions_json",
@@ -134,6 +135,31 @@ func TestErrorResponsesPassesAgainstMockServer(t *testing.T) {
 	}
 }
 
+func TestRunAllDefaultSuitesAgainstMockServer(t *testing.T) {
+	server := mockserver.New()
+	t.Cleanup(server.Close)
+
+	cfg := &config.Config{
+		BaseURL:        server.BaseURL(),
+		APIKey:         "test-key",
+		Model:          "gpt-4o-mini",
+		ResponsesModel: "gpt-4o-mini",
+		RequestTimeout: 30 * time.Second,
+		Suites:         append([]string(nil), config.DefaultSuites...),
+	}
+
+	runner := New(cfg)
+	runner.Output = &bytes.Buffer{}
+
+	results, err := runner.Run(context.Background())
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if code := ExitCode(results); code != 0 {
+		t.Fatalf("ExitCode() = %d, want 0; summary:\n%s", code, FormatSummary(results))
+	}
+}
+
 func TestErrorResponsesFailsOnBrokenServer(t *testing.T) {
 	server := mockserver.BrokenServer()
 	t.Cleanup(server.Close)
@@ -157,7 +183,6 @@ func TestErrorResponsesFailsOnBrokenServer(t *testing.T) {
 		t.Fatalf("ExitCode() = %d, want 1; summary:\n%s", code, FormatSummary(results))
 	}
 }
-
 func TestRunAllFailsOnIncompatibleEndpoint(t *testing.T) {
 	server := mockserver.BrokenServer()
 	t.Cleanup(server.Close)
@@ -179,6 +204,36 @@ func TestRunAllFailsOnIncompatibleEndpoint(t *testing.T) {
 	}
 	if code := ExitCode(results); code != 1 {
 		t.Fatalf("ExitCode() = %d, want 1", code)
+	}
+}
+
+func TestRunAllDefaultSuitesFailOnBrokenServer(t *testing.T) {
+	server := mockserver.BrokenServer()
+	t.Cleanup(server.Close)
+
+	cfg := &config.Config{
+		BaseURL:        server.BaseURL(),
+		APIKey:         "test-key",
+		Model:          "gpt-4o-mini",
+		ResponsesModel: "gpt-4o-mini",
+		RequestTimeout: 30 * time.Second,
+		Suites:         append([]string(nil), config.DefaultSuites...),
+	}
+
+	runner := New(cfg)
+	runner.Output = &bytes.Buffer{}
+
+	results, err := runner.Run(context.Background())
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if code := ExitCode(results); code != 1 {
+		t.Fatalf("ExitCode() = %d, want 1; summary:\n%s", code, FormatSummary(results))
+	}
+	for _, result := range results {
+		if result.Passed {
+			t.Fatalf("suite %q passed against broken server, want failure", result.Name)
+		}
 	}
 }
 

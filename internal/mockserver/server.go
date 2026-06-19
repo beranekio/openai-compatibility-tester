@@ -729,10 +729,23 @@ func writeResponsesToolCallStream(w http.ResponseWriter) {
 }
 
 func writeJSON(w http.ResponseWriter, payload any) {
+	writeJSONStatus(w, http.StatusOK, payload)
+}
+
+func writeJSONStatus(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)
 	_ = enc.Encode(payload)
+}
+
+func brokenIncompatibleHandler(w http.ResponseWriter, _ *http.Request) {
+	writeJSONStatus(w, http.StatusBadRequest, map[string]any{
+		"error": map[string]any{
+			"message": "incompatible",
+		},
+	})
 }
 
 // BrokenServer returns a server that responds with invalid payloads.
@@ -741,11 +754,14 @@ func BrokenServer() *Server {
 	s := &Server{}
 
 	mux.HandleFunc("GET /v1/models", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = io.WriteString(w, strings.TrimSpace(`{"object":"list","data":[]}`))
+		writeJSON(w, map[string]any{"object": "list", "data": []any{}})
 	})
-	mux.HandleFunc("POST /v1/chat/completions", func(w http.ResponseWriter, _ *http.Request) {
-		http.Error(w, `{"error":{"message":"incompatible"}}`, http.StatusBadRequest)
+	mux.HandleFunc("GET /v1/models/{id}", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, map[string]any{"object": "model"})
 	})
+	mux.HandleFunc("POST /v1/chat/completions", brokenIncompatibleHandler)
+	mux.HandleFunc("POST /v1/responses", brokenIncompatibleHandler)
+	mux.HandleFunc("POST /v1/embeddings", brokenIncompatibleHandler)
 
 	s.Server = httptest.NewServer(mux)
 	return s
