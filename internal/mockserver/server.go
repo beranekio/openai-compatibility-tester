@@ -90,6 +90,7 @@ func New() *Server {
 	mux.HandleFunc("GET /v1/vector_stores/{id}/file_batches/{batchID}", s.handleVectorStoreFileBatchGet)
 	mux.HandleFunc("POST /v1/vector_stores/{id}/file_batches/{batchID}/cancel", s.handleVectorStoreFileBatchCancel)
 	mux.HandleFunc("GET /v1/vector_stores/{id}/file_batches/{batchID}/files", s.handleVectorStoreFileBatchListFiles)
+	mux.HandleFunc("POST /v1/realtime/client_secrets", handleRealtimeClientSecretCreate)
 
 	s.Server = httptest.NewServer(mux)
 	return s

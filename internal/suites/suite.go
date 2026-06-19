@@ -67,6 +67,7 @@ func All() []Suite {
 		VectorStores{},
 		VectorStoreFiles{},
 		VectorStoreFileBatches{},
+		RealtimeClientSecrets{},
 	}
 }
 

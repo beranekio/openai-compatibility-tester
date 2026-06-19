@@ -137,6 +137,7 @@ var FullSuites = []string{
 	"vector_stores",
 	"vector_store_files",
 	"vector_store_file_batches",
+	"realtime_client_secrets",
 }
 
 var knownSuites = map[string]struct{}{
@@ -189,6 +190,7 @@ var knownSuites = map[string]struct{}{
 	"vector_stores":                 {},
 	"vector_store_files":            {},
 	"vector_store_file_batches":     {},
+	"realtime_client_secrets":       {},
 }
 
 // Config holds runtime settings for compatibility testing.
