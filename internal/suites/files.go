@@ -2,7 +2,6 @@ package suites
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -154,22 +153,7 @@ func validateFileEnvelope(suite string, file *openai.FileObject) error {
 }
 
 func validateFileListPage(suite string, page *pagination.CursorPage[openai.FileObject]) error {
-	if page == nil {
-		return fail(suite, "list page is nil")
-	}
-	if !page.JSON.HasMore.Valid() {
-		return fail(suite, "list missing has_more")
-	}
-	var envelope struct {
-		Object string `json:"object"`
-	}
-	if err := json.Unmarshal([]byte(page.RawJSON()), &envelope); err != nil {
-		return fail(suite, "list response is not valid JSON")
-	}
-	if envelope.Object != "list" {
-		return fail(suite, fmt.Sprintf("list object is %q, want list", envelope.Object))
-	}
-	return nil
+	return validateCursorListPage(suite, page, nil)
 }
 
 func validateFileContentResponse(suite string, resp *http.Response, want []byte) error {
