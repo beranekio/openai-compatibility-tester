@@ -23,7 +23,7 @@ func (ResponsesGet) Run(ctx context.Context, client openai.Client, cfg *config.C
 	if err != nil {
 		return err
 	}
-	defer deleteStoredResponseBestEffort(ctx, client, created.ID)
+	defer deleteStoredResponseBestEffort(client, created.ID)
 
 	got, err := client.Responses.Get(ctx, created.ID, responses.ResponseGetParams{})
 	if err != nil {
@@ -36,8 +36,8 @@ func (ResponsesGet) Run(ctx context.Context, client openai.Client, cfg *config.C
 		return fail("responses_get", fmt.Sprintf("get id is %q, want %q", got.ID, created.ID))
 	}
 	if string(got.Status) == "completed" {
-		if !hasResponseOutput(got) {
-			return fail("responses_get", "get response produced no output text or refusal")
+		if err := validateCompletedResponseHasOutput("responses_get", got); err != nil {
+			return err
 		}
 		return nil
 	}

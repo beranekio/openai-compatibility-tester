@@ -30,6 +30,13 @@ func hasResponseOutput(resp *responses.Response) bool {
 	return resp.OutputText() != "" || responseOutputRefusal(resp) != ""
 }
 
+func validateCompletedResponseHasOutput(suite string, resp *responses.Response) error {
+	if !hasResponseOutput(resp) {
+		return fail(suite, "response produced no output text or refusal")
+	}
+	return nil
+}
+
 func validateResponseEnvelope(suite string, resp *responses.Response) error {
 	if resp == nil {
 		return fail(suite, "response is nil")

@@ -33,11 +33,14 @@ func (ResponsesCancel) Run(ctx context.Context, client openai.Client, cfg *confi
 	if created == nil || created.ID == "" {
 		return fail("responses_cancel", "background create missing response id")
 	}
-	defer deleteStoredResponseBestEffort(ctx, client, created.ID)
+	defer deleteStoredResponseBestEffort(client, created.ID)
 
 	status := string(created.Status)
 	if responsesCancelSkipsCancel(status) {
 		if err := validateResponseEnvelope("responses_cancel", created); err != nil {
+			return err
+		}
+		if err := validateCompletedResponseHasOutput("responses_cancel", created); err != nil {
 			return err
 		}
 		return nil
