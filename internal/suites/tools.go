@@ -74,15 +74,15 @@ func requiredResponseToolChoice() responses.ResponseNewParamsToolChoiceUnion {
 
 func validateWeatherToolArguments(suite string, arguments string) error {
 	if arguments == "" {
-		return fail(suite, "function_call missing arguments")
+		return fail(suite, "tool call missing arguments")
 	}
 	var parsed map[string]any
 	if err := json.Unmarshal([]byte(arguments), &parsed); err != nil {
-		return fail(suite, fmt.Sprintf("function_call arguments are not valid JSON: %v", err))
+		return fail(suite, fmt.Sprintf("tool call arguments are not valid JSON: %v", err))
 	}
 	location, ok := parsed["location"]
 	if !ok {
-		return fail(suite, `function_call arguments missing required "location" field`)
+		return fail(suite, `tool call arguments missing required "location" field`)
 	}
 	locationStr, ok := location.(string)
 	if !ok {

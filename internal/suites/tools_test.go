@@ -14,9 +14,9 @@ func TestValidateWeatherToolArguments(t *testing.T) {
 		args    string
 		wantErr string
 	}{
-		{name: "empty", args: "", wantErr: "missing arguments"},
-		{name: "invalid json", args: "not-json", wantErr: "not valid JSON"},
-		{name: "missing location", args: "{}", wantErr: `missing required "location"`},
+		{name: "empty", args: "", wantErr: "tool call missing arguments"},
+		{name: "invalid json", args: "not-json", wantErr: "tool call arguments are not valid JSON"},
+		{name: "missing location", args: "{}", wantErr: `tool call arguments missing required "location"`},
 		{name: "empty location", args: `{"location":""}`, wantErr: `"location" field is empty`},
 		{name: "non-string location", args: `{"location":1}`, wantErr: `"location" field is not a string`},
 	}

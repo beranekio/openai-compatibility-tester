@@ -154,10 +154,7 @@ func validateAccumulatedToolCall(suite string, call *accumulatedToolCall) error 
 	if call.name != weatherToolName {
 		return fail(suite, fmt.Sprintf("tool call function name is %q, want %s", call.name, weatherToolName))
 	}
-	if call.arguments == "" {
-		return fail(suite, "tool call function missing arguments")
-	}
-	return nil
+	return validateWeatherToolArguments(suite, call.arguments)
 }
 
 func hasResponseFunctionCalls(resp *responses.Response) bool {
