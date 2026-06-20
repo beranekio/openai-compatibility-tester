@@ -15,7 +15,7 @@ type ResponsesCancel struct{}
 
 func (ResponsesCancel) Name() string { return "responses_cancel" }
 func (ResponsesCancel) Description() string {
-	return "Responses API cancel (POST /v1/responses with background, then POST /v1/responses/{id}/cancel)"
+	return "Responses API cancel (POST /v1/responses with background, then POST /v1/responses/{id}/cancel; passes when create is already completed)"
 }
 
 func (ResponsesCancel) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
@@ -33,9 +33,20 @@ func (ResponsesCancel) Run(ctx context.Context, client openai.Client, cfg *confi
 	if created == nil || created.ID == "" {
 		return fail("responses_cancel", "background create missing response id")
 	}
+	defer deleteStoredResponseBestEffort(client, created.ID)
+
 	status := string(created.Status)
+	if responsesCancelSkipsCancel(status) {
+		if err := validateResponseEnvelope("responses_cancel", created); err != nil {
+			return err
+		}
+		if err := validateCompletedResponseHasOutput("responses_cancel", created); err != nil {
+			return err
+		}
+		return nil
+	}
 	if status != "queued" && status != "in_progress" {
-		return fail("responses_cancel", fmt.Sprintf("background create status is %q, want queued or in_progress", status))
+		return fail("responses_cancel", fmt.Sprintf("background create status is %q, want queued, in_progress, or completed", status))
 	}
 
 	cancelled, err := client.Responses.Cancel(ctx, created.ID)
@@ -55,4 +66,8 @@ func (ResponsesCancel) Run(ctx context.Context, client openai.Client, cfg *confi
 		return fail("responses_cancel", fmt.Sprintf("cancel status is %q, want cancelled", cancelled.Status))
 	}
 	return nil
+}
+
+func responsesCancelSkipsCancel(status string) bool {
+	return status == "completed"
 }

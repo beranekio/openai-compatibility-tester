@@ -75,16 +75,26 @@ func (ChatCompletionsJSON) Run(ctx context.Context, client openai.Client, cfg *c
 		return nil
 	}
 
+	if err := validateStructuredAnswerJSON("chat_completions_json", choice.Message.Content); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateStructuredAnswerJSON(suite string, content string) error {
 	var parsed map[string]any
-	if err := json.Unmarshal([]byte(choice.Message.Content), &parsed); err != nil {
-		return fail("chat_completions_json", fmt.Sprintf("message content is not valid JSON: %v", err))
+	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
+		return fail(suite, fmt.Sprintf("message content is not valid JSON: %v", err))
+	}
+	if len(parsed) != 1 {
+		return fail(suite, fmt.Sprintf("parsed JSON has %d top-level fields, want 1", len(parsed)))
 	}
 	answer, ok := parsed["answer"]
 	if !ok {
-		return fail("chat_completions_json", `parsed JSON missing "answer" field`)
+		return fail(suite, `parsed JSON missing "answer" field`)
 	}
 	if _, ok := answer.(string); !ok {
-		return fail("chat_completions_json", `"answer" field is not a string`)
+		return fail(suite, `"answer" field is not a string`)
 	}
 	return nil
 }

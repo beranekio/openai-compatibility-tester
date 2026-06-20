@@ -176,9 +176,6 @@ func validateResponseFunctionCallArgumentsDone(suite string, done responses.Resp
 	if done.Name == "" {
 		return fail(suite, "response.function_call_arguments.done missing name")
 	}
-	if done.Arguments == "" {
-		return fail(suite, "response.function_call_arguments.done missing arguments")
-	}
 	if done.Name != weatherToolName {
 		return fail(suite, fmt.Sprintf("function name is %q, want %s", done.Name, weatherToolName))
 	}
@@ -188,5 +185,5 @@ func validateResponseFunctionCallArgumentsDone(suite string, done responses.Resp
 	if !done.JSON.SequenceNumber.Valid() {
 		return fail(suite, "response.function_call_arguments.done missing sequence_number")
 	}
-	return nil
+	return validateWeatherToolArguments(suite, done.Arguments)
 }

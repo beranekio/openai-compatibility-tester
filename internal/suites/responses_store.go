@@ -3,6 +3,7 @@ package suites
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
 
@@ -30,4 +31,13 @@ func createStoredResponse(ctx context.Context, client openai.Client, cfg *config
 		return nil, fail("responses", "create stored response missing id")
 	}
 	return resp, nil
+}
+
+func deleteStoredResponseBestEffort(client openai.Client, id string) {
+	if id == "" {
+		return
+	}
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_ = client.Responses.Delete(cleanupCtx, id)
 }

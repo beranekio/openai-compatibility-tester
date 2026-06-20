@@ -1,6 +1,10 @@
 package suites
 
 import (
+	"encoding/json"
+	"fmt"
+	"strings"
+
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/responses"
 	"github.com/openai/openai-go/v3/shared"
@@ -66,4 +70,26 @@ func requiredResponseToolChoice() responses.ResponseNewParamsToolChoiceUnion {
 	return responses.ResponseNewParamsToolChoiceUnion{
 		OfToolChoiceMode: openai.Opt(responses.ToolChoiceOptionsRequired),
 	}
+}
+
+func validateWeatherToolArguments(suite string, arguments string) error {
+	if arguments == "" {
+		return fail(suite, "tool call missing arguments")
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(arguments), &parsed); err != nil {
+		return fail(suite, fmt.Sprintf("tool call arguments are not valid JSON: %v", err))
+	}
+	location, ok := parsed["location"]
+	if !ok {
+		return fail(suite, `tool call arguments missing required "location" field`)
+	}
+	locationStr, ok := location.(string)
+	if !ok {
+		return fail(suite, `"location" field is not a string`)
+	}
+	if strings.TrimSpace(locationStr) == "" {
+		return fail(suite, `"location" field is empty`)
+	}
+	return nil
 }
