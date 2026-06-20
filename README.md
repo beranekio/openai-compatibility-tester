@@ -79,7 +79,7 @@ docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suit
 | `responses_json` | `client.Responses.New` (`text.format` json_schema) | `POST /v1/responses` |
 | `responses_get` | `client.Responses.Get` | `GET /v1/responses/{id}` |
 | `responses_delete` | `client.Responses.Delete` | `DELETE /v1/responses/{id}` |
-| `responses_cancel` | `client.Responses.Cancel` | `POST /v1/responses/{id}/cancel` |
+| `responses_cancel` | `client.Responses.Cancel` | `POST /v1/responses/{id}/cancel` (passes when background create is already `completed`) |
 | `responses_input_items` | `client.Responses.InputItems.List` | `GET /v1/responses/{id}/input_items` |
 | `responses_compact` | `client.Responses.Compact` | `POST /v1/responses/compact` |
 | `responses_input_tokens` | `client.Responses.InputTokens.Count` | `POST /v1/responses/input_tokens` |

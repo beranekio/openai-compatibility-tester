@@ -31,3 +31,10 @@ func createStoredResponse(ctx context.Context, client openai.Client, cfg *config
 	}
 	return resp, nil
 }
+
+func deleteStoredResponseBestEffort(ctx context.Context, client openai.Client, id string) {
+	if id == "" {
+		return
+	}
+	_ = client.Responses.Delete(ctx, id)
+}

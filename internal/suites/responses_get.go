@@ -38,9 +38,11 @@ func (ResponsesGet) Run(ctx context.Context, client openai.Client, cfg *config.C
 		if !hasResponseOutput(got) {
 			return fail("responses_get", "get response produced no output text or refusal")
 		}
+		deleteStoredResponseBestEffort(ctx, client, created.ID)
 		return nil
 	}
 	if isContentFilterIncompleteResponse(got) {
+		deleteStoredResponseBestEffort(ctx, client, created.ID)
 		return nil
 	}
 	return fail("responses_get", fmt.Sprintf("get status is %q, want completed", got.Status))

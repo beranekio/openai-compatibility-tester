@@ -196,10 +196,7 @@ func validateResponseFunctionToolCall(suite string, call responses.ResponseFunct
 	if call.Name != weatherToolName {
 		return fail(suite, fmt.Sprintf("function_call name is %q, want %s", call.Name, weatherToolName))
 	}
-	if call.Arguments == "" {
-		return fail(suite, "function_call missing arguments")
-	}
-	return nil
+	return validateWeatherToolArguments(suite, call.Arguments)
 }
 
 func validateFunctionToolCall(suite string, call openai.ChatCompletionMessageToolCallUnion) error {
@@ -216,8 +213,5 @@ func validateFunctionToolCall(suite string, call openai.ChatCompletionMessageToo
 	if fn.Function.Name != weatherToolName {
 		return fail(suite, fmt.Sprintf("tool call function name is %q, want %s", fn.Function.Name, weatherToolName))
 	}
-	if fn.Function.Arguments == "" {
-		return fail(suite, "tool call function missing arguments")
-	}
-	return nil
+	return validateWeatherToolArguments(suite, fn.Function.Arguments)
 }
