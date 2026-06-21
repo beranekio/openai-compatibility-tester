@@ -103,7 +103,7 @@ jobs:
       # model: gpt-4o-mini     # optional; defaults to the container default
       # timeout: 2m            # optional
     secrets:
-      api_key: ${{ secrets.YOUR_OPENAI_API_KEY }}
+      api_key: ${{ secrets.YOUR_OPENAI_API_KEY }} # required; for endpoints that don't check auth, use any placeholder secret (e.g. "dummy")
       # org_id: ${{ secrets.OPENAI_ORG_ID }}      # optional
       # project_id: ${{ secrets.OPENAI_PROJECT_ID }} # optional
 ```
