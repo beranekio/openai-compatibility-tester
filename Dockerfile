@@ -4,10 +4,11 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/openai-compatibility-tester ./cmd/openai-compatibility-tester
+ARG TARGET=openai-compatibility-tester
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/app ./cmd/${TARGET}
 
 FROM gcr.io/distroless/static-debian12:nonroot
 
-COPY --from=builder /out/openai-compatibility-tester /usr/local/bin/openai-compatibility-tester
+COPY --from=builder /out/app /usr/local/bin/app
 
-ENTRYPOINT ["/usr/local/bin/openai-compatibility-tester"]
+ENTRYPOINT ["/usr/local/bin/app"]

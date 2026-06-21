@@ -66,25 +66,51 @@ For the complete suite catalog, presets, and per-suite examples, see **[docs/sui
 | `1` | One or more suites failed compatibility checks |
 | `2` | Configuration or runner error |
 
+## Mock server
+
+For testing gateways and SDK clients without a real backend, a standalone image of the in-process mock server is published. It implements the same OpenAI-compatible surface the test suite runs against (chat completions, Responses, embeddings, files, batches, vector stores, assistants, and more), but with deterministic canned responses. State is in memory, there is no authentication, and everything is lost on restart — suitable for a single-replica test backend, not production.
+
+```bash
+docker run --rm -p 8080:8080 ghcr.io/beranekio/openai-mockserver:latest
+```
+
+Point a client (or this tester) at `http://127.0.0.1:8080/v1`:
+
+```bash
+docker run --rm \
+  -e OPENAI_BASE_URL=http://host.docker.internal:8080/v1 \
+  -e OPENAI_API_KEY=anything \
+  ghcr.io/beranekio/openai-compatibility-tester:latest
+```
+
+The listen address can be changed with `MOCK_ADDR` (or the `-addr` flag):
+
+```bash
+docker run --rm -p 9090:9090 -e MOCK_ADDR=:9090 ghcr.io/beranekio/openai-mockserver:latest
+```
+
 ## Development
 
 ```bash
 go test ./...
 go build -o bin/openai-compatibility-tester ./cmd/openai-compatibility-tester
+go build -o bin/mockserver ./cmd/mockserver
 
 OPENAI_BASE_URL=http://127.0.0.1:4010/v1 \
 OPENAI_API_KEY=test \
 ./bin/openai-compatibility-tester
 ```
 
-Build the container locally:
+Build the containers locally:
 
 ```bash
 docker build -t openai-compatibility-tester .
+docker build --build-arg TARGET=mockserver -t openai-mockserver .
 ```
 
 ## CI and publishing
 
-GitHub Actions runs unit tests and builds the Docker image on every push and pull request to `main`. When tests pass on a push to `main`, a multi-architecture image (`linux/amd64`, `linux/arm64`) is published to GHCR:
+GitHub Actions runs unit tests and builds both Docker images on every push and pull request to `main`. When tests pass on a push to `main`, multi-architecture images (`linux/amd64`, `linux/arm64`) are published to GHCR:
 
-`ghcr.io/beranekio/openai-compatibility-tester:latest`
+- `ghcr.io/beranekio/openai-compatibility-tester:latest` — the compatibility tester
+- `ghcr.io/beranekio/openai-mockserver:latest` — the standalone mock server

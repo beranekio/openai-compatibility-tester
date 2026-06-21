@@ -11,6 +11,7 @@ import (
 // Server provides a minimal OpenAI-compatible HTTP API for CI tests.
 type Server struct {
 	*httptest.Server
+	mux               *http.ServeMux
 	store             *responseStore
 	chatStore         *chatCompletionStore
 	fileStore         *fileStore
@@ -29,6 +30,20 @@ type Server struct {
 
 // New starts a mock OpenAI API server.
 func New() *Server {
+	s := newServerWithRoutes()
+	s.Server = httptest.NewServer(s.mux)
+	return s
+}
+
+// Handler returns an http.Handler serving the mock OpenAI API. It is intended
+// for embedding the mock server behind a real net/http.Server (e.g. the
+// standalone mockserver binary). State is held in memory for the lifetime of
+// the returned handler; there is no persistence and no authentication.
+func Handler() http.Handler {
+	return newServerWithRoutes().mux
+}
+
+func newServerWithRoutes() *Server {
 	mux := http.NewServeMux()
 	s := &Server{
 		store:             newResponseStore(),
@@ -45,6 +60,7 @@ func New() *Server {
 		chatKitStore:      newChatKitStore(),
 		assistantStore:    newAssistantStore(),
 		threadStore:       newThreadStore(),
+		mux:               mux,
 	}
 
 	mux.HandleFunc("GET /v1/models", handleModels)
@@ -157,7 +173,6 @@ func New() *Server {
 	mux.HandleFunc("POST /v1/threads/{id}/runs", s.handleThreadRunCreate)
 	mux.HandleFunc("GET /v1/threads/{id}/runs/{runID}", s.handleThreadRunGet)
 
-	s.Server = httptest.NewServer(mux)
 	return s
 }
 
