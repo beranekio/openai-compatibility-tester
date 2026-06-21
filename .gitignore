@@ -27,6 +27,7 @@ go.work.sum
 # Build output
 /bin/
 /openai-compatibility-tester
+/mockserver
 
 # env file
 .env
