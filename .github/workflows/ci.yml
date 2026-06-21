@@ -97,7 +97,7 @@ jobs:
           [ -f /tmp/mockpid.txt ] && kill "$(cat /tmp/mockpid.txt)" 2>/dev/null || true
 
   publish:
-    needs: test
+    needs: [test, reusable-workflow-smoke]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
