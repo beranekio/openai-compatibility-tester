@@ -7,18 +7,23 @@ name: OpenAI compatibility test
 #     compat:
 #       uses: beranekio/openai-compatibility-tester/.github/workflows/openai-compatibility-test.yml@v1
 #       with:
-#         base-url: https://your-endpoint.example/v1
+#         base_url: https://your-endpoint.example/v1
 #         suites: default
 #       secrets:
-#         api-key: ${{ secrets.YOUR_OPENAI_API_KEY }}
+#         api_key: ${{ secrets.YOUR_OPENAI_API_KEY }}
 #
 # The job fails when any selected suite fails (container exit code 1) or on a
 # runner/config error (exit code 2). See docs/suites.md for the suite catalog.
+#
+# The run logic lives in .github/actions/run-tester (composite action); this
+# workflow is a thin wrapper so the same logic is exercised by CI smoke tests.
+# Input and secret names use snake_case because GitHub secret names cannot
+# contain hyphens and `inputs.x-y` is parsed as subtraction.
 
 on:
   workflow_call:
     inputs:
-      base-url:
+      base_url:
         description: API base URL including /v1 (e.g. https://api.openai.com/v1). No query params.
         required: true
         type: string
@@ -32,8 +37,68 @@ on:
         required: false
         default: ""
         type: string
-      responses-model:
+      responses_model:
         description: Responses API model. Defaults to OPENAI_MODEL when empty.
+        required: false
+        default: ""
+        type: string
+      completion_model:
+        description: Legacy completions model. Required when `completions`/`completions_stream` is selected.
+        required: false
+        default: ""
+        type: string
+      embedding_model:
+        description: Embedding model. Required when `embeddings`/`embeddings_batch` is selected.
+        required: false
+        default: ""
+        type: string
+      vision_model:
+        description: Vision-capable model. Defaults to OPENAI_MODEL when empty.
+        required: false
+        default: ""
+        type: string
+      reasoning_model:
+        description: Reasoning model (e.g. o3-mini). Required when `chat_completions_reasoning` is selected.
+        required: false
+        default: ""
+        type: string
+      image_model:
+        description: Image generation model. Required when `images_generations`/`images_edits` is selected.
+        required: false
+        default: ""
+        type: string
+      video_model:
+        description: Video generation model (e.g. sora-2). Required when `videos` is selected.
+        required: false
+        default: ""
+        type: string
+      tts_model:
+        description: Text-to-speech model. Required when `audio_speech` is selected.
+        required: false
+        default: ""
+        type: string
+      whisper_model:
+        description: Whisper model (e.g. whisper-1). Required when `audio_transcriptions`/`audio_translations` is selected.
+        required: false
+        default: ""
+        type: string
+      transcription_model:
+        description: Streaming transcription model. Required when `audio_transcriptions_stream` is selected.
+        required: false
+        default: ""
+        type: string
+      realtime_model:
+        description: Realtime API model. Defaults to gpt-realtime when empty.
+        required: false
+        default: ""
+        type: string
+      chatkit_workflow_id:
+        description: ChatKit sessions workflow ID. Defaults to wf_mock_compat_test when empty.
+        required: false
+        default: ""
+        type: string
+      chatkit_test_thread_id:
+        description: Disposable ChatKit thread ID for the `chatkit_threads` delete test. Optional.
         required: false
         default: ""
         type: string
@@ -42,7 +107,7 @@ on:
         required: false
         default: ""
         type: string
-      allow-insecure-http:
+      allow_insecure_http:
         description: Allow plaintext http:// to non-loopback hosts.
         required: false
         default: false
@@ -52,80 +117,22 @@ on:
         required: false
         default: ghcr.io/beranekio/openai-compatibility-tester:latest
         type: string
-      # Suite-specific model variables. Required only when the corresponding
-      # suite is selected via `suites` (see docs/suites.md). Left empty, they
-      # are not passed and the container applies its own defaults where it has one.
-      completion-model:
-        description: Legacy completions model. Required when `completions`/`completions_stream` is selected.
-        required: false
-        default: ""
-        type: string
-      embedding-model:
-        description: Embedding model. Required when `embeddings`/`embeddings_batch` is selected.
-        required: false
-        default: ""
-        type: string
-      vision-model:
-        description: Vision-capable model. Defaults to OPENAI_MODEL when empty.
-        required: false
-        default: ""
-        type: string
-      reasoning-model:
-        description: Reasoning model (e.g. o3-mini). Required when `chat_completions_reasoning` is selected.
-        required: false
-        default: ""
-        type: string
-      image-model:
-        description: Image generation model. Required when `images_generations`/`images_edits` is selected.
-        required: false
-        default: ""
-        type: string
-      video-model:
-        description: Video generation model (e.g. sora-2). Required when `videos` is selected.
-        required: false
-        default: ""
-        type: string
-      tts-model:
-        description: Text-to-speech model. Required when `audio_speech` is selected.
-        required: false
-        default: ""
-        type: string
-      whisper-model:
-        description: Whisper model (e.g. whisper-1). Required when `audio_transcriptions`/`audio_translations` is selected.
-        required: false
-        default: ""
-        type: string
-      transcription-model:
-        description: Streaming transcription model (e.g. gpt-4o-mini-transcribe). Required when `audio_transcriptions_stream` is selected.
-        required: false
-        default: ""
-        type: string
-      realtime-model:
-        description: Realtime API model. Defaults to gpt-realtime when empty.
-        required: false
-        default: ""
-        type: string
-      chatkit-workflow-id:
-        description: ChatKit sessions workflow ID. Defaults to wf_mock_compat_test when empty.
-        required: false
-        default: ""
-        type: string
-      chatkit-test-thread-id:
-        description: Disposable ChatKit thread ID for the `chatkit_threads` delete test. Optional.
+      network:
+        description: Docker network to attach the container to (e.g. `host`). Useful when the endpoint is on the runner's localhost.
         required: false
         default: ""
         type: string
     secrets:
-      api-key:
+      api_key:
         description: Bearer token sent to the endpoint.
         required: true
-      org-id:
+      org_id:
         description: OpenAI organization ID (sent as OpenAI-Organization). Optional.
         required: false
-      project-id:
+      project_id:
         description: OpenAI project ID (sent as OpenAI-Project). Optional.
         required: false
-      admin-api-key:
+      admin_api_key:
         description: Admin API key for the `fine_tuning` checkpoint permissions check. Optional; that check is skipped when unset.
         required: false
 
@@ -136,61 +143,30 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Run compatibility suites
-        env:
-          OPENAI_BASE_URL: ${{ inputs.base-url }}
-          OPENAI_API_KEY: ${{ secrets.api-key }}
-          OPENAI_ORG_ID: ${{ secrets.org-id }}
-          OPENAI_PROJECT_ID: ${{ secrets.project-id }}
-          OPENAI_ADMIN_API_KEY: ${{ secrets.admin-api-key }}
-          OPENAI_MODEL: ${{ inputs.model }}
-          OPENAI_RESPONSES_MODEL: ${{ inputs.responses-model }}
-          OPENAI_COMPLETION_MODEL: ${{ inputs.completion-model }}
-          OPENAI_EMBEDDING_MODEL: ${{ inputs.embedding-model }}
-          OPENAI_VISION_MODEL: ${{ inputs.vision-model }}
-          OPENAI_REASONING_MODEL: ${{ inputs.reasoning-model }}
-          OPENAI_IMAGE_MODEL: ${{ inputs.image-model }}
-          OPENAI_VIDEO_MODEL: ${{ inputs.video-model }}
-          OPENAI_TTS_MODEL: ${{ inputs.tts-model }}
-          OPENAI_WHISPER_MODEL: ${{ inputs.whisper-model }}
-          OPENAI_TRANSCRIPTION_MODEL: ${{ inputs.transcription-model }}
-          OPENAI_REALTIME_MODEL: ${{ inputs.realtime-model }}
-          OPENAI_CHATKIT_WORKFLOW_ID: ${{ inputs.chatkit-workflow-id }}
-          OPENAI_CHATKIT_TEST_THREAD_ID: ${{ inputs.chatkit-test-thread-id }}
-          TEST_SUITES: ${{ inputs.suites }}
-          REQUEST_TIMEOUT: ${{ inputs.timeout }}
-          ALLOW_INSECURE_HTTP: ${{ inputs.allow-insecure-http }}
-          IMAGE: ${{ inputs.image }}
-        run: |
-          set -euo pipefail
-
-          # Build the env list, passing only variables that are set so unset
-          # inputs don't shadow the container's built-in defaults.
-          args=(-e OPENAI_BASE_URL -e OPENAI_API_KEY)
-          [ -n "$OPENAI_ORG_ID" ]               && args+=(-e OPENAI_ORG_ID)
-          [ -n "$OPENAI_PROJECT_ID" ]           && args+=(-e OPENAI_PROJECT_ID)
-          [ -n "$OPENAI_ADMIN_API_KEY" ]        && args+=(-e OPENAI_ADMIN_API_KEY)
-          [ -n "$OPENAI_MODEL" ]                && args+=(-e OPENAI_MODEL)
-          [ -n "$OPENAI_RESPONSES_MODEL" ]      && args+=(-e OPENAI_RESPONSES_MODEL)
-          [ -n "$OPENAI_COMPLETION_MODEL" ]     && args+=(-e OPENAI_COMPLETION_MODEL)
-          [ -n "$OPENAI_EMBEDDING_MODEL" ]      && args+=(-e OPENAI_EMBEDDING_MODEL)
-          [ -n "$OPENAI_VISION_MODEL" ]         && args+=(-e OPENAI_VISION_MODEL)
-          [ -n "$OPENAI_REASONING_MODEL" ]      && args+=(-e OPENAI_REASONING_MODEL)
-          [ -n "$OPENAI_IMAGE_MODEL" ]          && args+=(-e OPENAI_IMAGE_MODEL)
-          [ -n "$OPENAI_VIDEO_MODEL" ]          && args+=(-e OPENAI_VIDEO_MODEL)
-          [ -n "$OPENAI_TTS_MODEL" ]            && args+=(-e OPENAI_TTS_MODEL)
-          [ -n "$OPENAI_WHISPER_MODEL" ]        && args+=(-e OPENAI_WHISPER_MODEL)
-          [ -n "$OPENAI_TRANSCRIPTION_MODEL" ]  && args+=(-e OPENAI_TRANSCRIPTION_MODEL)
-          [ -n "$OPENAI_REALTIME_MODEL" ]       && args+=(-e OPENAI_REALTIME_MODEL)
-          [ -n "$OPENAI_CHATKIT_WORKFLOW_ID" ]  && args+=(-e OPENAI_CHATKIT_WORKFLOW_ID)
-          [ -n "$OPENAI_CHATKIT_TEST_THREAD_ID" ] && args+=(-e OPENAI_CHATKIT_TEST_THREAD_ID)
-          [ -n "$TEST_SUITES" ]                 && args+=(-e TEST_SUITES)
-          [ -n "$REQUEST_TIMEOUT" ]             && args+=(-e REQUEST_TIMEOUT)
-          # ALLOW_INSECURE_HTTP is a boolean; pass only when explicitly true.
-          if [ "$ALLOW_INSECURE_HTTP" = "true" ]; then
-            args+=(-e ALLOW_INSECURE_HTTP=true)
-          fi
-
-          # The image entrypoint is the tester binary; docker run exits with the
-          # binary's exit code (0 = pass, 1 = suite failure, 2 = config error).
-          docker run --rm "${args[@]}" "$IMAGE"
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/run-tester
+        with:
+          base_url: ${{ inputs.base_url }}
+          api_key: ${{ secrets.api_key }}
+          org_id: ${{ secrets.org_id }}
+          project_id: ${{ secrets.project_id }}
+          admin_api_key: ${{ secrets.admin_api_key }}
+          suites: ${{ inputs.suites }}
+          model: ${{ inputs.model }}
+          responses_model: ${{ inputs.responses_model }}
+          completion_model: ${{ inputs.completion_model }}
+          embedding_model: ${{ inputs.embedding_model }}
+          vision_model: ${{ inputs.vision_model }}
+          reasoning_model: ${{ inputs.reasoning_model }}
+          image_model: ${{ inputs.image_model }}
+          video_model: ${{ inputs.video_model }}
+          tts_model: ${{ inputs.tts_model }}
+          whisper_model: ${{ inputs.whisper_model }}
+          transcription_model: ${{ inputs.transcription_model }}
+          realtime_model: ${{ inputs.realtime_model }}
+          chatkit_workflow_id: ${{ inputs.chatkit_workflow_id }}
+          chatkit_test_thread_id: ${{ inputs.chatkit_test_thread_id }}
+          timeout: ${{ inputs.timeout }}
+          allow_insecure_http: ${{ inputs.allow_insecure_http }}
+          image: ${{ inputs.image }}
+          network: ${{ inputs.network }}

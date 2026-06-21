@@ -98,14 +98,14 @@ jobs:
   openai-compat:
     uses: beranekio/openai-compatibility-tester/.github/workflows/openai-compatibility-test.yml@main
     with:
-      base-url: https://your-endpoint.example/v1
+      base_url: https://your-endpoint.example/v1
       suites: default          # all/default, extended, full, or comma-separated names
       # model: gpt-4o-mini     # optional; defaults to the container default
       # timeout: 2m            # optional
     secrets:
-      api-key: ${{ secrets.YOUR_OPENAI_API_KEY }}
-      # org-id: ${{ secrets.OPENAI_ORG_ID }}      # optional
-      # project-id: ${{ secrets.OPENAI_PROJECT_ID }} # optional
+      api_key: ${{ secrets.YOUR_OPENAI_API_KEY }}
+      # org_id: ${{ secrets.OPENAI_ORG_ID }}      # optional
+      # project_id: ${{ secrets.OPENAI_PROJECT_ID }} # optional
 ```
 
-The job fails when any selected suite fails (exit `1`) or on a config/runner error (exit `2`). For reproducible CI, pin `uses:` to a tag and the `image` input to a SHA tag instead of `:latest`. See the workflow file for the full input and secret reference.
+The job fails when any selected suite fails (exit `1`) or on a config/runner error (exit `2`). For reproducible CI, pin `uses:` to a tag and the `image` input to a SHA tag instead of `:latest`. Input and secret names use `snake_case` (GitHub secret names cannot contain hyphens). See the workflow file for the full input and secret reference.

@@ -50,6 +50,52 @@ jobs:
           tags: openai-compatibility-tester:ci
           cache-from: type=gha
 
+  reusable-workflow-smoke:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Build mock server
+        run: go build -o /tmp/mockserver ./cmd/mockserver
+
+      - name: Start mock server
+        run: |
+          /tmp/mockserver > /tmp/mockurl.txt &
+          echo $! > /tmp/mockpid.txt
+          for i in $(seq 1 50); do
+            [ -s /tmp/mockurl.txt ] && break
+            sleep 0.2
+          done
+          url="$(cat /tmp/mockurl.txt)"
+          echo "Mock base URL: $url"
+          curl -fsS -H "Authorization: Bearer test" "$url/models" >/dev/null
+          echo "MOCK_URL=$url" >> "$GITHUB_ENV"
+
+      - name: Build tester image
+        run: docker build -t oact:ci .
+
+      - name: Run tester against mock via composite action
+        uses: ./.github/actions/run-tester
+        with:
+          base_url: ${{ env.MOCK_URL }}
+          api_key: test
+          suites: default
+          image: oact:ci
+          network: host
+
+      - name: Stop mock server
+        if: always()
+        run: |
+          [ -f /tmp/mockpid.txt ] && kill "$(cat /tmp/mockpid.txt)" 2>/dev/null || true
+
   publish:
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
