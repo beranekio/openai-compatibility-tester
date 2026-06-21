@@ -88,3 +88,24 @@ docker build -t openai-compatibility-tester .
 GitHub Actions runs unit tests and builds the Docker image on every push and pull request to `main`. When tests pass on a push to `main`, a multi-architecture image (`linux/amd64`, `linux/arm64`) is published to GHCR:
 
 `ghcr.io/beranekio/openai-compatibility-tester:latest`
+
+### Use as a reusable workflow
+
+This repo provides a reusable GitHub Actions workflow (`.github/workflows/openai-compatibility-test.yml`) so other repositories can run the tester as a CI gate:
+
+```yaml
+jobs:
+  openai-compat:
+    uses: beranekio/openai-compatibility-tester/.github/workflows/openai-compatibility-test.yml@main
+    with:
+      base-url: https://your-endpoint.example/v1
+      suites: default          # all/default, extended, full, or comma-separated names
+      # model: gpt-4o-mini     # optional; defaults to the container default
+      # timeout: 2m            # optional
+    secrets:
+      api-key: ${{ secrets.YOUR_OPENAI_API_KEY }}
+      # org-id: ${{ secrets.OPENAI_ORG_ID }}      # optional
+      # project-id: ${{ secrets.OPENAI_PROJECT_ID }} # optional
+```
+
+The job fails when any selected suite fails (exit `1`) or on a config/runner error (exit `2`). For reproducible CI, pin `uses:` to a tag and the `image` input to a SHA tag instead of `:latest`. See the workflow file for the full input and secret reference.

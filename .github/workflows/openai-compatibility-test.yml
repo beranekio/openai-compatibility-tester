@@ -1,0 +1,104 @@
+name: OpenAI compatibility test
+
+# Reusable workflow: run the openai-compatibility-tester container against any
+# OpenAI-compatible endpoint. Call from another repository:
+#
+#   jobs:
+#     compat:
+#       uses: beranekio/openai-compatibility-tester/.github/workflows/openai-compatibility-test.yml@v1
+#       with:
+#         base-url: https://your-endpoint.example/v1
+#         suites: default
+#       secrets:
+#         api-key: ${{ secrets.YOUR_OPENAI_API_KEY }}
+#
+# The job fails when any selected suite fails (container exit code 1) or on a
+# runner/config error (exit code 2). See docs/suites.md for the suite catalog.
+
+on:
+  workflow_call:
+    inputs:
+      base-url:
+        description: API base URL including /v1 (e.g. https://api.openai.com/v1). No query params.
+        required: true
+        type: string
+      suites:
+        description: Comma-separated suite names, or preset (all/default, extended, full).
+        required: false
+        default: all
+        type: string
+      model:
+        description: Chat completion model. Defaults to the container's default (gpt-4o-mini) when empty.
+        required: false
+        default: ""
+        type: string
+      responses-model:
+        description: Responses API model. Defaults to OPENAI_MODEL when empty.
+        required: false
+        default: ""
+        type: string
+      timeout:
+        description: Per-suite request timeout (e.g. 2m, 10m). Defaults to 2m when empty.
+        required: false
+        default: ""
+        type: string
+      allow-insecure-http:
+        description: Allow plaintext http:// to non-loopback hosts.
+        required: false
+        default: false
+        type: boolean
+      image:
+        description: Container image to run. Pin to a SHA tag for reproducible CI.
+        required: false
+        default: ghcr.io/beranekio/openai-compatibility-tester:latest
+        type: string
+    secrets:
+      api-key:
+        description: Bearer token sent to the endpoint.
+        required: true
+      org-id:
+        description: OpenAI organization ID (sent as OpenAI-Organization). Optional.
+        required: false
+      project-id:
+        description: OpenAI project ID (sent as OpenAI-Project). Optional.
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run compatibility suites
+        env:
+          OPENAI_BASE_URL: ${{ inputs.base-url }}
+          OPENAI_API_KEY: ${{ secrets.api-key }}
+          OPENAI_ORG_ID: ${{ secrets.org-id }}
+          OPENAI_PROJECT_ID: ${{ secrets.project-id }}
+          OPENAI_MODEL: ${{ inputs.model }}
+          OPENAI_RESPONSES_MODEL: ${{ inputs.responses-model }}
+          TEST_SUITES: ${{ inputs.suites }}
+          REQUEST_TIMEOUT: ${{ inputs.timeout }}
+          ALLOW_INSECURE_HTTP: ${{ inputs.allow-insecure-http }}
+          IMAGE: ${{ inputs.image }}
+        run: |
+          set -euo pipefail
+
+          # Build the env list, passing only variables that are set so unset
+          # inputs don't shadow the container's built-in defaults.
+          args=(-e OPENAI_BASE_URL -e OPENAI_API_KEY)
+          [ -n "$OPENAI_ORG_ID" ]          && args+=(-e OPENAI_ORG_ID)
+          [ -n "$OPENAI_PROJECT_ID" ]      && args+=(-e OPENAI_PROJECT_ID)
+          [ -n "$OPENAI_MODEL" ]           && args+=(-e OPENAI_MODEL)
+          [ -n "$OPENAI_RESPONSES_MODEL" ] && args+=(-e OPENAI_RESPONSES_MODEL)
+          [ -n "$TEST_SUITES" ]            && args+=(-e TEST_SUITES)
+          [ -n "$REQUEST_TIMEOUT" ]        && args+=(-e REQUEST_TIMEOUT)
+          # ALLOW_INSECURE_HTTP is a boolean; pass only when explicitly true.
+          if [ "$ALLOW_INSECURE_HTTP" = "true" ]; then
+            args+=(-e ALLOW_INSECURE_HTTP=true)
+          fi
+
+          # The image entrypoint is the tester binary; docker run exits with the
+          # binary's exit code (0 = pass, 1 = suite failure, 2 = config error).
+          docker run --rm "${args[@]}" "$IMAGE"
