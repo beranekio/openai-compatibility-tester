@@ -1,8 +1,8 @@
 # openai-compatibility-tester
 
-Docker container that tests whether an arbitrary HTTP endpoint is compatible with the [OpenAI API](https://platform.openai.com/docs/api-reference) by exercising it through the [official OpenAI Go SDK](https://github.com/openai/openai-go).
+Docker container that checks whether an arbitrary HTTP endpoint is compatible with the [OpenAI API](https://platform.openai.com/docs/api-reference) by exercising it through the [official OpenAI Go SDK](https://github.com/openai/openai-go).
 
-Each test suite calls a real SDK method (models list, chat completions, Responses API, embeddings, and more). If the endpoint returns payloads the SDK cannot parse, or responses that fail basic validation, the process exits with a non-zero status code.
+Each test suite calls a real SDK method (models list, chat completions, Responses API, embeddings, and more). If the endpoint returns payloads the SDK cannot parse, or responses that fail basic validation, the process exits with a non-zero status code — making the image suitable for CI gates and compatibility smoke tests.
 
 ## Quick start
 
@@ -14,308 +14,49 @@ docker run --rm \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 
-## Configuration
-
-| Variable | Flag | Required | Default | Description |
-|----------|------|----------|---------|-------------|
-| `OPENAI_BASE_URL` | `--base-url` | yes | — | API base URL including `/v1` (e.g. `https://api.openai.com/v1`). Query parameters are not supported. |
-| `OPENAI_API_KEY` | `--api-key` | yes | — | Bearer token sent to the endpoint |
-| `OPENAI_ORG_ID` | `--org-id` | no | — | OpenAI organization ID sent as `OpenAI-Organization` when set |
-| `OPENAI_PROJECT_ID` | `--project-id` | no | — | OpenAI project ID sent as `OpenAI-Project` when set |
-| `OPENAI_MODEL` | `--model` | no | `gpt-4o-mini` | Model for chat completion suites and the model ID fetched by `models_get` |
-| `OPENAI_RESPONSES_MODEL` | `--responses-model` | no | same as `OPENAI_MODEL` | Model used for Responses API suites |
-| `OPENAI_COMPLETION_MODEL` | `--completion-model` | no | `gpt-3.5-turbo-instruct` when `completions` or `completions_stream` is selected, otherwise same as `OPENAI_MODEL` | Model used for legacy completions suites |
-| `OPENAI_EMBEDDING_MODEL` | `--embedding-model` | when `embeddings` or `embeddings_batch` is selected | — | Model used for embedding suites |
-| `OPENAI_VISION_MODEL` | `--vision-model` | when `chat_completions_vision` is selected | same as `OPENAI_MODEL` | Model used for vision chat suites |
-| `OPENAI_REASONING_MODEL` | `--reasoning-model` | when `chat_completions_reasoning` is selected | — | Model used for reasoning chat suites (e.g. `o3-mini`, `o4-mini`) |
-| `OPENAI_IMAGE_MODEL` | `--image-model` | when `images_generations` or `images_edits` is selected | — | Model used for image generation and edit suites |
-| `OPENAI_VIDEO_MODEL` | `--video-model` | when `videos` is selected | — | Model used for video generation suites (e.g. `sora-2`) |
-| `OPENAI_TTS_MODEL` | `--tts-model` | when `audio_speech` is selected | — | Model used for text-to-speech suites |
-| `OPENAI_WHISPER_MODEL` | `--whisper-model` | when `audio_transcriptions` or `audio_translations` is selected | — | Model for non-streaming transcription and translation (e.g. `whisper-1`) |
-| `OPENAI_TRANSCRIPTION_MODEL` | `--transcription-model` | when `audio_transcriptions_stream` is selected | — | Model for streaming transcription (e.g. `gpt-4o-mini-transcribe`) |
-| `OPENAI_REALTIME_MODEL` | `--realtime-model` | when `realtime_client_secrets` is selected | `gpt-realtime` | Model used for Realtime API suites |
-| `OPENAI_ADMIN_API_KEY` | `--admin-api-key` | no | — | Admin API key for `fine_tuning` checkpoint permissions (skipped when unset) |
-| `OPENAI_CHATKIT_WORKFLOW_ID` | `--chatkit-workflow-id` | no | `wf_mock_compat_test` (when `chatkit_sessions` is selected) | Workflow ID used by `chatkit_sessions`; set explicitly for real endpoints |
-| `OPENAI_CHATKIT_TEST_THREAD_ID` | `--chatkit-test-thread-id` | no | — | Disposable thread ID for `chatkit_threads` delete test; omit for read-only list/get/items checks |
-| `TEST_SUITES` | `--suites` | no | `all` | Comma-separated suite names, or preset: `all`/`default`, `extended`, `full` |
-| `REQUEST_TIMEOUT` | `--timeout` | no | `2m` | Per-suite request timeout (batch suites may need a longer value against real APIs while jobs finish) |
-| `ALLOW_INSECURE_HTTP` | `--allow-insecure-http` | no | `false` | Allow plaintext `http://` to non-loopback hosts (loopback HTTP is always permitted) |
-
-List available suites:
+This runs the default suites (`models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`). To see every available suite:
 
 ```bash
 docker run --rm ghcr.io/beranekio/openai-compatibility-tester:latest --list-suites
 ```
 
-### Test suites
+## Configuration
 
-| Suite | SDK surface | Endpoint |
-|-------|-------------|----------|
-| `models` | `client.Models.List` | `GET /v1/models` |
-| `models_get` | `client.Models.Get` | `GET /v1/models/{id}` |
-| `chat_completions` | `client.Chat.Completions.New` | `POST /v1/chat/completions` |
-| `chat_completions_stream` | `client.Chat.Completions.NewStreaming` | `POST /v1/chat/completions` (stream) |
-| `chat_completions_stream_usage` | `client.Chat.Completions.NewStreaming` (`stream_options.include_usage`) | `POST /v1/chat/completions` (stream) |
-| `chat_completions_logprobs` | `client.Chat.Completions.New` (`logprobs`) | `POST /v1/chat/completions` |
-| `chat_completions_json` | `client.Chat.Completions.New` (`response_format` json_schema) | `POST /v1/chat/completions` |
-| `chat_completions_vision` | `client.Chat.Completions.New` (with image input) | `POST /v1/chat/completions` |
-| `chat_completions_reasoning` | `client.Chat.Completions.New` (reasoning model) | `POST /v1/chat/completions` |
-| `chat_completions_audio` | `client.Chat.Completions.New` (with audio output) | `POST /v1/chat/completions` |
-| `chat_completions_tools` | `client.Chat.Completions.New` (with `tools`) | `POST /v1/chat/completions` |
-| `chat_completions_tools_stream` | `client.Chat.Completions.NewStreaming` (with `tools`) | `POST /v1/chat/completions` (stream) |
-| `chat_completions_multi_turn` | `client.Chat.Completions.New` (multi-turn history with developer and tool messages) | `POST /v1/chat/completions` |
-| `chat_completions_get` | `client.Chat.Completions.Get` | `GET /v1/chat/completions/{id}` |
-| `chat_completions_list` | `client.Chat.Completions.List` | `GET /v1/chat/completions` |
-| `chat_completions_delete` | `client.Chat.Completions.Delete` | `DELETE /v1/chat/completions/{id}` |
-| `chat_completions_messages` | `client.Chat.Completions.Messages.List` | `GET /v1/chat/completions/{id}/messages` |
-| `completions` | `client.Completions.New` | `POST /v1/completions` |
-| `completions_stream` | `client.Completions.NewStreaming` | `POST /v1/completions` (stream) |
-| `embeddings` | `client.Embeddings.New` | `POST /v1/embeddings` |
-| `embeddings_batch` | `client.Embeddings.New` (array input) | `POST /v1/embeddings` |
-| `responses` | `client.Responses.New` | `POST /v1/responses` |
-| `responses_stream` | `client.Responses.NewStreaming` | `POST /v1/responses` (stream) |
-| `responses_tools` | `client.Responses.New` (with `tools`) | `POST /v1/responses` |
-| `responses_tools_stream` | `client.Responses.NewStreaming` (with `tools`) | `POST /v1/responses` (stream) |
-| `responses_json` | `client.Responses.New` (`text.format` json_schema) | `POST /v1/responses` |
-| `responses_get` | `client.Responses.Get` | `GET /v1/responses/{id}` |
-| `responses_delete` | `client.Responses.Delete` | `DELETE /v1/responses/{id}` |
-| `responses_cancel` | `client.Responses.Cancel` | `POST /v1/responses/{id}/cancel` (passes when background create is already `completed`) |
-| `responses_input_items` | `client.Responses.InputItems.List` | `GET /v1/responses/{id}/input_items` |
-| `responses_compact` | `client.Responses.Compact` | `POST /v1/responses/compact` |
-| `responses_input_tokens` | `client.Responses.InputTokens.Count` | `POST /v1/responses/input_tokens` |
-| `moderations` | `client.Moderations.New` | `POST /v1/moderations` |
-| `images_generations` | `client.Images.Generate` | `POST /v1/images/generations` |
-| `images_edits` | `client.Images.Edit` | `POST /v1/images/edits` |
-| `images_variations` | `client.Images.NewVariation` | `POST /v1/images/variations` |
-| `audio_speech` | `client.Audio.Speech.New` | `POST /v1/audio/speech` |
-| `audio_transcriptions` | `client.Audio.Transcriptions.New` | `POST /v1/audio/transcriptions` |
-| `audio_transcriptions_stream` | `client.Audio.Transcriptions.NewStreaming` | `POST /v1/audio/transcriptions` (stream) |
-| `audio_translations` | `client.Audio.Translations.New` | `POST /v1/audio/translations` |
-| `files` | `client.Files.New`, `List`, `Get`, `Content`, `Delete` | `POST/GET/DELETE /v1/files`, `GET /v1/files/{id}/content` |
-| `uploads` | `client.Uploads.New`, `Parts.New`, `Complete` | `POST /v1/uploads`, `POST /v1/uploads/{id}/parts`, `POST /v1/uploads/{id}/complete` |
-| `batches_create` | `client.Batches.New` | `POST /v1/batches` |
-| `batches_get` | `client.Batches.Get` | `GET /v1/batches/{id}` |
-| `batches_cancel` | `client.Batches.Cancel` | `POST /v1/batches/{id}/cancel` |
-| `conversations` | `client.Conversations.New`, `Get`, `Update`, `Delete`; `client.Conversations.Items.New`, `List`, `Get`, `Delete` | `POST/GET/DELETE /v1/conversations`, `POST/GET/DELETE /v1/conversations/{id}/items` |
-| `vector_stores` | `client.VectorStores.New`, `Get`, `Update`, `List`, `Search`, `Delete` | `POST/GET/DELETE /v1/vector_stores`, `POST /v1/vector_stores/{id}/search` |
-| `vector_store_files` | `client.VectorStores.Files.New`, `List`, `Get`, `Delete` | `POST/GET/DELETE /v1/vector_stores/{id}/files` |
-| `vector_store_file_batches` | `client.VectorStores.FileBatches.New`, `Get`, `ListFiles`, `Cancel` | `POST/GET /v1/vector_stores/{id}/file_batches`, `POST /v1/vector_stores/{id}/file_batches/{batch_id}/cancel` |
-| `realtime_client_secrets` | `client.Realtime.ClientSecrets.New` | `POST /v1/realtime/client_secrets` (WebSocket sessions not exercised) |
-| `containers` | `client.Containers.New`, `Get`, `List`, `Delete` | `POST /v1/containers`, `GET /v1/containers`, `GET/DELETE /v1/containers/{id}` |
-| `container_files` | `client.Containers.Files.New`, `List`, `Get`, `Delete`; `client.Containers.Files.Content.Get` | `POST/GET /v1/containers/{id}/files`, `GET/DELETE /v1/containers/{id}/files/{file_id}`, `GET /v1/containers/{id}/files/{file_id}/content` |
-| `videos` | `client.Videos.New`, `PollStatus`, `Get`, `List`, `DownloadContent`, `Delete` | `POST/GET/DELETE /v1/videos`, `GET /v1/videos/{id}/content` |
-| `skills` | `client.Skills.New`, `Get`, `Update`, `List`, `Delete`; `client.Skills.Versions.New` | `POST /v1/skills`, `GET /v1/skills`, `GET/POST/DELETE /v1/skills/{id}`, `POST /v1/skills/{id}/versions` |
-| `skill_versions` | `client.Skills.Versions.New`, `Get`, `List`, `Delete`; `client.Skills.Content.Get`; `client.Skills.Versions.Content.Get` | `POST/GET /v1/skills/{id}/versions`, `GET/DELETE /v1/skills/{id}/versions/{version}`, `GET /v1/skills/{id}/content`, `GET /v1/skills/{id}/versions/{version}/content` |
-| `fine_tuning` | `client.FineTuning.Jobs.New`, `List`, `Get`, `Cancel`; `client.FineTuning.Jobs.Checkpoints.List`; `client.FineTuning.Checkpoints.Permissions.List` | `POST/GET /v1/fine_tuning/jobs`, `POST /v1/fine_tuning/jobs/{id}/cancel`, `GET /v1/fine_tuning/jobs/{id}/checkpoints`, `GET /v1/fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions` |
-| `chatkit_sessions` | `client.Beta.ChatKit.Sessions.New`, `Cancel` | `POST /v1/chatkit/sessions`, `POST /v1/chatkit/sessions/{id}/cancel` |
-| `chatkit_threads` | `client.Beta.ChatKit.Threads.List`, `Get`, `ListItems`[, `Delete`] | `GET /v1/chatkit/threads`, `GET /v1/chatkit/threads/{id}`, `GET /v1/chatkit/threads/{id}/items`[, `DELETE /v1/chatkit/threads/{id}`] |
-| `(deprecated) assistants` | `client.Beta.Assistants.New`, `Get`, `Update`, `List`, `Delete` | `GET/POST /v1/assistants`, `GET/POST/DELETE /v1/assistants/{id}` |
-| `(deprecated) assistants_threads` | `client.Beta.Threads.New`, `Get`, `Update`, `Delete`; `client.Beta.Threads.Messages.New`, `List`, `Get`; `client.Beta.Threads.Runs.New`, `Get` | `POST /v1/threads`, `GET/POST/DELETE /v1/threads/{id}`, `POST/GET /v1/threads/{id}/messages`, `GET /v1/threads/{id}/messages/{message_id}`, `POST /v1/threads/{id}/runs`, `GET /v1/threads/{id}/runs/{run_id}` |
-| `error_responses` | `client.Chat.Completions.New` (invalid model) | `POST /v1/chat/completions` |
+All settings can be passed as environment variables or CLI flags.
 
-Default suites (`all` or `default`): `models`, `models_get`, `chat_completions`, `chat_completions_stream`, `responses`, `responses_stream`.
+| Variable | Flag | Required | Default | Description |
+|----------|------|----------|---------|-------------|
+| `OPENAI_BASE_URL` | `--base-url` | yes | — | API base URL including `/v1` (e.g. `https://api.openai.com/v1`). Query parameters are not supported. |
+| `OPENAI_API_KEY` | `--api-key` | yes | — | Bearer token sent to the endpoint |
+| `OPENAI_MODEL` | `--model` | no | `gpt-4o-mini` | Model for chat completion suites and the model ID fetched by `models_get` |
+| `TEST_SUITES` | `--suites` | no | `all` | Comma-separated suite names, or preset: `all`/`default`, `extended`, `full` |
+| `REQUEST_TIMEOUT` | `--timeout` | no | `2m` | Per-suite request timeout (batch suites may need a longer value against real APIs while jobs finish) |
+| `ALLOW_INSECURE_HTTP` | `--allow-insecure-http` | no | `false` | Allow plaintext `http://` to non-loopback hosts (loopback HTTP is always permitted) |
+| `OPENAI_ORG_ID` | `--org-id` | no | — | OpenAI organization ID sent as `OpenAI-Organization` when set |
+| `OPENAI_PROJECT_ID` | `--project-id` | no | — | OpenAI project ID sent as `OpenAI-Project` when set |
 
-Extended preset (`extended`): default suites plus `chat_completions_stream_usage`, `chat_completions_logprobs`, `chat_completions_json`, `chat_completions_tools`, `chat_completions_tools_stream`, `chat_completions_multi_turn`, `chat_completions_get`, `chat_completions_list`, `chat_completions_delete`, `chat_completions_messages`, `responses_tools`, `responses_tools_stream`, `responses_json`, `responses_get`, `responses_delete`, `responses_cancel`, `responses_input_items`, `responses_compact`, `responses_input_tokens`, `completions`, `completions_stream`, `embeddings`, `embeddings_batch`, `chat_completions_vision`, `chat_completions_reasoning`, `moderations`, `images_generations`, `images_edits`, `audio_speech`, `audio_transcriptions`, `audio_transcriptions_stream`, `audio_translations`, and `error_responses`.
+Some suites require additional model variables (vision, image, audio, video, etc.). See the [suite-specific configuration](docs/suites.md#suite-specific-model-configuration) for the full list.
 
-Full preset (`full`): every registered suite (see `--list-suites`).
+## Selecting suites
 
-Deprecated Assistants API suites (`assistants`, `assistants_threads`) are **opt-in** — included in `full`, but not in `default` or `extended`. They use `OPENAI_MODEL` for the assistant model and are labeled `(deprecated)` in `--list-suites`:
+Use `TEST_SUITES` with a preset or an explicit comma-separated list.
+
+| Preset | Scope |
+|--------|-------|
+| `all` / `default` | Core chat, models, and Responses suites |
+| `extended` | default plus tools, JSON, streaming variants, embeddings, vision, reasoning, moderations, images, and audio |
+| `full` | every registered suite, including deprecated and specialized APIs |
 
 ```bash
-docker run --rm \
-  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
-  -e OPENAI_API_KEY=your-api-key \
-  -e OPENAI_MODEL=your-chat-model \
-  -e TEST_SUITES=assistants,assistants_threads \
-  ghcr.io/beranekio/openai-compatibility-tester:latest
-```
-
-Structured JSON output (`chat_completions_json`) is **opt-in** — included in `extended` and `full`, but not in the default `all` set:
-
-```bash
-docker run --rm \
-  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
-  -e OPENAI_API_KEY=your-api-key \
-  -e OPENAI_MODEL=your-chat-model \
-  -e TEST_SUITES=chat_completions_json \
-  ghcr.io/beranekio/openai-compatibility-tester:latest
-```
-
-Tool-calling suites (`chat_completions_tools`, `chat_completions_tools_stream`, `responses_tools`, `responses_tools_stream`) are **opt-in** — included in `extended` and `full`, but not in the default `all` set:
-
-```bash
-docker run --rm \
-  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
-  -e OPENAI_API_KEY=your-api-key \
-  -e OPENAI_MODEL=your-chat-model \
-  -e OPENAI_EMBEDDING_MODEL=your-embedding-model \
-  -e OPENAI_IMAGE_MODEL=your-image-model \
-  -e OPENAI_TTS_MODEL=tts-1 \
-  -e OPENAI_WHISPER_MODEL=whisper-1 \
-  -e OPENAI_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe \
-  -e OPENAI_REASONING_MODEL=o3-mini \
-  -e TEST_SUITES=extended \
-  ghcr.io/beranekio/openai-compatibility-tester:latest
-```
-
-Or select tool suites explicitly:
-
-```bash
-docker run --rm \
-  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
-  -e OPENAI_API_KEY=your-api-key \
-  -e OPENAI_MODEL=your-chat-model \
-  -e TEST_SUITES=chat_completions_tools,chat_completions_tools_stream,responses_tools,responses_tools_stream \
-  ghcr.io/beranekio/openai-compatibility-tester:latest
-```
-
-Add `completions` and `completions_stream` only when your endpoint exposes legacy `/v1/completions`:
-
-```bash
-docker run --rm \
-  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
-  -e OPENAI_API_KEY=your-api-key \
-  -e OPENAI_COMPLETION_MODEL=your-instruct-model \
-  -e TEST_SUITES=models,completions,completions_stream \
-  ghcr.io/beranekio/openai-compatibility-tester:latest
-```
-
-Add `embeddings` and `embeddings_batch` only when your endpoint exposes embedding models:
-
-```bash
-docker run --rm \
-  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
-  -e OPENAI_API_KEY=your-api-key \
-  -e OPENAI_MODEL=your-chat-model \
-  -e OPENAI_EMBEDDING_MODEL=your-embedding-model \
-  -e TEST_SUITES=models,chat_completions,chat_completions_stream,responses,responses_stream,embeddings,embeddings_batch \
-  ghcr.io/beranekio/openai-compatibility-tester:latest
-```
-
-**Image generation** — requires an image model (`OPENAI_IMAGE_MODEL`):
-
-```bash
-docker run --rm \
-  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
-  -e OPENAI_API_KEY=your-api-key \
-  -e OPENAI_IMAGE_MODEL=your-image-model \
-  -e TEST_SUITES=images_generations \
-  ghcr.io/beranekio/openai-compatibility-tester:latest
-```
-
-`images_edits` uses `OPENAI_IMAGE_MODEL` (GPT Image models or `dall-e-2`; `dall-e-3` is not supported for edits).
-
-**Video generation** — requires a video model (`OPENAI_VIDEO_MODEL`). The suite polls until the job completes; increase `REQUEST_TIMEOUT` for slow endpoints:
-
-```bash
-docker run --rm \
-  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
-  -e OPENAI_API_KEY=your-api-key \
-  -e OPENAI_VIDEO_MODEL=sora-2 \
-  -e REQUEST_TIMEOUT=10m \
-  -e TEST_SUITES=videos \
-  ghcr.io/beranekio/openai-compatibility-tester:latest
-```
-
-Add `images_variations` only when your endpoint still exposes legacy DALL-E 2 `/v1/images/variations`. The suite always requests `dall-e-2` (the only model that endpoint supports) and does not use `OPENAI_IMAGE_MODEL`. Official OpenAI retired DALL-E models in May 2026; this suite is included in `full` but not in `extended`:
-
-```bash
-docker run --rm \
-  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
-  -e OPENAI_API_KEY=your-api-key \
-  -e TEST_SUITES=images_variations \
-  ghcr.io/beranekio/openai-compatibility-tester:latest
-```
-
-**Text-to-speech** — requires a TTS model (`OPENAI_TTS_MODEL`):
-
-```bash
-docker run --rm \
-  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
-  -e OPENAI_API_KEY=your-api-key \
-  -e OPENAI_TTS_MODEL=tts-1 \
-  -e TEST_SUITES=audio_speech \
-  ghcr.io/beranekio/openai-compatibility-tester:latest
-```
-
-**Speech-to-text** — non-streaming transcription and translation use `OPENAI_WHISPER_MODEL` (typically `whisper-1`). Streaming transcription uses `OPENAI_TRANSCRIPTION_MODEL` (e.g. `gpt-4o-mini-transcribe`):
-
-```bash
-docker run --rm \
-  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
-  -e OPENAI_API_KEY=your-api-key \
-  -e OPENAI_WHISPER_MODEL=whisper-1 \
-  -e OPENAI_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe \
-  -e TEST_SUITES=audio_transcriptions,audio_transcriptions_stream,audio_translations \
-  ghcr.io/beranekio/openai-compatibility-tester:latest
-```
-
-**Vision** — requires a vision-capable model (`OPENAI_VISION_MODEL` defaults to `OPENAI_MODEL`):
-
-```bash
-docker run --rm \
-  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
-  -e OPENAI_API_KEY=your-api-key \
-  -e OPENAI_MODEL=your-vision-model \
-  -e TEST_SUITES=chat_completions_vision \
-  ghcr.io/beranekio/openai-compatibility-tester:latest
-```
-
-**Realtime API** — opt-in HTTP smoke test for client secret creation (`realtime_client_secrets`). WebSocket sessions are not exercised. Uses `OPENAI_REALTIME_MODEL` (defaults to `gpt-realtime`):
-
-```bash
-docker run --rm \
-  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
-  -e OPENAI_API_KEY=your-api-key \
-  -e OPENAI_REALTIME_MODEL=gpt-4o-realtime-preview \
-  -e TEST_SUITES=realtime_client_secrets \
-  ghcr.io/beranekio/openai-compatibility-tester:latest
-```
-
-**Fine-tuning** — opt-in only (included in `full`, not `default` or `extended`). The `fine_tuning` suite uploads a minimal training JSONL file (10 examples), creates a job, lists/gets it, lists checkpoints once, optionally smoke-tests checkpoint permissions when `OPENAI_ADMIN_API_KEY` is set, and cancels the job. It does **not** poll for training completion; an empty checkpoint list is valid. Job create/cancel can still incur **cost** on real endpoints. Set `OPENAI_ADMIN_API_KEY` only when you also want to exercise the admin-only permissions endpoint:
-
-```bash
-docker run --rm \
-  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
-  -e OPENAI_API_KEY=your-api-key \
-  -e OPENAI_ADMIN_API_KEY=your-admin-api-key \
-  -e OPENAI_MODEL=gpt-4o-mini \
-  -e TEST_SUITES=fine_tuning \
-  ghcr.io/beranekio/openai-compatibility-tester:latest
-```
-
-**Reasoning models** — requires a reasoning-capable model (`OPENAI_REASONING_MODEL`). Included in `extended` and `full`. Validation is lenient: the suite passes when the response has assistant content or refusal, reports `reasoning_tokens` in usage, exposes non-empty `reasoning_content`, or returns a `content_filter` finish reason — so proxies that strip reasoning fields can still pass if they return normal chat output:
-
-```bash
-docker run --rm \
-  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
-  -e OPENAI_API_KEY=your-api-key \
-  -e OPENAI_REASONING_MODEL=o3-mini \
-  -e TEST_SUITES=chat_completions_reasoning \
-  ghcr.io/beranekio/openai-compatibility-tester:latest
-```
-
-**Beta ChatKit** — opt-in only (included in `full`, not `default` or `extended`). The SDK sends `OpenAI-Beta: chatkit_beta=v1` on these requests. `chatkit_threads` is read-only by default (list, get, list items). Set `OPENAI_CHATKIT_TEST_THREAD_ID` to a disposable thread ID to also exercise delete:
-
-```bash
-docker run --rm \
-  -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
-  -e OPENAI_API_KEY=your-api-key \
-  -e OPENAI_CHATKIT_WORKFLOW_ID=your-workflow-id \
-  -e OPENAI_CHATKIT_TEST_THREAD_ID=your-disposable-thread-id \
-  -e TEST_SUITES=chatkit_sessions,chatkit_threads \
-  ghcr.io/beranekio/openai-compatibility-tester:latest
-```
-
-Run a subset:
-
-```bash
+# A subset
 docker run --rm \
   -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
   -e OPENAI_API_KEY=your-api-key \
   -e TEST_SUITES=models,chat_completions \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
+
+For the complete suite catalog, presets, and per-suite examples, see **[docs/suites.md](docs/suites.md)**.
 
 ## Exit codes
 
@@ -344,6 +85,6 @@ docker build -t openai-compatibility-tester .
 
 ## CI and publishing
 
-GitHub Actions runs unit tests and builds the Docker image on every push and pull request to `main`. When tests pass on a push to `main`, the image is published to GHCR:
+GitHub Actions runs unit tests and builds the Docker image on every push and pull request to `main`. When tests pass on a push to `main`, a multi-architecture image (`linux/amd64`, `linux/arm64`) is published to GHCR:
 
 `ghcr.io/beranekio/openai-compatibility-tester:latest`
