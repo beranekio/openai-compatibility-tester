@@ -49,6 +49,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          target: tester
           platforms: linux/amd64
           load: true
           tags: openai-compatibility-tester:ci
@@ -58,10 +59,9 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          target: mockserver
           platforms: linux/amd64
           load: true
-          build-args: |
-            TARGET=mockserver
           tags: openai-mockserver:ci
           cache-from: type=gha
 
@@ -95,6 +95,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          target: tester
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
@@ -102,35 +103,26 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Push latest tag if still main HEAD
-        run: |
-          image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-          git fetch origin main
-          if [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ]; then
-            docker buildx imagetools create -t "${image}:latest" "${image}:sha-${{ github.sha }}"
-          else
-            echo "Skipping latest tag: commit is no longer main HEAD"
-          fi
-
       - name: Build and push multi-arch mockserver image
         uses: docker/build-push-action@v7
         with:
           context: .
+          target: mockserver
           platforms: linux/amd64,linux/arm64
           push: true
-          build-args: |
-            TARGET=mockserver
           tags: |
             ${{ env.REGISTRY }}/${{ env.MOCK_IMAGE_NAME }}:sha-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Push mockserver latest tag if still main HEAD
+      - name: Advance latest tags if still main HEAD
         run: |
-          image="${{ env.REGISTRY }}/${{ env.MOCK_IMAGE_NAME }}"
+          tester="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          mock="${{ env.REGISTRY }}/${{ env.MOCK_IMAGE_NAME }}"
           git fetch origin main
           if [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ]; then
-            docker buildx imagetools create -t "${image}:latest" "${image}:sha-${{ github.sha }}"
+            docker buildx imagetools create -t "${tester}:latest" "${tester}:sha-${{ github.sha }}"
+            docker buildx imagetools create -t "${mock}:latest" "${mock}:sha-${{ github.sha }}"
           else
-            echo "Skipping mockserver latest tag: commit is no longer main HEAD"
+            echo "Skipping latest tags: commit is no longer main HEAD"
           fi

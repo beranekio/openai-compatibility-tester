@@ -74,12 +74,14 @@ For testing gateways and SDK clients without a real backend, a standalone image 
 docker run --rm -p 8080:8080 ghcr.io/beranekio/openai-mockserver:latest
 ```
 
-Point a client (or this tester) at `http://127.0.0.1:8080/v1`:
+Point a client (or this tester) at `http://127.0.0.1:8080/v1` on the host. When running the tester in a container that needs to reach the mock server on the host, use `host.docker.internal` with `--add-host` (Docker Desktop provides this automatically; Linux Docker Engine needs the flag) and allow plaintext HTTP to the non-loopback address:
 
 ```bash
 docker run --rm \
+  --add-host=host.docker.internal:host-gateway \
   -e OPENAI_BASE_URL=http://host.docker.internal:8080/v1 \
   -e OPENAI_API_KEY=anything \
+  -e ALLOW_INSECURE_HTTP=true \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 
@@ -105,7 +107,7 @@ Build the containers locally:
 
 ```bash
 docker build -t openai-compatibility-tester .
-docker build --build-arg TARGET=mockserver -t openai-mockserver .
+docker build --target mockserver -t openai-mockserver .
 ```
 
 ## CI and publishing

@@ -38,7 +38,10 @@ func TestHandlerServesChatCompletions(t *testing.T) {
 		t.Fatalf("http.Post() error = %v", err)
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body error = %v", err)
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status code = %d, want 200, body = %s", resp.StatusCode, body)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -59,7 +58,7 @@ func envDefault(key, fallback string) string {
 }
 
 // listenHost returns the address as it should appear in a printed URL, using
-// localhost for the unspecified host.
+// localhost for the unspecified host. net.JoinHostPort brackets IPv6 hosts.
 func listenHost(addr string) string {
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
@@ -68,5 +67,5 @@ func listenHost(addr string) string {
 	if host == "" {
 		host = "127.0.0.1"
 	}
-	return fmt.Sprintf("%s:%s", host, port)
+	return net.JoinHostPort(host, port)
 }
