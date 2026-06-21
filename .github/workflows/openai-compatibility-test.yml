@@ -14,9 +14,6 @@ name: OpenAI compatibility test
 #
 # The job fails when any selected suite fails (container exit code 1) or on a
 # runner/config error (exit code 2). See docs/suites.md for the suite catalog.
-#
-# The run logic lives in .github/actions/run-tester (composite action); this
-# workflow is a thin wrapper so the same logic is exercised by CI smoke tests.
 # Input and secret names use snake_case because GitHub secret names cannot
 # contain hyphens and `inputs.x-y` is parsed as subtraction.
 
@@ -143,34 +140,64 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      # Reference the composite action from this repo via a fully-qualified ref
-      # so cross-repo callers work: a relative `./` path would resolve against
-      # the caller's checkout, which does not contain this action. Pin to a
-      # release tag (e.g. @v1) for reproducible use; keep in sync with the
-      # README example and tag both the workflow and action together.
-      - uses: beranekio/openai-compatibility-tester/.github/actions/run-tester@main
-        with:
-          base_url: ${{ inputs.base_url }}
-          api_key: ${{ secrets.api_key }}
-          org_id: ${{ secrets.org_id }}
-          project_id: ${{ secrets.project_id }}
-          admin_api_key: ${{ secrets.admin_api_key }}
-          suites: ${{ inputs.suites }}
-          model: ${{ inputs.model }}
-          responses_model: ${{ inputs.responses_model }}
-          completion_model: ${{ inputs.completion_model }}
-          embedding_model: ${{ inputs.embedding_model }}
-          vision_model: ${{ inputs.vision_model }}
-          reasoning_model: ${{ inputs.reasoning_model }}
-          image_model: ${{ inputs.image_model }}
-          video_model: ${{ inputs.video_model }}
-          tts_model: ${{ inputs.tts_model }}
-          whisper_model: ${{ inputs.whisper_model }}
-          transcription_model: ${{ inputs.transcription_model }}
-          realtime_model: ${{ inputs.realtime_model }}
-          chatkit_workflow_id: ${{ inputs.chatkit_workflow_id }}
-          chatkit_test_thread_id: ${{ inputs.chatkit_test_thread_id }}
-          timeout: ${{ inputs.timeout }}
-          allow_insecure_http: ${{ inputs.allow_insecure_http }}
-          image: ${{ inputs.image }}
-          network: ${{ inputs.network }}
+      - name: Run compatibility suites
+        env:
+          OPENAI_BASE_URL: ${{ inputs.base_url }}
+          OPENAI_API_KEY: ${{ secrets.api_key }}
+          OPENAI_ORG_ID: ${{ secrets.org_id }}
+          OPENAI_PROJECT_ID: ${{ secrets.project_id }}
+          OPENAI_ADMIN_API_KEY: ${{ secrets.admin_api_key }}
+          OPENAI_MODEL: ${{ inputs.model }}
+          OPENAI_RESPONSES_MODEL: ${{ inputs.responses_model }}
+          OPENAI_COMPLETION_MODEL: ${{ inputs.completion_model }}
+          OPENAI_EMBEDDING_MODEL: ${{ inputs.embedding_model }}
+          OPENAI_VISION_MODEL: ${{ inputs.vision_model }}
+          OPENAI_REASONING_MODEL: ${{ inputs.reasoning_model }}
+          OPENAI_IMAGE_MODEL: ${{ inputs.image_model }}
+          OPENAI_VIDEO_MODEL: ${{ inputs.video_model }}
+          OPENAI_TTS_MODEL: ${{ inputs.tts_model }}
+          OPENAI_WHISPER_MODEL: ${{ inputs.whisper_model }}
+          OPENAI_TRANSCRIPTION_MODEL: ${{ inputs.transcription_model }}
+          OPENAI_REALTIME_MODEL: ${{ inputs.realtime_model }}
+          OPENAI_CHATKIT_WORKFLOW_ID: ${{ inputs.chatkit_workflow_id }}
+          OPENAI_CHATKIT_TEST_THREAD_ID: ${{ inputs.chatkit_test_thread_id }}
+          TEST_SUITES: ${{ inputs.suites }}
+          REQUEST_TIMEOUT: ${{ inputs.timeout }}
+          ALLOW_INSECURE_HTTP: ${{ inputs.allow_insecure_http }}
+          IMAGE: ${{ inputs.image }}
+          NETWORK: ${{ inputs.network }}
+        run: |
+          set -euo pipefail
+
+          # Pass only variables that are set so unset inputs don't shadow the
+          # container's built-in defaults.
+          args=(-e OPENAI_BASE_URL -e OPENAI_API_KEY)
+          [ -n "$OPENAI_ORG_ID" ]                 && args+=(-e OPENAI_ORG_ID)
+          [ -n "$OPENAI_PROJECT_ID" ]             && args+=(-e OPENAI_PROJECT_ID)
+          [ -n "$OPENAI_ADMIN_API_KEY" ]          && args+=(-e OPENAI_ADMIN_API_KEY)
+          [ -n "$OPENAI_MODEL" ]                  && args+=(-e OPENAI_MODEL)
+          [ -n "$OPENAI_RESPONSES_MODEL" ]        && args+=(-e OPENAI_RESPONSES_MODEL)
+          [ -n "$OPENAI_COMPLETION_MODEL" ]       && args+=(-e OPENAI_COMPLETION_MODEL)
+          [ -n "$OPENAI_EMBEDDING_MODEL" ]        && args+=(-e OPENAI_EMBEDDING_MODEL)
+          [ -n "$OPENAI_VISION_MODEL" ]           && args+=(-e OPENAI_VISION_MODEL)
+          [ -n "$OPENAI_REASONING_MODEL" ]        && args+=(-e OPENAI_REASONING_MODEL)
+          [ -n "$OPENAI_IMAGE_MODEL" ]            && args+=(-e OPENAI_IMAGE_MODEL)
+          [ -n "$OPENAI_VIDEO_MODEL" ]            && args+=(-e OPENAI_VIDEO_MODEL)
+          [ -n "$OPENAI_TTS_MODEL" ]              && args+=(-e OPENAI_TTS_MODEL)
+          [ -n "$OPENAI_WHISPER_MODEL" ]          && args+=(-e OPENAI_WHISPER_MODEL)
+          [ -n "$OPENAI_TRANSCRIPTION_MODEL" ]    && args+=(-e OPENAI_TRANSCRIPTION_MODEL)
+          [ -n "$OPENAI_REALTIME_MODEL" ]         && args+=(-e OPENAI_REALTIME_MODEL)
+          [ -n "$OPENAI_CHATKIT_WORKFLOW_ID" ]    && args+=(-e OPENAI_CHATKIT_WORKFLOW_ID)
+          [ -n "$OPENAI_CHATKIT_TEST_THREAD_ID" ] && args+=(-e OPENAI_CHATKIT_TEST_THREAD_ID)
+          [ -n "$TEST_SUITES" ]                   && args+=(-e TEST_SUITES)
+          [ -n "$REQUEST_TIMEOUT" ]               && args+=(-e REQUEST_TIMEOUT)
+          # ALLOW_INSECURE_HTTP is a boolean; pass only when explicitly true.
+          if [ "$ALLOW_INSECURE_HTTP" = "true" ]; then
+            args+=(-e ALLOW_INSECURE_HTTP=true)
+          fi
+          run_args=(--rm)
+          [ -n "$NETWORK" ] && run_args+=(--network "$NETWORK")
+
+          # The image entrypoint is the tester binary; docker run exits with the
+          # binary's exit code (0 = pass, 1 = suite failure, 2 = config error).
+          docker run "${run_args[@]}" "${args[@]}" "$IMAGE"

@@ -82,14 +82,18 @@ jobs:
       - name: Build tester image
         run: docker build -t oact:ci .
 
-      - name: Run tester against mock via composite action
-        uses: ./.github/actions/run-tester
-        with:
-          base_url: ${{ env.MOCK_URL }}
-          api_key: test
-          suites: default
-          image: oact:ci
-          network: host
+      - name: Run tester against mock
+        env:
+          OPENAI_BASE_URL: ${{ env.MOCK_URL }}
+          OPENAI_API_KEY: test
+          TEST_SUITES: default
+          IMAGE: oact:ci
+        run: |
+          set -euo pipefail
+          # The image entrypoint is the tester binary; its exit code propagates.
+          docker run --rm --network host \
+            -e OPENAI_BASE_URL -e OPENAI_API_KEY -e TEST_SUITES \
+            "$IMAGE"
 
       - name: Stop mock server
         if: always()
