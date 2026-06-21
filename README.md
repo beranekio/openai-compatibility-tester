@@ -44,7 +44,7 @@ Use `TEST_SUITES` with a preset or an explicit comma-separated list.
 | Preset | Scope |
 |--------|-------|
 | `all` / `default` | Core chat, models, and Responses suites |
-| `extended` | default plus tools, JSON, streaming variants, embeddings, vision, reasoning, moderations, images, and audio |
+| `extended` | default plus tools, JSON, completions, streaming variants, embeddings, vision, reasoning, moderations, images, audio, and error responses |
 | `full` | every registered suite, including deprecated and specialized APIs |
 
 ```bash

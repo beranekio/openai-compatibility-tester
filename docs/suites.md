@@ -101,7 +101,7 @@ Most suites reuse `OPENAI_MODEL` / `OPENAI_RESPONSES_MODEL`. The following varia
 
 ## Examples
 
-The base image is `ghcr.io/beranekio/openai-compatibility-tester:latest`. Every example below assumes `OPENAI_BASE_URL` and `OPENAI_API_KEY` are set; only the suite-specific variables are shown.
+The base image is `ghcr.io/beranekio/openai-compatibility-tester:latest`. Every example below assumes `OPENAI_BASE_URL` and `OPENAI_API_KEY` are set; the variables relevant to each suite are highlighted.
 
 ### Default suites
 
@@ -125,7 +125,7 @@ docker run --rm \
 
 ### Tool calling and structured output
 
-Tool-calling suites (`chat_completions_tools`, `chat_completions_tools_stream`, `responses_tools`, `responses_tools_stream`) and structured JSON output (`chat_completions_json`) are included in `extended` and `full`, but not in the default set.
+Tool-calling suites (`chat_completions_tools`, `chat_completions_tools_stream`, `responses_tools`, `responses_tools_stream`) and structured JSON output (`chat_completions_json`, `responses_json`) are included in `extended` and `full`, but not in the default set.
 
 ```bash
 docker run --rm \
