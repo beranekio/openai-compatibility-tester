@@ -119,9 +119,14 @@ on:
         required: false
         default: ""
         type: string
+      self_test:
+        description: INTERNAL CI USE ONLY. When true, ignore base_url/image/network/secrets, check out this repo, build the image and the in-process mock server on the runner, and run the tester against the mock. Used by this repo's CI to exercise the workflow itself.
+        required: false
+        default: false
+        type: boolean
     secrets:
       api_key:
-        description: Bearer token sent to the endpoint. Must be non-empty even for endpoints that don't check auth — use any placeholder (e.g. `dummy`); it's sent as `Authorization: Bearer …` and ignored by unauthenticated endpoints.
+        description: Bearer token sent to the endpoint. Must be non-empty even for endpoints that don't check auth — use any placeholder (e.g. `dummy`); it's sent as a Bearer token in the Authorization header and ignored by unauthenticated endpoints.
         required: true
       org_id:
         description: OpenAI organization ID (sent as OpenAI-Organization). Optional.
@@ -140,7 +145,44 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout (self-test only)
+        if: ${{ inputs.self_test }}
+        uses: actions/checkout@v6
+
+      - name: Set up Go (self-test only)
+        if: ${{ inputs.self_test }}
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Self-test (build image + mock, run tester against mock)
+        if: ${{ inputs.self_test }}
+        env:
+          TEST_SUITES: ${{ inputs.suites }}
+        run: |
+          set -euo pipefail
+          # Build the in-process mock server and the tester image from this
+          # checkout, start the mock on the runner, and run the tester
+          # container against it with --network host. No external endpoint,
+          # no image publish, no tunnel.
+          go build -o /tmp/mockserver ./cmd/mockserver
+          docker build -t oact-selftest:ci .
+          /tmp/mockserver > /tmp/mockurl.txt &
+          mockpid=$!
+          trap 'kill $mockpid 2>/dev/null || true' EXIT
+          for i in $(seq 1 50); do [ -s /tmp/mockurl.txt ] && break; sleep 0.2; done
+          mock_url="$(cat /tmp/mockurl.txt)"
+          echo "Mock base URL: $mock_url"
+          curl -fsS -H "Authorization: Bearer test" "$mock_url/models" >/dev/null
+          docker run --rm --network host \
+            -e OPENAI_BASE_URL="$mock_url" \
+            -e OPENAI_API_KEY=test \
+            -e TEST_SUITES="$TEST_SUITES" \
+            oact-selftest:ci
+
       - name: Run compatibility suites
+        if: ${{ !inputs.self_test }}
         env:
           OPENAI_BASE_URL: ${{ inputs.base_url }}
           OPENAI_API_KEY: ${{ secrets.api_key }}
