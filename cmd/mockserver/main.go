@@ -57,14 +57,16 @@ func envDefault(key, fallback string) string {
 	return fallback
 }
 
-// listenHost returns the address as it should appear in a printed URL, using
-// localhost for the unspecified host. net.JoinHostPort brackets IPv6 hosts.
+// listenHost returns the address as it should appear in a printed URL.
+// Unspecified bind hosts (":8080", "0.0.0.0:8080", "[::]:8080") normalize to
+// 127.0.0.1 so the logged base URL is always a usable local client URL;
+// net.JoinHostPort brackets IPv6 hosts.
 func listenHost(addr string) string {
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
 		return addr
 	}
-	if host == "" {
+	if host == "" || net.ParseIP(host).IsUnspecified() {
 		host = "127.0.0.1"
 	}
 	return net.JoinHostPort(host, port)
