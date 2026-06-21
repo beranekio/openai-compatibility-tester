@@ -62,7 +62,7 @@ Follow this checklist for every new suite:
    - `config.Load()` flags/env vars (if new settings are required)
 5. **Extend** `internal/mockserver/server.go` with a handler so CI stays offline.
 6. **Test** — add or extend `internal/runner/runner_test.go` to run the new suite against the mock server. If step 4 changed config (flags, env vars, presets, validation), add or update cases in `internal/config/config_test.go` too — `runner_test.go` constructs `config.Config` directly and does not exercise `config.Load()`.
-7. **Document** — update `README.md` suite table and env var table.
+7. **Document** — add the suite to the table in [`docs/suites.md`](docs/suites.md), and update the README common config table or `docs/suites.md` suite-specific model variables if new env vars were added.
 
 ### Suite design principles
 
@@ -85,6 +85,8 @@ Prefer extending shared helpers over duplicating validation logic across suites.
 
 ## Configuration conventions
 
+Core env vars (`OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `TEST_SUITES`, `REQUEST_TIMEOUT`, `ALLOW_INSECURE_HTTP`, `OPENAI_ORG_ID`, `OPENAI_PROJECT_ID`) are documented in the README. Suite-specific model variables (vision, image, audio, video, reasoning, realtime, fine-tuning, ChatKit) are documented in [`docs/suites.md`](docs/suites.md#suite-specific-model-configuration) — keep both in sync when adding settings.
+
 | Env var | Purpose |
 |---------|---------|
 | `OPENAI_BASE_URL` | Required. Conventionally ends with `/v1` (see README); SDK appends paths relative to this base. No query params. |
@@ -97,11 +99,11 @@ Prefer extending shared helpers over duplicating validation logic across suites.
 | `OPENAI_VIDEO_MODEL` | Required when `videos` is selected |
 | `OPENAI_CHATKIT_WORKFLOW_ID` | ChatKit sessions workflow (default `wf_mock_compat_test` when `chatkit_sessions` selected) |
 | `OPENAI_CHATKIT_TEST_THREAD_ID` | Optional disposable thread for `chatkit_threads` delete test |
-| `TEST_SUITES` | Comma-separated names or `all` |
+| `TEST_SUITES` | Comma-separated names, or preset: `all`/`default`, `extended`, `full` |
 | `REQUEST_TIMEOUT` | Per-suite timeout (default `2m`) |
 | `ALLOW_INSECURE_HTTP` | Allow non-loopback `http://` |
 
-Reuse existing model settings when the suite belongs to an established family (`OPENAI_MODEL` for chat, `OPENAI_RESPONSES_MODEL` for Responses, etc.). Add a dedicated env var and `validateModelsForSuites` entry only when the suite needs a genuinely different model category (e.g. vision, image generation, TTS). Planned presets (`extended`, `full`) are tracked in [#45](https://github.com/beranekio/openai-compatibility-tester/issues/45).
+Reuse existing model settings when the suite belongs to an established family (`OPENAI_MODEL` for chat, `OPENAI_RESPONSES_MODEL` for Responses, etc.). Add a dedicated env var and `validateModelsForSuites` entry only when the suite needs a genuinely different model category (e.g. vision, image generation, TTS). Presets `extended` and `full` are implemented in `config.ExtendedSuites` / `config.FullSuites`; the full suite-specific model variable list is documented in [`docs/suites.md`](docs/suites.md#suite-specific-model-configuration).
 
 ## Testing
 
@@ -124,7 +126,7 @@ go build -o bin/openai-compatibility-tester ./cmd/openai-compatibility-tester
 ## CI and Docker
 
 - GitHub Actions (`.github/workflows/ci.yml`): `go test ./...`, binary build, Docker build on every PR/push to `main`.
-- Pushes to `main` publish `ghcr.io/beranekio/openai-compatibility-tester:latest`.
+- Pushes to `main` publish a multi-architecture image (`linux/amd64`, `linux/arm64`) to `ghcr.io/beranekio/openai-compatibility-tester:latest` via QEMU + Buildx.
 - Dockerfile: multi-stage, distroless nonroot image, entrypoint is the binary.
 
 Do not break the Docker entrypoint contract (no shell wrapper; flags/env only).
@@ -140,18 +142,7 @@ Do not break the Docker entrypoint contract (no shell wrapper; flags/env only).
 
 ## Roadmap and issue tracking
 
-Expansion work is tracked in GitHub issues #7–#47, organized into milestones:
-
-| Milestone | Focus |
-|-----------|-------|
-| Sprint 1 | Config, tool calling, JSON mode, models get, mock parity |
-| Sprint 2 | Completions stream, embeddings batch, Responses tools, errors |
-| Sprint 3 | Vision, Responses lifecycle, moderations |
-| Extended tier | Images, audio, chat advanced |
-| Full tier | Files, batches, vector stores, specialized APIs |
-| Infrastructure | Multipart helpers, pagination, auth headers |
-
-Each issue has a **Dependencies** section (`Blocked by` / `Blocks`). Check [#48](https://github.com/beranekio/openai-compatibility-tester/issues/48) for the overview graph before starting work.
+The original API-compatibility expansion (issues #7–#47, overview in #48) is **complete** — all those issues are closed. New suites should be proposed via a fresh GitHub issue rather than the historical milestones. The current suite catalog lives in [`docs/suites.md`](docs/suites.md) and `--list-suites`.
 
 Labels: `phase-1` … `phase-8`, `suite`, `infrastructure`, `enhancement`.
 
@@ -277,7 +268,7 @@ Use the agent name that matches your label (e.g. `Grok`) and the model name the 
 - [ ] Mock server handler added
 - [ ] `runner_test.go` includes new suite in `TestRunAllPassesAgainstMockServer`
 - [ ] `config_test.go` updated if config parsing, validation, or presets changed
-- [ ] README updated for user-facing changes
+- [ ] README updated for user-facing changes (common config table); suite table and suite-specific model vars live in `docs/suites.md`
 - [ ] Review threads addressed: **resolved** when fixed; **replied** with rationale when declined
 - [ ] If you opened the PR: **`agent-<identity>`** label applied (e.g. `agent-grok`); model noted in body footer when known
 - [ ] Focused diff — no unrelated changes
