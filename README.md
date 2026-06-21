@@ -27,7 +27,7 @@ All settings can be passed as environment variables or CLI flags.
 | Variable | Flag | Required | Default | Description |
 |----------|------|----------|---------|-------------|
 | `OPENAI_BASE_URL` | `--base-url` | yes | — | API base URL including `/v1` (e.g. `https://api.openai.com/v1`). Query parameters are not supported. |
-| `OPENAI_API_KEY` | `--api-key` | yes | — | Bearer token sent to the endpoint |
+| `OPENAI_API_KEY` | `--api-key` | yes | — | Bearer token sent to the endpoint. Must be non-empty even for endpoints that don't check auth — use any placeholder (e.g. `dummy`); it's sent as `Authorization: Bearer …` and ignored by unauthenticated endpoints. |
 | `OPENAI_MODEL` | `--model` | no | `gpt-4o-mini` | Model for chat completion suites and the model ID fetched by `models_get` |
 | `TEST_SUITES` | `--suites` | no | `all` | Comma-separated suite names, or preset: `all`/`default`, `extended`, `full` |
 | `REQUEST_TIMEOUT` | `--timeout` | no | `2m` | Per-suite request timeout (batch suites may need a longer value against real APIs while jobs finish) |

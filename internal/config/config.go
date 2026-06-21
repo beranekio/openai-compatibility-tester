@@ -319,6 +319,9 @@ func Load(args []string) (*Config, error) {
 	if err := validateBaseURL(cfg.BaseURL, cfg.AllowInsecureHTTP); err != nil {
 		return nil, err
 	}
+	// OPENAI_API_KEY must be non-empty to run suites. It is sent as the bearer
+	// token; for endpoints that don't check auth, callers should pass any
+	// placeholder (e.g. "dummy") — the value is still sent and ignored.
 	if cfg.APIKey == "" {
 		return nil, fmt.Errorf("%s or --api-key is required", EnvAPIKey)
 	}

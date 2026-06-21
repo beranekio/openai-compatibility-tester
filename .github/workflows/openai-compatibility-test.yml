@@ -121,7 +121,7 @@ on:
         type: string
     secrets:
       api_key:
-        description: Bearer token sent to the endpoint.
+        description: Bearer token sent to the endpoint. Must be non-empty even for endpoints that don't check auth — use any placeholder (e.g. `dummy`); it's sent as `Authorization: Bearer …` and ignored by unauthenticated endpoints.
         required: true
       org_id:
         description: OpenAI organization ID (sent as OpenAI-Organization). Optional.

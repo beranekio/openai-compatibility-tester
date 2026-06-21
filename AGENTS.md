@@ -90,7 +90,7 @@ Core env vars (`OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `TEST_SUITES
 | Env var | Purpose |
 |---------|---------|
 | `OPENAI_BASE_URL` | Required. Conventionally ends with `/v1` (see README); SDK appends paths relative to this base. No query params. |
-| `OPENAI_API_KEY` | Required when running suites. Not required for `--list-suites`. Bearer token. |
+| `OPENAI_API_KEY` | Required (non-empty) when running suites; not required for `--list-suites`. Bearer token. For unauthenticated endpoints, pass any placeholder — the tester validates presence and sends it as `Authorization: Bearer …`, which such endpoints ignore. |
 | `OPENAI_MODEL` | Chat completion suites (default `gpt-4o-mini`) |
 | `OPENAI_RESPONSES_MODEL` | Responses suites (defaults to `OPENAI_MODEL`) |
 | `OPENAI_COMPLETION_MODEL` | Legacy completions (defaults to `gpt-3.5-turbo-instruct` when selected) |
