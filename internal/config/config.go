@@ -400,7 +400,7 @@ func validateModelsForSuites(cfg *Config) error {
 	var needsVision, needsReasoning, needsImage, needsVideo, needsTTS, needsWhisper, needsTranscription, needsRealtime, needsChatKitWorkflow bool
 	for _, name := range cfg.Suites {
 		switch name {
-		case "chat_completions", "chat_completions_stream", "chat_completions_stream_usage", "chat_completions_logprobs", "chat_completions_json", "chat_completions_audio", "chat_completions_tools", "chat_completions_tools_stream", "chat_completions_multi_turn", "chat_completions_get", "chat_completions_list", "chat_completions_delete", "chat_completions_messages", "models_get", "batches_create", "batches_get", "batches_cancel", "batches_list", "fine_tuning", "assistants", "assistants_threads":
+		case "chat_completions", "chat_completions_stream", "chat_completions_stream_usage", "chat_completions_logprobs", "chat_completions_json", "chat_completions_audio", "chat_completions_tools", "chat_completions_tools_stream", "chat_completions_multi_turn", "chat_completions_get", "chat_completions_list", "chat_completions_delete", "chat_completions_messages", "chat_completions_update", "models_get", "batches_create", "batches_get", "batches_cancel", "batches_list", "fine_tuning", "assistants", "assistants_threads":
 			needsChat = true
 		case "responses", "responses_stream", "responses_tools", "responses_tools_stream", "responses_json", "responses_get", "responses_delete", "responses_cancel", "responses_input_items", "responses_compact", "responses_input_tokens":
 			needsResponses = true
