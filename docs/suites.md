@@ -58,6 +58,7 @@ Deprecated Assistants API suites (`assistants`, `assistants_threads`) are **opt-
 | `audio_translations` | `client.Audio.Translations.New` | `POST /v1/audio/translations` |
 | `files` | `client.Files.New`, `List`, `Get`, `Content`, `Delete` | `POST/GET/DELETE /v1/files`, `GET /v1/files/{id}/content` |
 | `uploads` | `client.Uploads.New`, `Parts.New`, `Complete` | `POST /v1/uploads`, `POST /v1/uploads/{id}/parts`, `POST /v1/uploads/{id}/complete` |
+| `uploads_cancel` | `client.Uploads.New`, `Cancel` | `POST /v1/uploads`, `POST /v1/uploads/{id}/cancel` |
 | `batches_create` | `client.Batches.New` | `POST /v1/batches` |
 | `batches_get` | `client.Batches.Get` | `GET /v1/batches/{id}` |
 | `batches_cancel` | `client.Batches.Cancel` | `POST /v1/batches/{id}/cancel` |
