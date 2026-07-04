@@ -68,6 +68,7 @@ func newServerWithRoutes() *Server {
 	mux.HandleFunc("POST /v1/chat/completions", s.handleChatCompletions)
 	mux.HandleFunc("GET /v1/chat/completions", s.handleChatCompletionList)
 	mux.HandleFunc("GET /v1/chat/completions/{id}", s.handleChatCompletionGet)
+	mux.HandleFunc("POST /v1/chat/completions/{id}", s.handleChatCompletionUpdate)
 	mux.HandleFunc("DELETE /v1/chat/completions/{id}", s.handleChatCompletionDelete)
 	mux.HandleFunc("GET /v1/chat/completions/{id}/messages", s.handleChatCompletionMessages)
 	mux.HandleFunc("POST /v1/completions", handleCompletions)

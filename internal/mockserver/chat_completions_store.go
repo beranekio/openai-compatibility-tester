@@ -59,6 +59,26 @@ func (s *chatCompletionStore) delete(id string) bool {
 	return true
 }
 
+// updateMetadata merges the given metadata into the stored completion payload
+// and returns a clone of the updated payload.
+func (s *chatCompletionStore) updateMetadata(id string, metadata map[string]string) (map[string]any, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	payload, ok := s.completions[id]
+	if !ok {
+		return nil, false
+	}
+	if payload["metadata"] == nil {
+		payload["metadata"] = map[string]string{}
+	}
+	existing, _ := payload["metadata"].(map[string]string)
+	for k, v := range metadata {
+		existing[k] = v
+	}
+	payload["metadata"] = existing
+	return cloneMap(payload), true
+}
+
 func (s *chatCompletionStore) listAll() []map[string]any {
 	s.mu.Lock()
 	defer s.mu.Unlock()

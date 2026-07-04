@@ -55,6 +55,7 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 			"chat_completions_list",
 			"chat_completions_delete",
 			"chat_completions_messages",
+			"chat_completions_update",
 			"completions",
 			"completions_stream",
 			"embeddings",
