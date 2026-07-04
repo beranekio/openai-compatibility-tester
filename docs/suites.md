@@ -53,6 +53,8 @@ Deprecated Assistants API suites (`assistants`, `assistants_threads`) are **opt-
 | `images_generations` | `client.Images.Generate` | `POST /v1/images/generations` |
 | `images_edits` | `client.Images.Edit` | `POST /v1/images/edits` |
 | `images_variations` | `client.Images.NewVariation` | `POST /v1/images/variations` |
+| `images_generations_stream` | `client.Images.GenerateStreaming` | `POST /v1/images/generations` (stream) |
+| `images_edits_stream` | `client.Images.EditStreaming` | `POST /v1/images/edits` (stream) |
 | `audio_speech` | `client.Audio.Speech.New` | `POST /v1/audio/speech` |
 | `audio_transcriptions` | `client.Audio.Transcriptions.New` | `POST /v1/audio/transcriptions` |
 | `audio_transcriptions_stream` | `client.Audio.Transcriptions.NewStreaming` | `POST /v1/audio/transcriptions` (stream) |

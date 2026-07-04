@@ -143,6 +143,8 @@ var FullSuites = []string{
 	"moderations",
 	"images_generations",
 	"images_edits",
+	"images_generations_stream",
+	"images_edits_stream",
 	"images_variations",
 	"audio_speech",
 	"audio_transcriptions",
@@ -414,7 +416,7 @@ func validateModelsForSuites(cfg *Config) error {
 			needsVision = true
 		case "chat_completions_reasoning":
 			needsReasoning = true
-		case "images_generations", "images_edits":
+		case "images_generations", "images_edits", "images_generations_stream", "images_edits_stream":
 			needsImage = true
 		case "videos", "videos_variants":
 			needsVideo = true

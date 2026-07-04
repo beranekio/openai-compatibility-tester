@@ -583,6 +583,19 @@ func TestLoadRejectsImagesEditsSuiteWithoutImageModel(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsImagesStreamSuitesWithoutImageModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvImageModel, "")
+
+	for _, suite := range []string{"images_generations_stream", "images_edits_stream"} {
+		_, err := Load([]string{"--suites", suite})
+		if err == nil || !strings.Contains(err.Error(), EnvImageModel) {
+			t.Fatalf("suite %q: expected missing image model error, got %v", suite, err)
+		}
+	}
+}
+
 func TestLoadDefaultsRealtimeModelForRealtimeClientSecretsSuite(t *testing.T) {
 	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
