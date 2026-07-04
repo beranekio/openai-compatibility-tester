@@ -80,9 +80,15 @@ func writeImageStream(w http.ResponseWriter, prefix string) {
 		"type":                prefix + ".partial_image",
 		"b64_json":            mockImageB64JSON,
 		"partial_image_index": 1,
+		"created_at":          1700000000,
+		"output_format":       "png",
+		"size":                "1024x1024",
 	})
 	writeEvent(map[string]any{
-		"type":     prefix + ".completed",
-		"b64_json": mockImageB64JSON,
+		"type":          prefix + ".completed",
+		"b64_json":      mockImageB64JSON,
+		"created_at":    1700000000,
+		"output_format": "png",
+		"size":          "1024x1024",
 	})
 }

@@ -98,8 +98,6 @@ var ExtendedSuites = []string{
 	"moderations",
 	"images_generations",
 	"images_edits",
-	"images_generations_stream",
-	"images_edits_stream",
 	"audio_speech",
 	"audio_transcriptions",
 	"audio_transcriptions_stream",

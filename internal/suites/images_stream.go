@@ -6,29 +6,40 @@ import (
 	"github.com/openai/openai-go/v3/packages/ssestream"
 )
 
+// imageStreamEventInfo carries the fields consumeImageStream validates, extracted
+// from a typed stream event union by the per-suite info func.
+type imageStreamEventInfo struct {
+	eventType         string
+	b64JSON           string
+	createdAtValid    bool
+	outputFormatValid bool
+	sizeValid         bool
+}
+
 // consumeImageStream drains an image generation/edit SSE stream, validating the
 // terminal "<prefix>.completed" event is reached and that no events follow it.
 // Partial-image events are accepted but not required (providers may omit them).
-// The info func extracts the event type and b64_json payload from a union event.
-func consumeImageStream[T any](suite string, stream *ssestream.Stream[T], prefix string, info func(T) (eventType, b64JSON string)) error {
+// Each event must carry the render-critical metadata (b64_json, created_at,
+// output_format, size) that the OpenAI API marks required on these events.
+func consumeImageStream[T any](suite string, stream *ssestream.Stream[T], prefix string, info func(T) imageStreamEventInfo) error {
 	var terminalReached bool
 	for stream.Next() {
+		ev := info(stream.Current())
 		if terminalReached {
-			return fail(suite, fmt.Sprintf("stream event after terminal %s.completed event", prefix))
+			return fail(suite, fmt.Sprintf("stream event %q after terminal %s.completed event", ev.eventType, prefix))
 		}
-		eventType, b64 := info(stream.Current())
-		switch eventType {
+		switch ev.eventType {
 		case prefix + ".partial_image":
-			if b64 == "" {
-				return fail(suite, "partial_image event missing b64_json")
+			if err := validateImageStreamEvent(suite, "partial_image", ev); err != nil {
+				return err
 			}
 		case prefix + ".completed":
-			if b64 == "" {
-				return fail(suite, "completed event missing b64_json")
+			if err := validateImageStreamEvent(suite, "completed", ev); err != nil {
+				return err
 			}
 			terminalReached = true
 		default:
-			return fail(suite, fmt.Sprintf("unexpected stream event type %q", eventType))
+			return fail(suite, fmt.Sprintf("unexpected stream event type %q", ev.eventType))
 		}
 	}
 	if err := stream.Err(); err != nil {
@@ -39,3 +50,23 @@ func consumeImageStream[T any](suite string, stream *ssestream.Stream[T], prefix
 	}
 	return nil
 }
+
+// validateImageStreamEvent checks the render-critical metadata on an image
+// stream event. quality/background are intentionally not enforced (informational
+// fields where providers may reasonably differ).
+func validateImageStreamEvent(suite, kind string, ev imageStreamEventInfo) error {
+	if ev.b64JSON == "" {
+		return fail(suite, kind+" event missing b64_json")
+	}
+	if !ev.createdAtValid {
+		return fail(suite, kind+" event missing created_at")
+	}
+	if !ev.outputFormatValid {
+		return fail(suite, kind+" event missing output_format")
+	}
+	if !ev.sizeValid {
+		return fail(suite, kind+" event missing size")
+	}
+	return nil
+}
+
