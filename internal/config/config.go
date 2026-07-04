@@ -416,7 +416,7 @@ func validateModelsForSuites(cfg *Config) error {
 			needsReasoning = true
 		case "images_generations", "images_edits":
 			needsImage = true
-		case "videos":
+		case "videos", "videos_variants":
 			needsVideo = true
 		case "audio_speech":
 			needsTTS = true
