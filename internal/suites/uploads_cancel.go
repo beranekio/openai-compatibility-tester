@@ -45,10 +45,12 @@ func (UploadsCancel) Run(ctx context.Context, client openai.Client, cfg *config.
 	if err != nil {
 		return fmt.Errorf("upload create failed: %w", err)
 	}
+	if created != nil {
+		uploadID = created.ID
+	}
 	if err := validateUploadObject("uploads_cancel", created); err != nil {
 		return err
 	}
-	uploadID = created.ID
 	if created.Status != openai.UploadStatusPending {
 		return fail("uploads_cancel", fmt.Sprintf("create status is %q, want pending", created.Status))
 	}
@@ -57,6 +59,10 @@ func (UploadsCancel) Run(ctx context.Context, client openai.Client, cfg *config.
 	if err != nil {
 		return fmt.Errorf("upload cancel failed: %w", err)
 	}
+	// The upload is cancelled on the server as soon as the call succeeds; mark
+	// it so the deferred cleanup doesn't issue a redundant cancel if response
+	// validation below fails.
+	cancelled = true
 	if err := validateUploadObject("uploads_cancel", result); err != nil {
 		return err
 	}
@@ -66,6 +72,5 @@ func (UploadsCancel) Run(ctx context.Context, client openai.Client, cfg *config.
 	if result.Status != openai.UploadStatusCancelled {
 		return fail("uploads_cancel", fmt.Sprintf("cancel status is %q, want cancelled", result.Status))
 	}
-	cancelled = true
 	return nil
 }
