@@ -23,15 +23,24 @@ type storedVideo struct {
 	remixedFromVideoID string
 }
 
+type storedVideoCharacter struct {
+	id        string
+	name      string
+	createdAt int64
+}
+
 type videoStore struct {
-	mu     sync.Mutex
-	next   int
-	videos map[string]storedVideo
+	mu          sync.Mutex
+	next        int
+	videos      map[string]storedVideo
+	nextChar    int
+	characters  map[string]storedVideoCharacter
 }
 
 func newVideoStore() *videoStore {
 	return &videoStore{
-		videos: make(map[string]storedVideo),
+		videos:     make(map[string]storedVideo),
+		characters: make(map[string]storedVideoCharacter),
 	}
 }
 
@@ -73,6 +82,65 @@ func (s *videoStore) get(id string) (storedVideo, bool) {
 	defer s.mu.Unlock()
 	video, ok := s.videos[id]
 	return video, ok
+}
+
+// createVariant stores a new completed video derived from a reference video
+// (edit/extend/remix) and returns it.
+func (s *videoStore) createVariant(model, prompt, seconds, size, remixedFromVideoID string) storedVideo {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.next++
+	if model == "" {
+		model = "sora-2"
+	}
+	if prompt == "" {
+		prompt = "mock video variant prompt"
+	}
+	if seconds == "" {
+		seconds = "4"
+	}
+	if size == "" {
+		size = "720x1280"
+	}
+	createdAt := int64(1700000000)
+	video := storedVideo{
+		id:                 "video_mock_" + strconv.Itoa(s.next),
+		model:              model,
+		prompt:             prompt,
+		seconds:            seconds,
+		size:               size,
+		status:             "completed",
+		progress:           100,
+		createdAt:          createdAt,
+		completedAt:        createdAt + 5,
+		expiresAt:          createdAt + 86400,
+		remixedFromVideoID: remixedFromVideoID,
+	}
+	s.videos[video.id] = video
+	return video
+}
+
+func (s *videoStore) createCharacter(name string) storedVideoCharacter {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.nextChar++
+	if name == "" {
+		name = "mock-character"
+	}
+	char := storedVideoCharacter{
+		id:        "videochar_mock_" + strconv.Itoa(s.nextChar),
+		name:      name,
+		createdAt: 1700000000,
+	}
+	s.characters[char.id] = char
+	return char
+}
+
+func (s *videoStore) getCharacter(id string) (storedVideoCharacter, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	char, ok := s.characters[id]
+	return char, ok
 }
 
 func (s *videoStore) list() []storedVideo {
@@ -128,4 +196,13 @@ func videoPayload(video storedVideo) map[string]any {
 		payload["expires_at"] = video.expiresAt
 	}
 	return payload
+}
+
+func videoCharacterPayload(char storedVideoCharacter) map[string]any {
+	return map[string]any{
+		"id":         char.id,
+		"object":     "video.character",
+		"created_at": char.createdAt,
+		"name":       char.name,
+	}
 }

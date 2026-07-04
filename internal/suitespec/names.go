@@ -64,6 +64,8 @@ var allNames = []string{
 	"containers",
 	"container_files",
 	"videos",
+	"videos_variants",
+	"videos_characters",
 	"skills",
 	"skill_versions",
 	"fine_tuning",
