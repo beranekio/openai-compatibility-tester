@@ -82,7 +82,7 @@ func (s *Server) handleVectorStoreFileContent(w http.ResponseWriter, r *http.Req
 		return
 	}
 	writeJSON(w, map[string]any{
-		"object": "list",
+		"object": "vector_store.file_content.page",
 		"data": []map[string]any{
 			{
 				"text": string(stored.bytes),
