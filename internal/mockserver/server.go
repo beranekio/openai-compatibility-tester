@@ -117,6 +117,8 @@ func newServerWithRoutes() *Server {
 	mux.HandleFunc("POST /v1/vector_stores/{id}/files", s.handleVectorStoreFileCreate)
 	mux.HandleFunc("GET /v1/vector_stores/{id}/files", s.handleVectorStoreFileList)
 	mux.HandleFunc("GET /v1/vector_stores/{id}/files/{fileID}", s.handleVectorStoreFileGet)
+	mux.HandleFunc("POST /v1/vector_stores/{id}/files/{fileID}", s.handleVectorStoreFileUpdate)
+	mux.HandleFunc("GET /v1/vector_stores/{id}/files/{fileID}/content", s.handleVectorStoreFileContent)
 	mux.HandleFunc("DELETE /v1/vector_stores/{id}/files/{fileID}", s.handleVectorStoreFileDelete)
 	mux.HandleFunc("POST /v1/vector_stores/{id}/file_batches", s.handleVectorStoreFileBatchCreate)
 	mux.HandleFunc("GET /v1/vector_stores/{id}/file_batches/{batchID}", s.handleVectorStoreFileBatchGet)

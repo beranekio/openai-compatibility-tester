@@ -66,7 +66,7 @@ Deprecated Assistants API suites (`assistants`, `assistants_threads`) are **opt-
 | `batches_list` | `client.Batches.List` | `GET /v1/batches` |
 | `conversations` | `client.Conversations.New`, `Get`, `Update`, `Delete`; `client.Conversations.Items.New`, `List`, `Get`, `Delete` | `POST/GET/DELETE /v1/conversations`, `POST/GET/DELETE /v1/conversations/{id}/items` |
 | `vector_stores` | `client.VectorStores.New`, `Get`, `Update`, `List`, `Search`, `Delete` | `POST/GET/DELETE /v1/vector_stores`, `POST /v1/vector_stores/{id}/search` |
-| `vector_store_files` | `client.VectorStores.Files.New`, `List`, `Get`, `Delete` | `POST/GET/DELETE /v1/vector_stores/{id}/files` |
+| `vector_store_files` | `client.VectorStores.Files.New`, `List`, `Get`, `Update`, `Content`, `Delete` | `POST/GET/DELETE /v1/vector_stores/{id}/files`, `POST /v1/vector_stores/{id}/files/{file_id}`, `GET /v1/vector_stores/{id}/files/{file_id}/content` |
 | `vector_store_file_batches` | `client.VectorStores.FileBatches.New`, `Get`, `ListFiles`, `Cancel` | `POST/GET /v1/vector_stores/{id}/file_batches`, `POST /v1/vector_stores/{id}/file_batches/{batch_id}/cancel` |
 | `realtime_client_secrets` | `client.Realtime.ClientSecrets.New` | `POST /v1/realtime/client_secrets` (WebSocket sessions not exercised) |
 | `containers` | `client.Containers.New`, `Get`, `List`, `Delete` | `POST /v1/containers`, `GET /v1/containers`, `GET/DELETE /v1/containers/{id}` |

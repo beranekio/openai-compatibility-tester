@@ -104,6 +104,77 @@ func (VectorStoreFiles) Run(ctx context.Context, client openai.Client, _ *config
 		return fail("vector_store_files", fmt.Sprintf("get file id is %q, want %q", got.ID, uploaded.ID))
 	}
 
+	// Update the file's attributes and validate the patch is reflected.
+	const attrKey = "compat_test"
+	const attrValue = "vector-store-file"
+	updatedFile, err := client.VectorStores.Files.Update(ctx, store.ID, uploaded.ID, openai.VectorStoreFileUpdateParams{
+		Attributes: map[string]openai.VectorStoreFileUpdateParamsAttributeUnion{
+			attrKey: {OfString: openai.String(attrValue)},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("vector store file update failed: %w", err)
+	}
+	if err := validateVectorStoreFileObject("vector_store_files", updatedFile, store.ID); err != nil {
+		return err
+	}
+	if !updatedFile.JSON.Attributes.Valid() {
+		return fail("vector_store_files", "update response missing attributes")
+	}
+	attr, ok := updatedFile.Attributes[attrKey]
+	if !ok {
+		return fail("vector_store_files", fmt.Sprintf("update response attributes missing key %q", attrKey))
+	}
+	if !attr.JSON.OfString.Valid() {
+		return fail("vector_store_files", fmt.Sprintf("update response attribute %q is not a string", attrKey))
+	}
+	if attr.AsString() != attrValue {
+		return fail("vector_store_files", fmt.Sprintf("update attribute %q is %q, want %q", attrKey, attr.AsString(), attrValue))
+	}
+
+	// Re-fetch to confirm the attribute persisted.
+	persisted, err := client.VectorStores.Files.Get(ctx, store.ID, uploaded.ID)
+	if err != nil {
+		return fmt.Errorf("vector store file get after update failed: %w", err)
+	}
+	if err := validateVectorStoreFileObject("vector_store_files", persisted, store.ID); err != nil {
+		return err
+	}
+	if persistedAttr, ok := persisted.Attributes[attrKey]; !ok || !persistedAttr.JSON.OfString.Valid() || persistedAttr.AsString() != attrValue {
+		return fail("vector_store_files", fmt.Sprintf("attribute %q did not persist after update", attrKey))
+	}
+
+	// Content retrieval requires a processed file; poll to completed so the
+	// suite doesn't false-fail against async providers (the mock is already
+	// completed, so this returns immediately in CI).
+	if err := waitForVectorStoreFileCompleted(ctx, client, "vector_store_files", store.ID, uploaded.ID); err != nil {
+		return err
+	}
+
+	// Retrieve the parsed file content and validate the SDK can decode it.
+	contentPage, err := client.VectorStores.Files.Content(ctx, store.ID, uploaded.ID)
+	if err != nil {
+		return fmt.Errorf("vector store file content failed: %w", err)
+	}
+	if contentPage == nil {
+		return fail("vector_store_files", "content page is nil")
+	}
+	if !contentPage.JSON.Data.Valid() {
+		return fail("vector_store_files", "content page missing data")
+	}
+	if contentPage.Object != "vector_store.file_content.page" {
+		return fail("vector_store_files", fmt.Sprintf("content page object is %q, want vector_store.file_content.page", contentPage.Object))
+	}
+	if len(contentPage.Data) == 0 {
+		return fail("vector_store_files", "content page has no data entries")
+	}
+	if contentPage.Data[0].Text == "" {
+		return fail("vector_store_files", "content page first entry has empty text")
+	}
+	if contentPage.Data[0].Type != "text" {
+		return fail("vector_store_files", fmt.Sprintf("content page first entry type is %q, want text", contentPage.Data[0].Type))
+	}
+
 	if err := expectVectorStoreFileDeleteNotFound(ctx, client, "vector_store_files", store.ID, otherUploaded.ID, "cross-store delete"); err != nil {
 		return err
 	}
@@ -320,6 +391,30 @@ func isVectorStoreFileStatusOK(status openai.VectorStoreFileStatus) bool {
 		return true
 	default:
 		return false
+	}
+}
+
+// waitForVectorStoreFileCompleted polls Get until the vector store file reaches
+// completed status. Content retrieval requires a processed file, and providers
+// may attach asynchronously (returning in_progress); polling avoids false
+// failures on those endpoints. Bounded by ctx.
+func waitForVectorStoreFileCompleted(ctx context.Context, client openai.Client, suite, vectorStoreID, fileID string) error {
+	for {
+		file, err := client.VectorStores.Files.Get(ctx, vectorStoreID, fileID)
+		if err != nil {
+			return fmt.Errorf("%s: vector store file get while polling failed: %w", suite, err)
+		}
+		if err := validateVectorStoreFileObject(suite, file, vectorStoreID); err != nil {
+			return err
+		}
+		if file.Status == openai.VectorStoreFileStatusCompleted {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("%s: timed out waiting for vector store file to complete: %w", suite, ctx.Err())
+		case <-time.After(2 * time.Second):
+		}
 	}
 }
 
