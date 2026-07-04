@@ -73,6 +73,7 @@ func All() []Suite {
 		AudioTranslations{},
 		Files{},
 		Uploads{},
+		UploadsCancel{},
 		BatchesCreate{},
 		BatchesGet{},
 		BatchesCancel{},
