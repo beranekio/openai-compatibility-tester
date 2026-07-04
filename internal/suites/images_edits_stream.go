@@ -40,11 +40,12 @@ func (ImagesEditsStream) Run(ctx context.Context, client openai.Client, cfg *con
 
 	return consumeImageStream("images_edits_stream", stream, "image_edit", func(e openai.ImageEditStreamEventUnion) imageStreamEventInfo {
 		return imageStreamEventInfo{
-			eventType:         e.Type,
-			b64JSON:           e.B64JSON,
-			createdAtValid:    e.JSON.CreatedAt.Valid(),
-			outputFormatValid: e.JSON.OutputFormat.Valid(),
-			sizeValid:         e.JSON.Size.Valid(),
+			eventType:              e.Type,
+			b64JSON:                e.B64JSON,
+			createdAtValid:         e.JSON.CreatedAt.Valid(),
+			outputFormatValid:      e.JSON.OutputFormat.Valid(),
+			sizeValid:              e.JSON.Size.Valid(),
+			partialImageIndexValid: e.JSON.PartialImageIndex.Valid(),
 		}
 	})
 }

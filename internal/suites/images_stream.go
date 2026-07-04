@@ -9,11 +9,12 @@ import (
 // imageStreamEventInfo carries the fields consumeImageStream validates, extracted
 // from a typed stream event union by the per-suite info func.
 type imageStreamEventInfo struct {
-	eventType         string
-	b64JSON           string
-	createdAtValid    bool
-	outputFormatValid bool
-	sizeValid         bool
+	eventType              string
+	b64JSON                string
+	createdAtValid         bool
+	outputFormatValid      bool
+	sizeValid              bool
+	partialImageIndexValid bool
 }
 
 // consumeImageStream drains an image generation/edit SSE stream, validating the
@@ -67,6 +68,8 @@ func validateImageStreamEvent(suite, kind string, ev imageStreamEventInfo) error
 	if !ev.sizeValid {
 		return fail(suite, kind+" event missing size")
 	}
+	if kind == "partial_image" && !ev.partialImageIndexValid {
+		return fail(suite, "partial_image event missing partial_image_index")
+	}
 	return nil
 }
-

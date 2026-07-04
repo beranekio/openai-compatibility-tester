@@ -38,11 +38,12 @@ func (ImagesGenerationsStream) Run(ctx context.Context, client openai.Client, cf
 
 	return consumeImageStream("images_generations_stream", stream, "image_generation", func(e openai.ImageGenStreamEventUnion) imageStreamEventInfo {
 		return imageStreamEventInfo{
-			eventType:         e.Type,
-			b64JSON:           e.B64JSON,
-			createdAtValid:    e.JSON.CreatedAt.Valid(),
-			outputFormatValid: e.JSON.OutputFormat.Valid(),
-			sizeValid:         e.JSON.Size.Valid(),
+			eventType:              e.Type,
+			b64JSON:                e.B64JSON,
+			createdAtValid:         e.JSON.CreatedAt.Valid(),
+			outputFormatValid:      e.JSON.OutputFormat.Valid(),
+			sizeValid:              e.JSON.Size.Valid(),
+			partialImageIndexValid: e.JSON.PartialImageIndex.Valid(),
 		}
 	})
 }
