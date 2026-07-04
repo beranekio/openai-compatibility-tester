@@ -367,7 +367,6 @@ func TestLoadRejectsEmptyModelForChatCompletionsUpdateSuite(t *testing.T) {
 		t.Fatalf("expected missing model error, got %v", err)
 	}
 }
-}
 
 func TestLoadAllowsBatchesCreateSuiteWithModel(t *testing.T) {
 	t.Setenv(EnvBaseURL, "https://example.com/v1")

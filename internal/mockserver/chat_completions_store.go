@@ -60,7 +60,10 @@ func (s *chatCompletionStore) delete(id string) bool {
 }
 
 // updateMetadata merges the given metadata into the stored completion payload
-// and returns a clone of the updated payload.
+// and returns a clone of the updated payload. It builds a fresh metadata map
+// rather than mutating the existing one in place, so previously returned
+// (shallow-cloned) payloads keep their nested metadata untouched and free of
+// data races.
 func (s *chatCompletionStore) updateMetadata(id string, metadata map[string]string) (map[string]any, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -68,14 +71,23 @@ func (s *chatCompletionStore) updateMetadata(id string, metadata map[string]stri
 	if !ok {
 		return nil, false
 	}
-	if payload["metadata"] == nil {
-		payload["metadata"] = map[string]string{}
+	merged := make(map[string]string, len(metadata))
+	switch existing := payload["metadata"].(type) {
+	case map[string]string:
+		for k, v := range existing {
+			merged[k] = v
+		}
+	case map[string]any:
+		for k, v := range existing {
+			if s, ok := v.(string); ok {
+				merged[k] = s
+			}
+		}
 	}
-	existing, _ := payload["metadata"].(map[string]string)
 	for k, v := range metadata {
-		existing[k] = v
+		merged[k] = v
 	}
-	payload["metadata"] = existing
+	payload["metadata"] = merged
 	return cloneMap(payload), true
 }
 

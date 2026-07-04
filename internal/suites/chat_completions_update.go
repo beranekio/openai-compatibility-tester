@@ -29,11 +29,7 @@ func (ChatCompletionsUpdate) Run(ctx context.Context, client openai.Client, cfg 
 	if err != nil {
 		return err
 	}
-	deleted := false
 	defer func() {
-		if deleted {
-			return
-		}
 		cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		_, _ = client.Chat.Completions.Delete(cleanupCtx, created.ID)
@@ -70,7 +66,6 @@ func (ChatCompletionsUpdate) Run(ctx context.Context, client openai.Client, cfg 
 	if err := validateChatCompletionMetadata("chat_completions_update", refetched.RawJSON(), metadataKey, metadataValue); err != nil {
 		return err
 	}
-	deleted = true
 	return nil
 }
 
