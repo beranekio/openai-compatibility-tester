@@ -1,7 +1,9 @@
 package mockserver
 
 import (
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -47,6 +49,24 @@ func (s *batchStore) get(id string) (storedBatch, bool) {
 		return storedBatch{}, false
 	}
 	return batch, true
+}
+
+// list returns a snapshot of all stored batches, newest first (matching the
+// OpenAI API's default ordering). Map iteration is randomized, so the result is
+// sorted by the numeric suffix of the allocated ID.
+func (s *batchStore) list() []storedBatch {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	items := make([]storedBatch, 0, len(s.batches))
+	for _, batch := range s.batches {
+		items = append(items, batch)
+	}
+	sort.Slice(items, func(i, j int) bool {
+		numI, _ := strconv.Atoi(strings.TrimPrefix(items[i].id, "batch-mock-"))
+		numJ, _ := strconv.Atoi(strings.TrimPrefix(items[j].id, "batch-mock-"))
+		return numI > numJ
+	})
+	return items
 }
 
 func (s *batchStore) advanceStatus(id string) (storedBatch, bool) {

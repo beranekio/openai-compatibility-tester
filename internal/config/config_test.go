@@ -346,6 +346,17 @@ func TestLoadRejectsEmptyModelForBatchesCreateSuite(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsEmptyModelForBatchesListSuite(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvModel, "")
+
+	_, err := Load([]string{"--suites", "batches_list", "--model="})
+	if err == nil || !strings.Contains(err.Error(), EnvModel) {
+		t.Fatalf("expected missing model error, got %v", err)
+	}
+}
+
 func TestLoadAllowsBatchesCreateSuiteWithModel(t *testing.T) {
 	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
