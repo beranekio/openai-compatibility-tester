@@ -622,6 +622,17 @@ func TestLoadRejectsVideosSuiteWithoutVideoModel(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsVideosVariantsSuiteWithoutVideoModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvVideoModel, "")
+
+	_, err := Load([]string{"--suites", "videos_variants"})
+	if err == nil || !strings.Contains(err.Error(), EnvVideoModel) {
+		t.Fatalf("expected missing video model error, got %v", err)
+	}
+}
+
 func TestLoadAllowsVideosSuiteWithVideoModel(t *testing.T) {
 	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")

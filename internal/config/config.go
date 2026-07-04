@@ -163,6 +163,8 @@ var FullSuites = []string{
 	"containers",
 	"container_files",
 	"videos",
+	"videos_variants",
+	"videos_characters",
 	"skills",
 	"skill_versions",
 	"fine_tuning",
@@ -414,7 +416,7 @@ func validateModelsForSuites(cfg *Config) error {
 			needsReasoning = true
 		case "images_generations", "images_edits":
 			needsImage = true
-		case "videos":
+		case "videos", "videos_variants":
 			needsVideo = true
 		case "audio_speech":
 			needsTTS = true

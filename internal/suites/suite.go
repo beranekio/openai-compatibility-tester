@@ -87,6 +87,8 @@ func All() []Suite {
 		Containers{},
 		ContainerFiles{},
 		Videos{},
+		VideosVariants{},
+		VideosCharacters{},
 		Skills{},
 		SkillVersions{},
 		FineTuning{},
@@ -147,7 +149,7 @@ func RequiredModels(names []string) ModelRequirements {
 			req.Transcription = true
 		case "realtime_client_secrets":
 			req.Realtime = true
-		case "videos":
+		case "videos", "videos_variants":
 			req.Video = true
 		}
 	}
