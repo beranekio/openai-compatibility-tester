@@ -61,6 +61,7 @@ Deprecated Assistants API suites (`assistants`, `assistants_threads`) are **opt-
 | `batches_create` | `client.Batches.New` | `POST /v1/batches` |
 | `batches_get` | `client.Batches.Get` | `GET /v1/batches/{id}` |
 | `batches_cancel` | `client.Batches.Cancel` | `POST /v1/batches/{id}/cancel` |
+| `batches_list` | `client.Batches.List` | `GET /v1/batches` |
 | `conversations` | `client.Conversations.New`, `Get`, `Update`, `Delete`; `client.Conversations.Items.New`, `List`, `Get`, `Delete` | `POST/GET/DELETE /v1/conversations`, `POST/GET/DELETE /v1/conversations/{id}/items` |
 | `vector_stores` | `client.VectorStores.New`, `Get`, `Update`, `List`, `Search`, `Delete` | `POST/GET/DELETE /v1/vector_stores`, `POST /v1/vector_stores/{id}/search` |
 | `vector_store_files` | `client.VectorStores.Files.New`, `List`, `Get`, `Delete` | `POST/GET/DELETE /v1/vector_stores/{id}/files` |

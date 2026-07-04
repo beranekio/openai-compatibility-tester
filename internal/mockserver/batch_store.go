@@ -49,6 +49,22 @@ func (s *batchStore) get(id string) (storedBatch, bool) {
 	return batch, true
 }
 
+// list returns a snapshot of all stored batches, newest first (matching the
+// OpenAI API's default ordering).
+func (s *batchStore) list() []storedBatch {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	items := make([]storedBatch, 0, len(s.batches))
+	for _, batch := range s.batches {
+		items = append(items, batch)
+	}
+	// Newest first: reverse insertion order, which mirrors allocateID growth.
+	for i, j := 0, len(items)-1; i < j; i, j = i+1, j-1 {
+		items[i], items[j] = items[j], items[i]
+	}
+	return items
+}
+
 func (s *batchStore) advanceStatus(id string) (storedBatch, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

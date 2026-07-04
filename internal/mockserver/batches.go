@@ -60,6 +60,27 @@ func (s *Server) handleBatchGet(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, batchObjectPayload(batch))
 }
 
+func (s *Server) handleBatchList(w http.ResponseWriter, _ *http.Request) {
+	items := s.batchStore.list()
+	data := make([]map[string]any, len(items))
+	firstID := ""
+	lastID := ""
+	for i, batch := range items {
+		data[i] = batchObjectPayload(batch)
+		if i == 0 {
+			firstID = batch.id
+		}
+		lastID = batch.id
+	}
+	writeJSON(w, map[string]any{
+		"object":   "list",
+		"data":     data,
+		"first_id": firstID,
+		"last_id":  lastID,
+		"has_more": false,
+	})
+}
+
 func (s *Server) handleBatchCancel(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	batch, ok := s.batchStore.cancel(id)

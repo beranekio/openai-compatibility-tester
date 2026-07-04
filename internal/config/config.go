@@ -151,6 +151,7 @@ var FullSuites = []string{
 	"batches_create",
 	"batches_get",
 	"batches_cancel",
+	"batches_list",
 	"conversations",
 	"vector_stores",
 	"vector_store_files",

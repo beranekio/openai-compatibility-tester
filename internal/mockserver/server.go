@@ -96,6 +96,7 @@ func newServerWithRoutes() *Server {
 	mux.HandleFunc("POST /v1/uploads/{id}/complete", s.handleUploadComplete)
 	mux.HandleFunc("POST /v1/uploads/{id}/cancel", s.handleUploadCancel)
 	mux.HandleFunc("POST /v1/batches", s.handleBatchCreate)
+	mux.HandleFunc("GET /v1/batches", s.handleBatchList)
 	mux.HandleFunc("GET /v1/batches/{id}", s.handleBatchGet)
 	mux.HandleFunc("POST /v1/batches/{id}/cancel", s.handleBatchCancel)
 	mux.HandleFunc("POST /v1/conversations", s.handleConversationCreate)
