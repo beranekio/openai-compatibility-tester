@@ -19,7 +19,7 @@ func (VideosCharacters) Description() string {
 	return "Videos API characters (POST /v1/videos/characters, then GET /v1/videos/characters/{id})"
 }
 
-func (VideosCharacters) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
+func (VideosCharacters) Run(ctx context.Context, client openai.Client, _ *config.Config) error {
 	const characterName = "compat-test-character"
 	created, err := client.Videos.NewCharacter(ctx, openai.VideoNewCharacterParams{
 		Name: characterName,
