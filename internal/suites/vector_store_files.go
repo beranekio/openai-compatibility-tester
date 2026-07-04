@@ -104,6 +104,64 @@ func (VectorStoreFiles) Run(ctx context.Context, client openai.Client, _ *config
 		return fail("vector_store_files", fmt.Sprintf("get file id is %q, want %q", got.ID, uploaded.ID))
 	}
 
+	// Update the file's attributes and validate the patch is reflected.
+	const attrKey = "compat_test"
+	const attrValue = "vector-store-file"
+	updatedFile, err := client.VectorStores.Files.Update(ctx, store.ID, uploaded.ID, openai.VectorStoreFileUpdateParams{
+		Attributes: map[string]openai.VectorStoreFileUpdateParamsAttributeUnion{
+			attrKey: {OfString: openai.String(attrValue)},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("vector store file update failed: %w", err)
+	}
+	if err := validateVectorStoreFileObject("vector_store_files", updatedFile, store.ID); err != nil {
+		return err
+	}
+	if !updatedFile.JSON.Attributes.Valid() {
+		return fail("vector_store_files", "update response missing attributes")
+	}
+	attr, ok := updatedFile.Attributes[attrKey]
+	if !ok {
+		return fail("vector_store_files", fmt.Sprintf("update response attributes missing key %q", attrKey))
+	}
+	if !attr.JSON.OfString.Valid() {
+		return fail("vector_store_files", fmt.Sprintf("update response attribute %q is not a string", attrKey))
+	}
+	if attr.AsString() != attrValue {
+		return fail("vector_store_files", fmt.Sprintf("update attribute %q is %q, want %q", attrKey, attr.AsString(), attrValue))
+	}
+
+	// Re-fetch to confirm the attribute persisted.
+	persisted, err := client.VectorStores.Files.Get(ctx, store.ID, uploaded.ID)
+	if err != nil {
+		return fmt.Errorf("vector store file get after update failed: %w", err)
+	}
+	if persistedAttr, ok := persisted.Attributes[attrKey]; !ok || !persistedAttr.JSON.OfString.Valid() || persistedAttr.AsString() != attrValue {
+		return fail("vector_store_files", fmt.Sprintf("attribute %q did not persist after update", attrKey))
+	}
+
+	// Retrieve the parsed file content and validate the SDK can decode it.
+	contentPage, err := client.VectorStores.Files.Content(ctx, store.ID, uploaded.ID)
+	if err != nil {
+		return fmt.Errorf("vector store file content failed: %w", err)
+	}
+	if contentPage == nil {
+		return fail("vector_store_files", "content page is nil")
+	}
+	if !contentPage.JSON.Data.Valid() {
+		return fail("vector_store_files", "content page missing data")
+	}
+	if len(contentPage.Data) == 0 {
+		return fail("vector_store_files", "content page has no data entries")
+	}
+	if contentPage.Data[0].Text == "" {
+		return fail("vector_store_files", "content page first entry has empty text")
+	}
+	if contentPage.Data[0].Type != "text" {
+		return fail("vector_store_files", fmt.Sprintf("content page first entry type is %q, want text", contentPage.Data[0].Type))
+	}
+
 	if err := expectVectorStoreFileDeleteNotFound(ctx, client, "vector_store_files", store.ID, otherUploaded.ID, "cross-store delete"); err != nil {
 		return err
 	}

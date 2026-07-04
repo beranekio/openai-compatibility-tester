@@ -51,6 +51,47 @@ func (s *Server) handleVectorStoreFileGet(w http.ResponseWriter, r *http.Request
 	writeJSON(w, vectorStoreFilePayload(file))
 }
 
+func (s *Server) handleVectorStoreFileUpdate(w http.ResponseWriter, r *http.Request) {
+	vectorStoreID := r.PathValue("id")
+	fileID := r.PathValue("fileID")
+	var req struct {
+		Attributes map[string]any `json:"attributes"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	file, ok := s.vectorStoreStore.updateFile(vectorStoreID, fileID, req.Attributes)
+	if !ok {
+		writeNotFound(w, "Vector store file not found", "file_id")
+		return
+	}
+	writeJSON(w, vectorStoreFilePayload(file))
+}
+
+func (s *Server) handleVectorStoreFileContent(w http.ResponseWriter, r *http.Request) {
+	vectorStoreID := r.PathValue("id")
+	fileID := r.PathValue("fileID")
+	if _, ok := s.vectorStoreStore.getFile(vectorStoreID, fileID); !ok {
+		writeNotFound(w, "Vector store file not found", "file_id")
+		return
+	}
+	stored, ok := s.fileStore.get(fileID)
+	if !ok {
+		writeNotFound(w, "File not found", "file_id")
+		return
+	}
+	writeJSON(w, map[string]any{
+		"object": "list",
+		"data": []map[string]any{
+			{
+				"text": string(stored.bytes),
+				"type": "text",
+			},
+		},
+	})
+}
+
 func (s *Server) handleVectorStoreFileDelete(w http.ResponseWriter, r *http.Request) {
 	vectorStoreID := r.PathValue("id")
 	fileID := r.PathValue("fileID")

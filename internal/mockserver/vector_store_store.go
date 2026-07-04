@@ -149,6 +149,30 @@ func (s *vectorStoreStore) getFile(vectorStoreID, fileID string) (storedVectorSt
 	return cloneVectorStoreFile(file), true
 }
 
+// updateFile merges the given attributes into the stored vector store file and
+// returns a clone of the updated file.
+func (s *vectorStoreStore) updateFile(vectorStoreID, fileID string, attributes map[string]any) (storedVectorStoreFile, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	store, ok := s.stores[vectorStoreID]
+	if !ok {
+		return storedVectorStoreFile{}, false
+	}
+	file, ok := store.files[fileID]
+	if !ok {
+		return storedVectorStoreFile{}, false
+	}
+	if file.attributes == nil {
+		file.attributes = map[string]any{}
+	}
+	for k, v := range attributes {
+		file.attributes[k] = v
+	}
+	store.files[fileID] = file
+	s.stores[vectorStoreID] = store
+	return cloneVectorStoreFile(file), true
+}
+
 func (s *vectorStoreStore) deleteFile(vectorStoreID, fileID string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
