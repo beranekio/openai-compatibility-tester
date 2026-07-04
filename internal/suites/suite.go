@@ -68,6 +68,8 @@ func All() []Suite {
 		ImagesGenerations{},
 		ImagesEdits{},
 		ImagesVariations{},
+		ImagesGenerationsStream{},
+		ImagesEditsStream{},
 		AudioSpeech{},
 		AudioTranscriptions{},
 		AudioTranscriptionsStream{},
@@ -139,7 +141,7 @@ func RequiredModels(names []string) ModelRequirements {
 			req.Vision = true
 		case "chat_completions_reasoning":
 			req.Reasoning = true
-		case "images_generations", "images_edits":
+		case "images_generations", "images_edits", "images_generations_stream", "images_edits_stream":
 			req.Image = true
 		case "audio_speech":
 			req.TTS = true
