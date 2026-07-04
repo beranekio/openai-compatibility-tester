@@ -15,6 +15,7 @@ type imageStreamEventInfo struct {
 	outputFormatValid      bool
 	sizeValid              bool
 	partialImageIndexValid bool
+	partialImageIndex      int64
 }
 
 // consumeImageStream drains an image generation/edit SSE stream, validating the
@@ -24,6 +25,7 @@ type imageStreamEventInfo struct {
 // output_format, size) that the OpenAI API marks required on these events.
 func consumeImageStream[T any](suite string, stream *ssestream.Stream[T], prefix string, info func(T) imageStreamEventInfo) error {
 	var terminalReached bool
+	var nextPartialIndex int64
 	for stream.Next() {
 		ev := info(stream.Current())
 		if terminalReached {
@@ -34,6 +36,12 @@ func consumeImageStream[T any](suite string, stream *ssestream.Stream[T], prefix
 			if err := validateImageStreamEvent(suite, "partial_image", ev); err != nil {
 				return err
 			}
+			// partial_image_index is 0-based and increments across partials;
+			// clients use it to order partial images.
+			if ev.partialImageIndex != nextPartialIndex {
+				return fail(suite, fmt.Sprintf("partial_image index is %d, want %d", ev.partialImageIndex, nextPartialIndex))
+			}
+			nextPartialIndex++
 		case prefix + ".completed":
 			if err := validateImageStreamEvent(suite, "completed", ev); err != nil {
 				return err

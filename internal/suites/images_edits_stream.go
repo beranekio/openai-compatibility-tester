@@ -46,6 +46,7 @@ func (ImagesEditsStream) Run(ctx context.Context, client openai.Client, cfg *con
 			outputFormatValid:      e.JSON.OutputFormat.Valid(),
 			sizeValid:              e.JSON.Size.Valid(),
 			partialImageIndexValid: e.JSON.PartialImageIndex.Valid(),
+			partialImageIndex:      e.PartialImageIndex,
 		}
 	})
 }
