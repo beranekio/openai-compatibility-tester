@@ -33,6 +33,7 @@ Deprecated Assistants API suites (`assistants`, `assistants_threads`) are **opt-
 | `chat_completions_list` | `client.Chat.Completions.List` | `GET /v1/chat/completions` |
 | `chat_completions_delete` | `client.Chat.Completions.Delete` | `DELETE /v1/chat/completions/{id}` |
 | `chat_completions_messages` | `client.Chat.Completions.Messages.List` | `GET /v1/chat/completions/{id}/messages` |
+| `chat_completions_update` | `client.Chat.Completions.Update` | `POST /v1/chat/completions/{id}` (update metadata) |
 | `completions` | `client.Completions.New` | `POST /v1/completions` |
 | `completions_stream` | `client.Completions.NewStreaming` | `POST /v1/completions` (stream) |
 | `embeddings` | `client.Embeddings.New` | `POST /v1/embeddings` |

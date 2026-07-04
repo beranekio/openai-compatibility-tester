@@ -1,12 +1,39 @@
 package mockserver
 
 import (
+	"encoding/json"
 	"net/http"
 )
 
 func (s *Server) handleChatCompletionGet(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	payload, ok := s.chatStore.get(id)
+	if !ok {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		writeJSON(w, map[string]any{
+			"error": map[string]any{
+				"message": "Chat completion not found",
+				"type":    "invalid_request_error",
+				"param":   "id",
+				"code":    "not_found",
+			},
+		})
+		return
+	}
+	writeJSON(w, payload)
+}
+
+func (s *Server) handleChatCompletionUpdate(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var req struct {
+		Metadata map[string]string `json:"metadata"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	payload, ok := s.chatStore.updateMetadata(id, req.Metadata)
 	if !ok {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
