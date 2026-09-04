@@ -936,6 +936,74 @@ func TestLoadAllowsReasoningSuiteWithExplicitReasoningModel(t *testing.T) {
 	}
 }
 
+func TestLoadAllowsResponsesVisionWithoutChatOrResponsesModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvModel, "")
+	t.Setenv(EnvResponsesModel, "")
+	t.Setenv(EnvVisionModel, "gpt-4o")
+
+	cfg, err := Load([]string{"--suites", "responses_vision", "--model="})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.VisionModel != "gpt-4o" {
+		t.Fatalf("VisionModel = %q, want gpt-4o", cfg.VisionModel)
+	}
+}
+
+func TestLoadAllowsResponsesReasoningWithoutChatOrResponsesModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvModel, "")
+	t.Setenv(EnvResponsesModel, "")
+	t.Setenv(EnvReasoningModel, "o3-mini")
+
+	cfg, err := Load([]string{"--suites", "responses_reasoning", "--model="})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.ReasoningModel != "o3-mini" {
+		t.Fatalf("ReasoningModel = %q, want o3-mini", cfg.ReasoningModel)
+	}
+}
+
+func TestLoadRejectsResponsesReasoningSuiteWithoutReasoningModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvReasoningModel, "")
+
+	_, err := Load([]string{"--suites", "responses_reasoning"})
+	if err == nil || !strings.Contains(err.Error(), EnvReasoningModel) {
+		t.Fatalf("expected missing reasoning model error, got %v", err)
+	}
+}
+
+func TestLoadRejectsAudioSpeechStreamWithoutTTSModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvTTSModel, "")
+
+	_, err := Load([]string{"--suites", "audio_speech_stream"})
+	if err == nil || !strings.Contains(err.Error(), EnvTTSModel) {
+		t.Fatalf("expected missing TTS model error, got %v", err)
+	}
+}
+
+func TestLoadAllowsTranscriptionClientSecretsWithoutRealtimeModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvRealtimeModel, "")
+
+	cfg, err := Load([]string{"--suites", "realtime_transcription_client_secrets"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.RealtimeModel != "" {
+		t.Fatalf("RealtimeModel = %q, want empty", cfg.RealtimeModel)
+	}
+}
+
 func TestLoadAdminAPIKeyFromEnv(t *testing.T) {
 	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")

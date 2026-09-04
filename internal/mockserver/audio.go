@@ -44,10 +44,34 @@ func mockChatCompletionWAVBytes() []byte {
 	return b.Bytes()
 }
 
-func handleAudioSpeech(w http.ResponseWriter, _ *http.Request) {
+func handleAudioSpeech(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		StreamFormat string `json:"stream_format"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	if req.StreamFormat == "sse" {
+		writeAudioSpeechStream(w)
+		return
+	}
 	w.Header().Set("Content-Type", "audio/mpeg")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(mockAudioBytes)
+}
+
+func writeAudioSpeechStream(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.WriteHeader(http.StatusOK)
+
+	delta, _ := json.Marshal(map[string]any{
+		"type":  "speech.audio.delta",
+		"audio": "AA==",
+	})
+	_, _ = w.Write([]byte("data: " + string(delta) + "\n\n"))
+
+	done, _ := json.Marshal(map[string]any{
+		"type": "speech.audio.done",
+	})
+	_, _ = w.Write([]byte("data: " + string(done) + "\n\n"))
 }
 
 func handleAudioTranscriptions(w http.ResponseWriter, r *http.Request) {

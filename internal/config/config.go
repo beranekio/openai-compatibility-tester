@@ -14,28 +14,28 @@ import (
 )
 
 const (
-	EnvBaseURL            = "OPENAI_BASE_URL"
-	EnvAPIKey             = "OPENAI_API_KEY"
-	EnvOrgID              = "OPENAI_ORG_ID"
-	EnvProjectID          = "OPENAI_PROJECT_ID"
-	EnvAdminAPIKey        = "OPENAI_ADMIN_API_KEY"
-	EnvModel              = "OPENAI_MODEL"
-	EnvCompletionModel    = "OPENAI_COMPLETION_MODEL"
-	EnvEmbeddingModel     = "OPENAI_EMBEDDING_MODEL"
-	EnvResponsesModel     = "OPENAI_RESPONSES_MODEL"
-	EnvVisionModel        = "OPENAI_VISION_MODEL"
-	EnvReasoningModel     = "OPENAI_REASONING_MODEL"
-	EnvImageModel         = "OPENAI_IMAGE_MODEL"
-	EnvVideoModel         = "OPENAI_VIDEO_MODEL"
-	EnvTTSModel           = "OPENAI_TTS_MODEL"
-	EnvWhisperModel       = "OPENAI_WHISPER_MODEL"
-	EnvTranscriptionModel = "OPENAI_TRANSCRIPTION_MODEL"
+	EnvBaseURL             = "OPENAI_BASE_URL"
+	EnvAPIKey              = "OPENAI_API_KEY"
+	EnvOrgID               = "OPENAI_ORG_ID"
+	EnvProjectID           = "OPENAI_PROJECT_ID"
+	EnvAdminAPIKey         = "OPENAI_ADMIN_API_KEY"
+	EnvModel               = "OPENAI_MODEL"
+	EnvCompletionModel     = "OPENAI_COMPLETION_MODEL"
+	EnvEmbeddingModel      = "OPENAI_EMBEDDING_MODEL"
+	EnvResponsesModel      = "OPENAI_RESPONSES_MODEL"
+	EnvVisionModel         = "OPENAI_VISION_MODEL"
+	EnvReasoningModel      = "OPENAI_REASONING_MODEL"
+	EnvImageModel          = "OPENAI_IMAGE_MODEL"
+	EnvVideoModel          = "OPENAI_VIDEO_MODEL"
+	EnvTTSModel            = "OPENAI_TTS_MODEL"
+	EnvWhisperModel        = "OPENAI_WHISPER_MODEL"
+	EnvTranscriptionModel  = "OPENAI_TRANSCRIPTION_MODEL"
 	EnvRealtimeModel       = "OPENAI_REALTIME_MODEL"
 	EnvChatKitWorkflowID   = "OPENAI_CHATKIT_WORKFLOW_ID"
 	EnvChatKitTestThreadID = "OPENAI_CHATKIT_TEST_THREAD_ID"
-	EnvTestSuites         = "TEST_SUITES"
-	EnvRequestTimeout     = "REQUEST_TIMEOUT"
-	EnvAllowInsecureHTTP  = "ALLOW_INSECURE_HTTP"
+	EnvTestSuites          = "TEST_SUITES"
+	EnvRequestTimeout      = "REQUEST_TIMEOUT"
+	EnvAllowInsecureHTTP   = "ALLOW_INSECURE_HTTP"
 
 	// DefaultCompletionModel is used when the completions suite is selected without
 	// an explicit completion model. Legacy /v1/completions expects instruct models.
@@ -89,6 +89,10 @@ var ExtendedSuites = []string{
 	"responses_input_items",
 	"responses_compact",
 	"responses_input_tokens",
+	"responses_vision",
+	"responses_reasoning",
+	"responses_web_search",
+	"responses_multi_turn",
 	"completions",
 	"completions_stream",
 	"embeddings",
@@ -96,9 +100,11 @@ var ExtendedSuites = []string{
 	"chat_completions_vision",
 	"chat_completions_reasoning",
 	"moderations",
+	"moderations_image",
 	"images_generations",
 	"images_edits",
 	"audio_speech",
+	"audio_speech_stream",
 	"audio_transcriptions",
 	"audio_transcriptions_stream",
 	"audio_translations",
@@ -117,6 +123,7 @@ var FullSuites = []string{
 	"chat_completions_vision",
 	"chat_completions_reasoning",
 	"chat_completions_audio",
+	"chat_completions_audio_input",
 	"chat_completions_tools",
 	"chat_completions_tools_stream",
 	"chat_completions_multi_turn",
@@ -140,17 +147,25 @@ var FullSuites = []string{
 	"responses_input_items",
 	"responses_compact",
 	"responses_input_tokens",
+	"responses_vision",
+	"responses_reasoning",
+	"responses_web_search",
+	"responses_file_search",
+	"responses_multi_turn",
 	"moderations",
+	"moderations_image",
 	"images_generations",
 	"images_edits",
 	"images_generations_stream",
 	"images_edits_stream",
 	"images_variations",
 	"audio_speech",
+	"audio_speech_stream",
 	"audio_transcriptions",
 	"audio_transcriptions_stream",
 	"audio_translations",
 	"files",
+	"content_provenance_checks",
 	"uploads",
 	"uploads_cancel",
 	"batches_create",
@@ -162,6 +177,7 @@ var FullSuites = []string{
 	"vector_store_files",
 	"vector_store_file_batches",
 	"realtime_client_secrets",
+	"realtime_transcription_client_secrets",
 	"containers",
 	"container_files",
 	"videos",
@@ -177,32 +193,31 @@ var FullSuites = []string{
 	"error_responses",
 }
 
-
 // Config holds runtime settings for compatibility testing.
 type Config struct {
-	BaseURL            string
-	APIKey             string
-	OrgID              string
-	ProjectID          string
-	AdminAPIKey        string
-	Model              string
-	CompletionModel    string
-	EmbeddingModel     string
-	ResponsesModel     string
-	VisionModel        string
-	ReasoningModel     string
-	ImageModel         string
-	VideoModel         string
-	TTSModel           string
-	WhisperModel       string
-	TranscriptionModel string
+	BaseURL             string
+	APIKey              string
+	OrgID               string
+	ProjectID           string
+	AdminAPIKey         string
+	Model               string
+	CompletionModel     string
+	EmbeddingModel      string
+	ResponsesModel      string
+	VisionModel         string
+	ReasoningModel      string
+	ImageModel          string
+	VideoModel          string
+	TTSModel            string
+	WhisperModel        string
+	TranscriptionModel  string
 	RealtimeModel       string
 	ChatKitWorkflowID   string
 	ChatKitTestThreadID string
-	Suites             []string
-	RequestTimeout     time.Duration
-	AllowInsecureHTTP  bool
-	ListSuites         bool
+	Suites              []string
+	RequestTimeout      time.Duration
+	AllowInsecureHTTP   bool
+	ListSuites          bool
 }
 
 // Load parses configuration from environment variables and command-line flags.
@@ -246,28 +261,28 @@ func Load(args []string) (*Config, error) {
 	}
 
 	cfg := &Config{
-		BaseURL:            strings.TrimRight(strings.TrimSpace(*baseURL), "/"),
-		APIKey:             strings.TrimSpace(*apiKey),
-		OrgID:              strings.TrimSpace(*orgID),
-		ProjectID:          strings.TrimSpace(*projectID),
-		AdminAPIKey:        strings.TrimSpace(*adminAPIKey),
-		Model:              strings.TrimSpace(*model),
-		CompletionModel:    strings.TrimSpace(*completionModel),
-		EmbeddingModel:     strings.TrimSpace(*embeddingModel),
-		ResponsesModel:     strings.TrimSpace(*responsesModel),
-		VisionModel:        strings.TrimSpace(*visionModel),
-		ReasoningModel:     strings.TrimSpace(*reasoningModel),
-		ImageModel:         strings.TrimSpace(*imageModel),
-		VideoModel:         strings.TrimSpace(*videoModel),
-		TTSModel:           strings.TrimSpace(*ttsModel),
-		WhisperModel:       strings.TrimSpace(*whisperModel),
+		BaseURL:             strings.TrimRight(strings.TrimSpace(*baseURL), "/"),
+		APIKey:              strings.TrimSpace(*apiKey),
+		OrgID:               strings.TrimSpace(*orgID),
+		ProjectID:           strings.TrimSpace(*projectID),
+		AdminAPIKey:         strings.TrimSpace(*adminAPIKey),
+		Model:               strings.TrimSpace(*model),
+		CompletionModel:     strings.TrimSpace(*completionModel),
+		EmbeddingModel:      strings.TrimSpace(*embeddingModel),
+		ResponsesModel:      strings.TrimSpace(*responsesModel),
+		VisionModel:         strings.TrimSpace(*visionModel),
+		ReasoningModel:      strings.TrimSpace(*reasoningModel),
+		ImageModel:          strings.TrimSpace(*imageModel),
+		VideoModel:          strings.TrimSpace(*videoModel),
+		TTSModel:            strings.TrimSpace(*ttsModel),
+		WhisperModel:        strings.TrimSpace(*whisperModel),
 		TranscriptionModel:  strings.TrimSpace(*transcriptionModel),
 		RealtimeModel:       strings.TrimSpace(*realtimeModel),
 		ChatKitWorkflowID:   strings.TrimSpace(*chatKitWorkflowID),
 		ChatKitTestThreadID: strings.TrimSpace(*chatKitTestThreadID),
 		RequestTimeout:      *timeout,
-		AllowInsecureHTTP:  *allowInsecureHTTP,
-		ListSuites:         *listSuites,
+		AllowInsecureHTTP:   *allowInsecureHTTP,
+		ListSuites:          *listSuites,
 	}
 
 	if cfg.ListSuites {
@@ -404,23 +419,23 @@ func validateModelsForSuites(cfg *Config) error {
 	var needsVision, needsReasoning, needsImage, needsVideo, needsTTS, needsWhisper, needsTranscription, needsRealtime, needsChatKitWorkflow bool
 	for _, name := range cfg.Suites {
 		switch name {
-		case "chat_completions", "chat_completions_stream", "chat_completions_stream_usage", "chat_completions_logprobs", "chat_completions_json", "chat_completions_audio", "chat_completions_tools", "chat_completions_tools_stream", "chat_completions_multi_turn", "chat_completions_get", "chat_completions_list", "chat_completions_delete", "chat_completions_messages", "chat_completions_update", "models_get", "batches_create", "batches_get", "batches_cancel", "batches_list", "fine_tuning", "assistants", "assistants_threads":
+		case "chat_completions", "chat_completions_stream", "chat_completions_stream_usage", "chat_completions_logprobs", "chat_completions_json", "chat_completions_audio", "chat_completions_audio_input", "chat_completions_tools", "chat_completions_tools_stream", "chat_completions_multi_turn", "chat_completions_get", "chat_completions_list", "chat_completions_delete", "chat_completions_messages", "chat_completions_update", "models_get", "batches_create", "batches_get", "batches_cancel", "batches_list", "fine_tuning", "assistants", "assistants_threads":
 			needsChat = true
-		case "responses", "responses_stream", "responses_tools", "responses_tools_stream", "responses_json", "responses_get", "responses_delete", "responses_cancel", "responses_input_items", "responses_compact", "responses_input_tokens":
+		case "responses", "responses_stream", "responses_tools", "responses_tools_stream", "responses_json", "responses_get", "responses_delete", "responses_cancel", "responses_input_items", "responses_compact", "responses_input_tokens", "responses_web_search", "responses_file_search", "responses_multi_turn":
 			needsResponses = true
 		case "completions", "completions_stream":
 			needsCompletion = true
 		case "embeddings", "embeddings_batch":
 			needsEmbedding = true
-		case "chat_completions_vision":
+		case "chat_completions_vision", "responses_vision":
 			needsVision = true
-		case "chat_completions_reasoning":
+		case "chat_completions_reasoning", "responses_reasoning":
 			needsReasoning = true
 		case "images_generations", "images_edits", "images_generations_stream", "images_edits_stream":
 			needsImage = true
 		case "videos", "videos_variants":
 			needsVideo = true
-		case "audio_speech":
+		case "audio_speech", "audio_speech_stream":
 			needsTTS = true
 		case "audio_transcriptions", "audio_translations":
 			needsWhisper = true
