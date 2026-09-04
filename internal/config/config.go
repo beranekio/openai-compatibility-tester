@@ -429,10 +429,8 @@ func validateModelsForSuites(cfg *Config) error {
 			needsEmbedding = true
 		case "chat_completions_vision", "responses_vision":
 			needsVision = true
-			needsResponses = needsResponses || name == "responses_vision"
 		case "chat_completions_reasoning", "responses_reasoning":
 			needsReasoning = true
-			needsResponses = needsResponses || name == "responses_reasoning"
 		case "images_generations", "images_edits", "images_generations_stream", "images_edits_stream":
 			needsImage = true
 		case "videos", "videos_variants":

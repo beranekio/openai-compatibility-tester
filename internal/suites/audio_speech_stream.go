@@ -60,7 +60,7 @@ func consumeSpeechAudioStream(suite string, resp *http.Response) error {
 	}
 	defer resp.Body.Close()
 
-	var terminalReached bool
+	var terminalReached, sawDelta bool
 	scanner := bufio.NewScanner(resp.Body)
 	// Real TTS SSE data lines carry base64 audio and exceed the default 64KiB token cap.
 	scanner.Buffer(make([]byte, 64*1024), 8*1024*1024)
@@ -84,6 +84,7 @@ func consumeSpeechAudioStream(suite string, resp *http.Response) error {
 		}
 		switch ev.Type {
 		case "speech.audio.delta":
+			sawDelta = true
 		case "speech.audio.done":
 			terminalReached = true
 		default:
@@ -92,6 +93,9 @@ func consumeSpeechAudioStream(suite string, resp *http.Response) error {
 	}
 	if err := scanner.Err(); err != nil {
 		return fmt.Errorf("%s stream failed: %w", suite, err)
+	}
+	if !sawDelta {
+		return fail(suite, "stream ended without speech.audio.delta event")
 	}
 	if !terminalReached {
 		return fail(suite, "stream ended without speech.audio.done event")
