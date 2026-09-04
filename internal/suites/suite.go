@@ -159,7 +159,7 @@ func RequiredModels(names []string) ModelRequirements {
 			req.Whisper = true
 		case "audio_transcriptions_stream":
 			req.Transcription = true
-		case "realtime_client_secrets", "realtime_transcription_client_secrets":
+		case "realtime_client_secrets":
 			req.Realtime = true
 		case "videos", "videos_variants":
 			req.Video = true

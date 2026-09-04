@@ -398,7 +398,7 @@ func suiteNeedsCompletion(names []string) bool {
 
 func suiteNeedsRealtime(names []string) bool {
 	for _, name := range names {
-		if name == "realtime_client_secrets" || name == "realtime_transcription_client_secrets" {
+		if name == "realtime_client_secrets" {
 			return true
 		}
 	}
@@ -441,7 +441,7 @@ func validateModelsForSuites(cfg *Config) error {
 			needsWhisper = true
 		case "audio_transcriptions_stream":
 			needsTranscription = true
-		case "realtime_client_secrets", "realtime_transcription_client_secrets":
+		case "realtime_client_secrets":
 			needsRealtime = true
 		case "chatkit_sessions":
 			needsChatKitWorkflow = true

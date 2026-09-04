@@ -990,7 +990,7 @@ func TestLoadRejectsAudioSpeechStreamWithoutTTSModel(t *testing.T) {
 	}
 }
 
-func TestLoadDefaultsRealtimeModelForTranscriptionClientSecretsSuite(t *testing.T) {
+func TestLoadAllowsTranscriptionClientSecretsWithoutRealtimeModel(t *testing.T) {
 	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")
 	t.Setenv(EnvRealtimeModel, "")
@@ -999,8 +999,8 @@ func TestLoadDefaultsRealtimeModelForTranscriptionClientSecretsSuite(t *testing.
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if cfg.RealtimeModel != DefaultRealtimeModel {
-		t.Fatalf("RealtimeModel = %q, want %q", cfg.RealtimeModel, DefaultRealtimeModel)
+	if cfg.RealtimeModel != "" {
+		t.Fatalf("RealtimeModel = %q, want empty", cfg.RealtimeModel)
 	}
 }
 

@@ -111,7 +111,7 @@ Most suites reuse `OPENAI_MODEL` / `OPENAI_RESPONSES_MODEL`. The following varia
 | `OPENAI_TTS_MODEL` | `audio_speech`, `audio_speech_stream` | — | Text-to-speech model |
 | `OPENAI_WHISPER_MODEL` | `audio_transcriptions`, `audio_translations` | — | e.g. `whisper-1` |
 | `OPENAI_TRANSCRIPTION_MODEL` | `audio_transcriptions_stream` | — | e.g. `gpt-4o-mini-transcribe` |
-| `OPENAI_REALTIME_MODEL` | `realtime_client_secrets`, `realtime_transcription_client_secrets` | `gpt-realtime` | Realtime API |
+| `OPENAI_REALTIME_MODEL` | `realtime_client_secrets` | `gpt-realtime` | Realtime API |
 | `OPENAI_ADMIN_API_KEY` | `fine_tuning` (permissions only) | — | Skipped when unset |
 | `OPENAI_CHATKIT_WORKFLOW_ID` | `chatkit_sessions` | `wf_mock_compat_test` (when selected) | Set explicitly for real endpoints |
 | `OPENAI_CHATKIT_TEST_THREAD_ID` | `chatkit_threads` (delete only) | — | Disposable thread ID; omit for read-only checks |

@@ -33,16 +33,26 @@ func (ResponsesReasoning) Run(ctx context.Context, client openai.Client, cfg *co
 	if err != nil {
 		return fmt.Errorf("responses reasoning request failed: %w", err)
 	}
-	if err := validateResponseEnvelope("responses_reasoning", resp); err != nil {
-		return err
-	}
-	if hasResponseReasoningOutput(resp) {
-		return nil
-	}
-	return fail("responses_reasoning", "response has no output text, refusal, reasoning item, or content_filter incomplete status")
+	return validateResponsesReasoningResult("responses_reasoning", resp)
 }
 
-func hasResponseReasoningOutput(resp *responses.Response) bool {
+func validateResponsesReasoningResult(suite string, resp *responses.Response) error {
+	if err := validateResponseEnvelope(suite, resp); err != nil {
+		return err
+	}
+	if string(resp.Status) == "completed" {
+		if hasResponseReasoningSignal(resp) {
+			return nil
+		}
+		return fail(suite, "completed response has no output text, refusal, or reasoning signal")
+	}
+	if isContentFilterIncompleteResponse(resp) {
+		return nil
+	}
+	return fail(suite, fmt.Sprintf("response status is %q, want completed", resp.Status))
+}
+
+func hasResponseReasoningSignal(resp *responses.Response) bool {
 	if hasResponseOutput(resp) {
 		return true
 	}
@@ -54,5 +64,5 @@ func hasResponseReasoningOutput(resp *responses.Response) bool {
 			return true
 		}
 	}
-	return isContentFilterIncompleteResponse(resp)
+	return false
 }
