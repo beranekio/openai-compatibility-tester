@@ -131,6 +131,30 @@ func TestRunAllPassesAgainstMockServer(t *testing.T) {
 	}
 }
 
+func TestAudioSpeechStreamSSEAgainstMockServer(t *testing.T) {
+	server := mockserver.New()
+	t.Cleanup(server.Close)
+
+	cfg := &config.Config{
+		BaseURL:        server.BaseURL(),
+		APIKey:         "test-key",
+		TTSModel:       "gpt-4o-mini-tts",
+		RequestTimeout: 30 * time.Second,
+		Suites:         []string{"audio_speech_stream"},
+	}
+
+	runner := New(cfg)
+	runner.Output = &bytes.Buffer{}
+
+	results, err := runner.Run(context.Background())
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if code := ExitCode(results); code != 0 {
+		t.Fatalf("ExitCode() = %d, want 0; summary:\n%s", code, FormatSummary(results))
+	}
+}
+
 func TestErrorResponsesPassesAgainstMockServer(t *testing.T) {
 	server := mockserver.New()
 	t.Cleanup(server.Close)

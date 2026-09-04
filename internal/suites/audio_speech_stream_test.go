@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/openai/openai-go/v3"
 )
 
 func TestConsumeSpeechAudioStreamAcceptsLargeDelta(t *testing.T) {
@@ -27,5 +29,23 @@ func TestConsumeSpeechAudioStreamRequiresDelta(t *testing.T) {
 	err := consumeSpeechAudioStream("audio_speech_stream", resp)
 	if err == nil || !strings.Contains(err.Error(), "speech.audio.delta") {
 		t.Fatalf("consumeSpeechAudioStream() error = %v, want missing delta", err)
+	}
+}
+
+func TestSpeechStreamFormatUsesAudioForLegacyTTS(t *testing.T) {
+	tests := []struct {
+		model string
+		want  openai.AudioSpeechNewParamsStreamFormat
+	}{
+		{model: "tts-1", want: openai.AudioSpeechNewParamsStreamFormatAudio},
+		{model: "tts-1-hd", want: openai.AudioSpeechNewParamsStreamFormatAudio},
+		{model: " TTS-1 ", want: openai.AudioSpeechNewParamsStreamFormatAudio},
+		{model: "gpt-4o-mini-tts", want: openai.AudioSpeechNewParamsStreamFormatSSE},
+		{model: "gpt-4o-mini-tts-2025-12-15", want: openai.AudioSpeechNewParamsStreamFormatSSE},
+	}
+	for _, tt := range tests {
+		if got := speechStreamFormat(tt.model); got != tt.want {
+			t.Errorf("speechStreamFormat(%q) = %q, want %q", tt.model, got, tt.want)
+		}
 	}
 }

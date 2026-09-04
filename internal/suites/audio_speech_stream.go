@@ -25,6 +25,11 @@ func (AudioSpeechStream) Description() string {
 
 func (AudioSpeechStream) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
 	var httpResp *http.Response
+	streamFormat := speechStreamFormat(cfg.TTSModel)
+	opts := []option.RequestOption{option.WithResponseInto(&httpResp)}
+	if streamFormat == openai.AudioSpeechNewParamsStreamFormatSSE {
+		opts = append([]option.RequestOption{option.WithHeader("Accept", "text/event-stream")}, opts...)
+	}
 	_, err := client.Audio.Speech.New(ctx, openai.AudioSpeechNewParams{
 		Model: openai.SpeechModel(cfg.TTSModel),
 		Input: "compatibility test",
@@ -32,8 +37,8 @@ func (AudioSpeechStream) Run(ctx context.Context, client openai.Client, cfg *con
 			OfAudioSpeechNewsVoiceString2: openai.String("alloy"),
 		},
 		ResponseFormat: openai.AudioSpeechNewParamsResponseFormatMP3,
-		StreamFormat:   openai.AudioSpeechNewParamsStreamFormatSSE,
-	}, option.WithHeader("Accept", "text/event-stream"), option.WithResponseInto(&httpResp))
+		StreamFormat:   streamFormat,
+	}, opts...)
 	if err != nil {
 		return fmt.Errorf("audio speech stream request failed: %w", err)
 	}
@@ -49,6 +54,17 @@ func (AudioSpeechStream) Run(ctx context.Context, client openai.Client, cfg *con
 		return consumeSpeechAudioStream("audio_speech_stream", httpResp)
 	}
 	return validateBinaryHTTPResponse("audio_speech_stream", httpResp, 1)
+}
+
+// speechStreamFormat selects stream_format for POST /v1/audio/speech.
+// The API does not support sse for tts-1 / tts-1-hd.
+func speechStreamFormat(model string) openai.AudioSpeechNewParamsStreamFormat {
+	switch strings.ToLower(strings.TrimSpace(model)) {
+	case "tts-1", "tts-1-hd":
+		return openai.AudioSpeechNewParamsStreamFormatAudio
+	default:
+		return openai.AudioSpeechNewParamsStreamFormatSSE
+	}
 }
 
 func consumeSpeechAudioStream(suite string, resp *http.Response) error {

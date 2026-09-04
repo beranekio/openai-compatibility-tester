@@ -63,7 +63,7 @@ Deprecated Assistants API suites (`assistants`, `assistants_threads`) are **opt-
 | `images_generations_stream` | `client.Images.GenerateStreaming` | `POST /v1/images/generations` (stream) |
 | `images_edits_stream` | `client.Images.EditStreaming` | `POST /v1/images/edits` (stream) |
 | `audio_speech` | `client.Audio.Speech.New` | `POST /v1/audio/speech` |
-| `audio_speech_stream` | `client.Audio.Speech.New` (`stream_format=sse`) | `POST /v1/audio/speech` (stream) |
+| `audio_speech_stream` | `client.Audio.Speech.New` (`stream_format=sse`, or `audio` for `tts-1`/`tts-1-hd`) | `POST /v1/audio/speech` (stream) |
 | `audio_transcriptions` | `client.Audio.Transcriptions.New` | `POST /v1/audio/transcriptions` |
 | `audio_transcriptions_stream` | `client.Audio.Transcriptions.NewStreaming` | `POST /v1/audio/transcriptions` (stream) |
 | `audio_translations` | `client.Audio.Translations.New` | `POST /v1/audio/translations` |
@@ -108,7 +108,7 @@ Most suites reuse `OPENAI_MODEL` / `OPENAI_RESPONSES_MODEL`. The following varia
 | `OPENAI_REASONING_MODEL` | `chat_completions_reasoning`, `responses_reasoning` | — | e.g. `o3-mini`, `o4-mini` |
 | `OPENAI_IMAGE_MODEL` | `images_generations`, `images_edits` | — | GPT Image models or `dall-e-2`; `dall-e-3` not supported for edits |
 | `OPENAI_VIDEO_MODEL` | `videos` | — | e.g. `sora-2` |
-| `OPENAI_TTS_MODEL` | `audio_speech`, `audio_speech_stream` | — | Text-to-speech model |
+| `OPENAI_TTS_MODEL` | `audio_speech`, `audio_speech_stream` | — | Text-to-speech model. `audio_speech_stream` uses `stream_format=sse` except for `tts-1`/`tts-1-hd`, which do not support SSE and use `stream_format=audio` instead |
 | `OPENAI_WHISPER_MODEL` | `audio_transcriptions`, `audio_translations` | — | e.g. `whisper-1` |
 | `OPENAI_TRANSCRIPTION_MODEL` | `audio_transcriptions_stream` | — | e.g. `gpt-4o-mini-transcribe` |
 | `OPENAI_REALTIME_MODEL` | `realtime_client_secrets` | `gpt-realtime` | Realtime API |
@@ -260,14 +260,14 @@ docker run --rm \
 
 ### Text-to-speech
 
-Requires `OPENAI_TTS_MODEL`:
+Requires `OPENAI_TTS_MODEL`. `audio_speech_stream` requests SSE for models that support it (`gpt-4o-mini-tts` and similar). For `tts-1` and `tts-1-hd`, which do not support SSE, it uses `stream_format=audio` and validates a non-empty audio body.
 
 ```bash
 docker run --rm \
   -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
   -e OPENAI_API_KEY=your-api-key \
   -e OPENAI_TTS_MODEL=tts-1 \
-  -e TEST_SUITES=audio_speech \
+  -e TEST_SUITES=audio_speech,audio_speech_stream \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
 
