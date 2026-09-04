@@ -62,6 +62,8 @@ func consumeSpeechAudioStream(suite string, resp *http.Response) error {
 
 	var terminalReached bool
 	scanner := bufio.NewScanner(resp.Body)
+	// Real TTS SSE data lines carry base64 audio and exceed the default 64KiB token cap.
+	scanner.Buffer(make([]byte, 64*1024), 8*1024*1024)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if !strings.HasPrefix(line, "data:") {

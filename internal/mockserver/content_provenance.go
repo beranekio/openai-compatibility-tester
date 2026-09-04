@@ -18,8 +18,8 @@ func handleContentProvenanceChecks(w http.ResponseWriter, _ *http.Request) {
 			{
 				"type":         "synthid",
 				"outcome":      "not_detected",
-				"model":        nil,
-				"generated_at": nil,
+				"model":        "",
+				"generated_at": "",
 			},
 		},
 	})

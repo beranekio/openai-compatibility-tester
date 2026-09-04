@@ -40,8 +40,6 @@ func (ResponsesMultiTurn) Run(ctx context.Context, client openai.Client, cfg *co
 		}
 	} else if !isContentFilterIncompleteResponse(first) {
 		return fail("responses_multi_turn", fmt.Sprintf("first response status is %q, want completed", first.Status))
-	} else {
-		return nil
 	}
 
 	second, err := client.Responses.New(ctx, responses.ResponseNewParams{
