@@ -22,7 +22,7 @@ type FineTuning struct{}
 
 func (FineTuning) Name() string { return "fine_tuning" }
 func (FineTuning) Description() string {
-	return "Fine-tuning API smoke (POST/GET /v1/fine_tuning/jobs, checkpoints; permissions when OPENAI_ADMIN_API_KEY is set)"
+	return "Fine-tuning API smoke (POST/GET /v1/fine_tuning/jobs, events, checkpoints; permissions when OPENAI_ADMIN_API_KEY is set)"
 }
 
 func (FineTuning) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
@@ -86,6 +86,14 @@ func (FineTuning) Run(ctx context.Context, client openai.Client, cfg *config.Con
 	}
 	if got.ID != jobID {
 		return fail("fine_tuning", fmt.Sprintf("get id is %q, want %q", got.ID, jobID))
+	}
+
+	eventPage, err := client.FineTuning.Jobs.ListEvents(ctx, jobID, openai.FineTuningJobListEventsParams{})
+	if err != nil {
+		return fmt.Errorf("fine-tuning job event list failed: %w", err)
+	}
+	if err := validateFineTuningJobEventListPage("fine_tuning", eventPage); err != nil {
+		return err
 	}
 
 	checkpointPage, err := client.FineTuning.Jobs.Checkpoints.List(ctx, jobID, openai.FineTuningJobCheckpointListParams{})
@@ -257,6 +265,52 @@ func validateFineTuningJobListPage(suite string, page *pagination.CursorPage[ope
 		if err := validateFineTuningJobEnvelope(suite, &page.Data[i]); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func validateFineTuningJobEventListPage(suite string, page *pagination.CursorPage[openai.FineTuningJobEvent]) error {
+	if page == nil {
+		return fail(suite, "fine-tuning job event list page is nil")
+	}
+	if !page.JSON.HasMore.Valid() {
+		return fail(suite, "fine-tuning job event list missing has_more")
+	}
+	if !page.JSON.Data.Valid() {
+		return fail(suite, "fine-tuning job event list missing data")
+	}
+	var envelope struct {
+		Object string `json:"object"`
+	}
+	if err := json.Unmarshal([]byte(page.RawJSON()), &envelope); err != nil {
+		return fail(suite, "fine-tuning job event list response is not valid JSON")
+	}
+	if envelope.Object != "list" {
+		return fail(suite, fmt.Sprintf("fine-tuning job event list object is %q, want list", envelope.Object))
+	}
+	for i := range page.Data {
+		if err := validateFineTuningJobEvent(suite, &page.Data[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateFineTuningJobEvent(suite string, event *openai.FineTuningJobEvent) error {
+	if event == nil {
+		return fail(suite, "fine-tuning job event is nil")
+	}
+	if event.ID == "" {
+		return fail(suite, "fine-tuning job event missing id")
+	}
+	if !event.JSON.CreatedAt.Valid() {
+		return fail(suite, "fine-tuning job event missing created_at")
+	}
+	if event.Level == "" {
+		return fail(suite, "fine-tuning job event missing level")
+	}
+	if strings.TrimSpace(event.Message) == "" {
+		return fail(suite, "fine-tuning job event missing message")
 	}
 	return nil
 }

@@ -29,8 +29,17 @@ func (s *Server) handleResponses(w http.ResponseWriter, r *http.Request) {
 	_ = json.Unmarshal(body, &req)
 
 	if len(req.Tools) > 0 {
+		toolType := firstToolType(req.Tools)
 		if req.Stream {
 			writeResponsesToolCallStream(w)
+			return
+		}
+		switch toolType {
+		case "web_search", "web_search_2025_08_26":
+			writeResponsesHostedToolResponse(w, "web_search_call")
+			return
+		case "file_search":
+			writeResponsesHostedToolResponse(w, "file_search_call")
 			return
 		}
 		writeResponsesToolCallResponse(w)
@@ -252,5 +261,69 @@ func (s *Server) handleResponseInputItems(w http.ResponseWriter, r *http.Request
 		"first_id": firstID,
 		"last_id":  lastID,
 		"has_more": false,
+	})
+}
+
+func firstToolType(tools []json.RawMessage) string {
+	for _, raw := range tools {
+		var tool struct {
+			Type string `json:"type"`
+		}
+		if err := json.Unmarshal(raw, &tool); err != nil {
+			continue
+		}
+		if tool.Type != "" {
+			return tool.Type
+		}
+	}
+	return ""
+}
+
+func writeResponsesHostedToolResponse(w http.ResponseWriter, callType string) {
+	var call map[string]any
+	switch callType {
+	case "web_search_call":
+		call = map[string]any{
+			"id":     "ws_mock",
+			"type":   "web_search_call",
+			"status": "completed",
+			"action": map[string]any{
+				"type":  "search",
+				"query": "compatibility test",
+			},
+		}
+	case "file_search_call":
+		call = map[string]any{
+			"id":      "fs_mock",
+			"type":    "file_search_call",
+			"status":  "completed",
+			"queries": []string{"compatibility test"},
+			"results": []any{},
+		}
+	default:
+		writeResponsesToolCallResponse(w)
+		return
+	}
+	writeJSON(w, map[string]any{
+		"id":         "resp-mock-hosted-tools",
+		"object":     "response",
+		"status":     "completed",
+		"model":      "gpt-4o-mini",
+		"created_at": 1700000000,
+		"output": []map[string]any{
+			call,
+			{
+				"id":     "msg-mock",
+				"type":   "message",
+				"role":   "assistant",
+				"status": "completed",
+				"content": []map[string]any{
+					{
+						"type": "output_text",
+						"text": "pong",
+					},
+				},
+			},
+		},
 	})
 }

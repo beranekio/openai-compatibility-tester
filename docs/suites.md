@@ -26,6 +26,7 @@ Deprecated Assistants API suites (`assistants`, `assistants_threads`) are **opt-
 | `chat_completions_vision` | `client.Chat.Completions.New` (with image input) | `POST /v1/chat/completions` |
 | `chat_completions_reasoning` | `client.Chat.Completions.New` (reasoning model) | `POST /v1/chat/completions` |
 | `chat_completions_audio` | `client.Chat.Completions.New` (with audio output) | `POST /v1/chat/completions` |
+| `chat_completions_audio_input` | `client.Chat.Completions.New` (with audio input) | `POST /v1/chat/completions` |
 | `chat_completions_tools` | `client.Chat.Completions.New` (with `tools`) | `POST /v1/chat/completions` |
 | `chat_completions_tools_stream` | `client.Chat.Completions.NewStreaming` (with `tools`) | `POST /v1/chat/completions` (stream) |
 | `chat_completions_multi_turn` | `client.Chat.Completions.New` (multi-turn history with developer and tool messages) | `POST /v1/chat/completions` |
@@ -49,17 +50,25 @@ Deprecated Assistants API suites (`assistants`, `assistants_threads`) are **opt-
 | `responses_input_items` | `client.Responses.InputItems.List` | `GET /v1/responses/{id}/input_items` |
 | `responses_compact` | `client.Responses.Compact` | `POST /v1/responses/compact` |
 | `responses_input_tokens` | `client.Responses.InputTokens.Count` | `POST /v1/responses/input_tokens` |
+| `responses_vision` | `client.Responses.New` (with image input) | `POST /v1/responses` |
+| `responses_reasoning` | `client.Responses.New` (reasoning model) | `POST /v1/responses` |
+| `responses_web_search` | `client.Responses.New` (with `web_search` tool) | `POST /v1/responses` |
+| `responses_file_search` | `client.Responses.New` (with `file_search` tool) | `POST /v1/responses` |
+| `responses_multi_turn` | `client.Responses.New` (`previous_response_id`) | `POST /v1/responses` |
 | `moderations` | `client.Moderations.New` | `POST /v1/moderations` |
+| `moderations_image` | `client.Moderations.New` (with image input) | `POST /v1/moderations` |
 | `images_generations` | `client.Images.Generate` | `POST /v1/images/generations` |
 | `images_edits` | `client.Images.Edit` | `POST /v1/images/edits` |
 | `images_variations` | `client.Images.NewVariation` | `POST /v1/images/variations` |
 | `images_generations_stream` | `client.Images.GenerateStreaming` | `POST /v1/images/generations` (stream) |
 | `images_edits_stream` | `client.Images.EditStreaming` | `POST /v1/images/edits` (stream) |
 | `audio_speech` | `client.Audio.Speech.New` | `POST /v1/audio/speech` |
+| `audio_speech_stream` | `client.Audio.Speech.New` (`stream_format=sse`) | `POST /v1/audio/speech` (stream) |
 | `audio_transcriptions` | `client.Audio.Transcriptions.New` | `POST /v1/audio/transcriptions` |
 | `audio_transcriptions_stream` | `client.Audio.Transcriptions.NewStreaming` | `POST /v1/audio/transcriptions` (stream) |
 | `audio_translations` | `client.Audio.Translations.New` | `POST /v1/audio/translations` |
 | `files` | `client.Files.New`, `List`, `Get`, `Content`, `Delete` | `POST/GET/DELETE /v1/files`, `GET /v1/files/{id}/content` |
+| `content_provenance_checks` | `client.ContentProvenanceChecks.New` | `POST /v1/content_provenance_checks` |
 | `uploads` | `client.Uploads.New`, `Parts.New`, `Complete` | `POST /v1/uploads`, `POST /v1/uploads/{id}/parts`, `POST /v1/uploads/{id}/complete` |
 | `uploads_cancel` | `client.Uploads.New`, `Cancel` | `POST /v1/uploads`, `POST /v1/uploads/{id}/cancel` |
 | `batches_create` | `client.Batches.New` | `POST /v1/batches` |
@@ -71,6 +80,7 @@ Deprecated Assistants API suites (`assistants`, `assistants_threads`) are **opt-
 | `vector_store_files` | `client.VectorStores.Files.New`, `List`, `Get`, `Update`, `Content`, `Delete` | `POST/GET/DELETE /v1/vector_stores/{id}/files`, `POST /v1/vector_stores/{id}/files/{file_id}`, `GET /v1/vector_stores/{id}/files/{file_id}/content` |
 | `vector_store_file_batches` | `client.VectorStores.FileBatches.New`, `Get`, `ListFiles`, `Cancel` | `POST/GET /v1/vector_stores/{id}/file_batches`, `POST /v1/vector_stores/{id}/file_batches/{batch_id}/cancel` |
 | `realtime_client_secrets` | `client.Realtime.ClientSecrets.New` | `POST /v1/realtime/client_secrets` (WebSocket sessions not exercised) |
+| `realtime_transcription_client_secrets` | `client.Realtime.ClientSecrets.New` (transcription session) | `POST /v1/realtime/client_secrets` (WebSocket sessions not exercised) |
 | `containers` | `client.Containers.New`, `Get`, `List`, `Delete` | `POST /v1/containers`, `GET /v1/containers`, `GET/DELETE /v1/containers/{id}` |
 | `container_files` | `client.Containers.Files.New`, `List`, `Get`, `Delete`; `client.Containers.Files.Content.Get` | `POST/GET /v1/containers/{id}/files`, `GET/DELETE /v1/containers/{id}/files/{file_id}`, `GET /v1/containers/{id}/files/{file_id}/content` |
 | `videos` | `client.Videos.New`, `PollStatus`, `Get`, `List`, `DownloadContent`, `Delete` | `POST/GET/DELETE /v1/videos`, `GET /v1/videos/{id}/content` |
@@ -78,7 +88,7 @@ Deprecated Assistants API suites (`assistants`, `assistants_threads`) are **opt-
 | `videos_characters` | `client.Videos.NewCharacter`, `GetCharacter` | `POST /v1/videos/characters`, `GET /v1/videos/characters/{id}` |
 | `skills` | `client.Skills.New`, `Get`, `Update`, `List`, `Delete`; `client.Skills.Versions.New` | `POST /v1/skills`, `GET /v1/skills`, `GET/POST/DELETE /v1/skills/{id}`, `POST /v1/skills/{id}/versions` |
 | `skill_versions` | `client.Skills.Versions.New`, `Get`, `List`, `Delete`; `client.Skills.Content.Get`; `client.Skills.Versions.Content.Get` | `POST/GET /v1/skills/{id}/versions`, `GET/DELETE /v1/skills/{id}/versions/{version}`, `GET /v1/skills/{id}/content`, `GET /v1/skills/{id}/versions/{version}/content` |
-| `fine_tuning` | `client.FineTuning.Jobs.New`, `List`, `Get`, `Cancel`; `client.FineTuning.Jobs.Checkpoints.List`; `client.FineTuning.Checkpoints.Permissions.List` | `POST/GET /v1/fine_tuning/jobs`, `POST /v1/fine_tuning/jobs/{id}/cancel`, `GET /v1/fine_tuning/jobs/{id}/checkpoints`, `GET /v1/fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions` |
+| `fine_tuning` | `client.FineTuning.Jobs.New`, `List`, `Get`, `Cancel`; `client.FineTuning.Jobs.ListEvents`; `client.FineTuning.Jobs.Checkpoints.List`; `client.FineTuning.Checkpoints.Permissions.List` | `POST/GET /v1/fine_tuning/jobs`, `GET /v1/fine_tuning/jobs/{id}/events`, `POST /v1/fine_tuning/jobs/{id}/cancel`, `GET /v1/fine_tuning/jobs/{id}/checkpoints`, `GET /v1/fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions` |
 | `chatkit_sessions` | `client.Beta.ChatKit.Sessions.New`, `Cancel` | `POST /v1/chatkit/sessions`, `POST /v1/chatkit/sessions/{id}/cancel` |
 | `chatkit_threads` | `client.Beta.ChatKit.Threads.List`, `Get`, `ListItems`[, `Delete`] | `GET /v1/chatkit/threads`, `GET /v1/chatkit/threads/{id}`, `GET /v1/chatkit/threads/{id}/items`[, `DELETE /v1/chatkit/threads/{id}`] |
 | `(deprecated) assistants` | `client.Beta.Assistants.New`, `Get`, `Update`, `List`, `Delete` | `GET/POST /v1/assistants`, `GET/POST/DELETE /v1/assistants/{id}` |
@@ -94,14 +104,14 @@ Most suites reuse `OPENAI_MODEL` / `OPENAI_RESPONSES_MODEL`. The following varia
 | `OPENAI_RESPONSES_MODEL` | Responses suites | same as `OPENAI_MODEL` | Model used for Responses API suites |
 | `OPENAI_COMPLETION_MODEL` | `completions`, `completions_stream` | `gpt-3.5-turbo-instruct` when selected, otherwise same as `OPENAI_MODEL` | Legacy completions |
 | `OPENAI_EMBEDDING_MODEL` | `embeddings`, `embeddings_batch` | — | Embedding model |
-| `OPENAI_VISION_MODEL` | `chat_completions_vision` | same as `OPENAI_MODEL` | Vision-capable model |
-| `OPENAI_REASONING_MODEL` | `chat_completions_reasoning` | — | e.g. `o3-mini`, `o4-mini` |
+| `OPENAI_VISION_MODEL` | `chat_completions_vision`, `responses_vision` | same as `OPENAI_MODEL` | Vision-capable model |
+| `OPENAI_REASONING_MODEL` | `chat_completions_reasoning`, `responses_reasoning` | — | e.g. `o3-mini`, `o4-mini` |
 | `OPENAI_IMAGE_MODEL` | `images_generations`, `images_edits` | — | GPT Image models or `dall-e-2`; `dall-e-3` not supported for edits |
 | `OPENAI_VIDEO_MODEL` | `videos` | — | e.g. `sora-2` |
-| `OPENAI_TTS_MODEL` | `audio_speech` | — | Text-to-speech model |
+| `OPENAI_TTS_MODEL` | `audio_speech`, `audio_speech_stream` | — | Text-to-speech model |
 | `OPENAI_WHISPER_MODEL` | `audio_transcriptions`, `audio_translations` | — | e.g. `whisper-1` |
 | `OPENAI_TRANSCRIPTION_MODEL` | `audio_transcriptions_stream` | — | e.g. `gpt-4o-mini-transcribe` |
-| `OPENAI_REALTIME_MODEL` | `realtime_client_secrets` | `gpt-realtime` | Realtime API |
+| `OPENAI_REALTIME_MODEL` | `realtime_client_secrets`, `realtime_transcription_client_secrets` | `gpt-realtime` | Realtime API |
 | `OPENAI_ADMIN_API_KEY` | `fine_tuning` (permissions only) | — | Skipped when unset |
 | `OPENAI_CHATKIT_WORKFLOW_ID` | `chatkit_sessions` | `wf_mock_compat_test` (when selected) | Set explicitly for real endpoints |
 | `OPENAI_CHATKIT_TEST_THREAD_ID` | `chatkit_threads` (delete only) | — | Disposable thread ID; omit for read-only checks |

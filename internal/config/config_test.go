@@ -936,6 +936,42 @@ func TestLoadAllowsReasoningSuiteWithExplicitReasoningModel(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsResponsesReasoningSuiteWithoutReasoningModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvReasoningModel, "")
+
+	_, err := Load([]string{"--suites", "responses_reasoning"})
+	if err == nil || !strings.Contains(err.Error(), EnvReasoningModel) {
+		t.Fatalf("expected missing reasoning model error, got %v", err)
+	}
+}
+
+func TestLoadRejectsAudioSpeechStreamWithoutTTSModel(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvTTSModel, "")
+
+	_, err := Load([]string{"--suites", "audio_speech_stream"})
+	if err == nil || !strings.Contains(err.Error(), EnvTTSModel) {
+		t.Fatalf("expected missing TTS model error, got %v", err)
+	}
+}
+
+func TestLoadDefaultsRealtimeModelForTranscriptionClientSecretsSuite(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvRealtimeModel, "")
+
+	cfg, err := Load([]string{"--suites", "realtime_transcription_client_secrets"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.RealtimeModel != DefaultRealtimeModel {
+		t.Fatalf("RealtimeModel = %q, want %q", cfg.RealtimeModel, DefaultRealtimeModel)
+	}
+}
+
 func TestLoadAdminAPIKeyFromEnv(t *testing.T) {
 	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")

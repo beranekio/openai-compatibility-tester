@@ -164,6 +164,34 @@ func validateAccumulatedToolCall(suite string, call *accumulatedToolCall) error 
 	return validateWeatherToolArguments(suite, call.arguments)
 }
 
+func validateHostedToolResponse(suite string, resp *responses.Response, toolType string) error {
+	if err := validateResponseEnvelope(suite, resp); err != nil {
+		return err
+	}
+	if string(resp.Status) == "completed" {
+		if hasResponseOutput(resp) || hasResponseOutputItemType(resp, toolType) {
+			return nil
+		}
+		return fail(suite, fmt.Sprintf("response produced no %s output, text, or refusal", toolType))
+	}
+	if isContentFilterIncompleteResponse(resp) {
+		return nil
+	}
+	return fail(suite, fmt.Sprintf("response status is %q, want completed", resp.Status))
+}
+
+func hasResponseOutputItemType(resp *responses.Response, itemType string) bool {
+	if resp == nil {
+		return false
+	}
+	for _, item := range resp.Output {
+		if item.Type == itemType {
+			return true
+		}
+	}
+	return false
+}
+
 func hasResponseFunctionCalls(resp *responses.Response) bool {
 	return len(responseFunctionCalls(resp)) > 0
 }

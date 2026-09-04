@@ -116,6 +116,31 @@ func (s *Server) handleFineTuningJobCancel(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, fineTuningJobObjectPayload(job))
 }
 
+func (s *Server) handleFineTuningJobEventList(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if _, ok := s.fineTuningStore.get(id); !ok {
+		writeNotFound(w, "Fine tuning job not found", "id")
+		return
+	}
+	eventID := "ftevent-mock"
+	writeJSON(w, map[string]any{
+		"object": "list",
+		"data": []map[string]any{
+			{
+				"id":         eventID,
+				"object":     "fine_tuning.job.event",
+				"created_at": 1700000000,
+				"level":      "info",
+				"message":    "Job created",
+				"type":       "message",
+			},
+		},
+		"first_id": eventID,
+		"last_id":  eventID,
+		"has_more": false,
+	})
+}
+
 func (s *Server) handleFineTuningJobCheckpointList(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	job, ok := s.fineTuningStore.advanceStatus(id)
