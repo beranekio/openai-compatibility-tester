@@ -170,14 +170,10 @@ func validateResponseFunctionCallArgumentsDelta(suite string, delta responses.Re
 }
 
 func validateResponseFunctionCallArgumentsDone(suite string, done responses.ResponseFunctionCallArgumentsDoneEvent) error {
+	// openai-go v3.61+ dropped Name from this event; tool name is validated on
+	// response.output_item.done via validateResponseFunctionToolCall.
 	if done.ItemID == "" {
 		return fail(suite, "response.function_call_arguments.done missing item_id")
-	}
-	if done.Name == "" {
-		return fail(suite, "response.function_call_arguments.done missing name")
-	}
-	if done.Name != weatherToolName {
-		return fail(suite, fmt.Sprintf("function name is %q, want %s", done.Name, weatherToolName))
 	}
 	if !done.JSON.OutputIndex.Valid() {
 		return fail(suite, "response.function_call_arguments.done missing output_index")
