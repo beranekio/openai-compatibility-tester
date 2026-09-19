@@ -50,3 +50,39 @@ func TestHandlerServesChatCompletions(t *testing.T) {
 		t.Fatalf("response body = %s, want a chat.completion object", body)
 	}
 }
+
+func TestAgentsRequireBetaHeader(t *testing.T) {
+	server := New()
+	t.Cleanup(server.Close)
+
+	resp, err := http.Post(server.BaseURL()+"/agents", "application/json", strings.NewReader(`{"model":"gpt-4o-mini"}`))
+	if err != nil {
+		t.Fatalf("http.Post() error = %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status without OpenAI-Beta = %d, want 400", resp.StatusCode)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, server.BaseURL()+"/agents", strings.NewReader(`{"model":"gpt-4o-mini","name":"compat"}`))
+	if err != nil {
+		t.Fatalf("NewRequest() error = %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("OpenAI-Beta", agentsBetaHeaderValue)
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Do() error = %v", err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body error = %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status with OpenAI-Beta = %d, want 200, body = %s", resp.StatusCode, body)
+	}
+	if !strings.Contains(string(body), `"object":"agent"`) && !strings.Contains(string(body), `"object": "agent"`) {
+		t.Fatalf("response body = %s, want an agent object", body)
+	}
+}

@@ -5,9 +5,30 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 )
 
+const agentsBetaHeaderValue = "agents=v1"
+
+func requireAgentsBetaHeader(w http.ResponseWriter, r *http.Request) bool {
+	if strings.TrimSpace(r.Header.Get("OpenAI-Beta")) != agentsBetaHeaderValue {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"error": map[string]any{
+				"message": "missing or invalid OpenAI-Beta header",
+				"type":    "invalid_request_error",
+			},
+		})
+		return false
+	}
+	return true
+}
+
 func (s *Server) handleAgentCreate(w http.ResponseWriter, r *http.Request) {
+	if !requireAgentsBetaHeader(w, r) {
+		return
+	}
 	var req struct {
 		Model        string            `json:"model"`
 		Name         string            `json:"name"`
@@ -25,7 +46,10 @@ func (s *Server) handleAgentCreate(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, agentPayload(agent))
 }
 
-func (s *Server) handleAgentList(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleAgentList(w http.ResponseWriter, r *http.Request) {
+	if !requireAgentsBetaHeader(w, r) {
+		return
+	}
 	items := s.agentStore.list()
 	data := make([]map[string]any, len(items))
 	firstID := ""
@@ -47,6 +71,9 @@ func (s *Server) handleAgentList(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) handleAgentGet(w http.ResponseWriter, r *http.Request) {
+	if !requireAgentsBetaHeader(w, r) {
+		return
+	}
 	id := r.PathValue("id")
 	agent, ok := s.agentStore.get(id)
 	if !ok {
@@ -57,6 +84,9 @@ func (s *Server) handleAgentGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAgentUpdate(w http.ResponseWriter, r *http.Request) {
+	if !requireAgentsBetaHeader(w, r) {
+		return
+	}
 	id := r.PathValue("id")
 	var req struct {
 		Name         *string           `json:"name"`
@@ -76,6 +106,9 @@ func (s *Server) handleAgentUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAgentDelete(w http.ResponseWriter, r *http.Request) {
+	if !requireAgentsBetaHeader(w, r) {
+		return
+	}
 	id := r.PathValue("id")
 	if !s.agentStore.delete(id) {
 		writeNotFound(w, "Agent not found", "agent_id")
@@ -89,6 +122,9 @@ func (s *Server) handleAgentDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAgentSessionCreate(w http.ResponseWriter, r *http.Request) {
+	if !requireAgentsBetaHeader(w, r) {
+		return
+	}
 	var req struct {
 		AgentID  string            `json:"agent_id"`
 		Metadata map[string]string `json:"metadata"`
@@ -109,7 +145,10 @@ func (s *Server) handleAgentSessionCreate(w http.ResponseWriter, r *http.Request
 	writeJSON(w, agentSessionPayload(session))
 }
 
-func (s *Server) handleAgentSessionList(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleAgentSessionList(w http.ResponseWriter, r *http.Request) {
+	if !requireAgentsBetaHeader(w, r) {
+		return
+	}
 	items := s.agentStore.listSessions()
 	data := make([]map[string]any, len(items))
 	firstID := ""
@@ -131,6 +170,9 @@ func (s *Server) handleAgentSessionList(w http.ResponseWriter, _ *http.Request) 
 }
 
 func (s *Server) handleAgentSessionGet(w http.ResponseWriter, r *http.Request) {
+	if !requireAgentsBetaHeader(w, r) {
+		return
+	}
 	id := r.PathValue("id")
 	session, ok := s.agentStore.getSession(id)
 	if !ok {
@@ -141,6 +183,9 @@ func (s *Server) handleAgentSessionGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAgentSessionDelete(w http.ResponseWriter, r *http.Request) {
+	if !requireAgentsBetaHeader(w, r) {
+		return
+	}
 	id := r.PathValue("id")
 	if !s.agentStore.deleteSession(id) {
 		writeNotFound(w, "Session not found", "session_id")

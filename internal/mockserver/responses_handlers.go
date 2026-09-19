@@ -76,7 +76,7 @@ func (s *Server) handleResponses(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var output []map[string]any
+	output := []map[string]any{}
 	prewarm := req.PromptCacheOptions != nil && req.PromptCacheOptions.Prewarm != nil && *req.PromptCacheOptions.Prewarm
 	if !prewarm {
 		output = []map[string]any{

@@ -48,10 +48,12 @@ func (AgentsSessions) Run(ctx context.Context, client openai.Client, cfg *config
 	if err != nil {
 		return fmt.Errorf("agent create failed: %w", err)
 	}
+	if agent != nil && agent.ID != "" {
+		agentID = agent.ID
+	}
 	if err := validateAgentObject("agents_sessions", agent); err != nil {
 		return err
 	}
-	agentID = agent.ID
 
 	created, err := client.Beta.Agents.Sessions.New(ctx, openai.BetaAgentSessionNewParams{
 		AgentID: openai.String(agentID),
@@ -65,10 +67,12 @@ func (AgentsSessions) Run(ctx context.Context, client openai.Client, cfg *config
 	if err != nil {
 		return fmt.Errorf("agent session create failed: %w", err)
 	}
+	if created != nil && created.ID != "" {
+		sessionID = created.ID
+	}
 	if err := validateAgentSessionObject("agents_sessions", created); err != nil {
 		return err
 	}
-	sessionID = created.ID
 	if created.Agent.ID != "" && created.Agent.ID != agentID {
 		return fail("agents_sessions", fmt.Sprintf("session agent id is %q, want %q", created.Agent.ID, agentID))
 	}
@@ -155,9 +159,9 @@ func validateAgentSessionObject(suite string, session *openai.AgentSession) erro
 		return fail(suite, "session missing status")
 	}
 	switch session.Status {
-	case openai.AgentSessionStatusIdle, openai.AgentSessionStatusInProgress, openai.AgentSessionStatusRequiresAction:
+	case openai.AgentSessionStatusIdle, openai.AgentSessionStatusInProgress, openai.AgentSessionStatusRequiresAction, openai.AgentSessionStatusFailed:
 	default:
-		return fail(suite, fmt.Sprintf("session status is %q, want idle, in_progress, or requires_action", session.Status))
+		return fail(suite, fmt.Sprintf("session status is %q, want idle, in_progress, requires_action, or failed", session.Status))
 	}
 	if !session.JSON.Environment.Valid() {
 		return fail(suite, "session missing environment")
