@@ -26,6 +26,7 @@ type Server struct {
 	chatKitStore      *chatKitStore
 	assistantStore    *assistantStore
 	threadStore       *threadStore
+	agentStore        *agentStore
 }
 
 // New starts a mock OpenAI API server.
@@ -60,6 +61,7 @@ func newServerWithRoutes() *Server {
 		chatKitStore:      newChatKitStore(),
 		assistantStore:    newAssistantStore(),
 		threadStore:       newThreadStore(),
+		agentStore:        newAgentStore(),
 		mux:               mux,
 	}
 
@@ -168,6 +170,17 @@ func newServerWithRoutes() *Server {
 	mux.HandleFunc("GET /v1/chatkit/threads/{id}", s.handleChatKitThreadGet)
 	mux.HandleFunc("DELETE /v1/chatkit/threads/{id}", s.handleChatKitThreadDelete)
 	mux.HandleFunc("GET /v1/chatkit/threads/{id}/items", s.handleChatKitThreadListItems)
+	mux.HandleFunc("POST /v1/live/sessions", handleLiveSessionCreate)
+	mux.HandleFunc("POST /v1/live/sessions/{id}/hangup", handleLiveSessionHangup)
+	mux.HandleFunc("POST /v1/agents", s.handleAgentCreate)
+	mux.HandleFunc("GET /v1/agents", s.handleAgentList)
+	mux.HandleFunc("GET /v1/agents/{id}", s.handleAgentGet)
+	mux.HandleFunc("POST /v1/agents/{id}", s.handleAgentUpdate)
+	mux.HandleFunc("DELETE /v1/agents/{id}", s.handleAgentDelete)
+	mux.HandleFunc("POST /v1/agents/sessions", s.handleAgentSessionCreate)
+	mux.HandleFunc("GET /v1/agents/sessions", s.handleAgentSessionList)
+	mux.HandleFunc("GET /v1/agents/sessions/{id}", s.handleAgentSessionGet)
+	mux.HandleFunc("DELETE /v1/agents/sessions/{id}", s.handleAgentSessionDelete)
 	mux.HandleFunc("POST /v1/assistants", s.handleAssistantCreate)
 	mux.HandleFunc("GET /v1/assistants", s.handleAssistantList)
 	mux.HandleFunc("GET /v1/assistants/{id}", s.handleAssistantGet)

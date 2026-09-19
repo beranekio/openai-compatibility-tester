@@ -31,6 +31,7 @@ const (
 	EnvWhisperModel        = "OPENAI_WHISPER_MODEL"
 	EnvTranscriptionModel  = "OPENAI_TRANSCRIPTION_MODEL"
 	EnvRealtimeModel       = "OPENAI_REALTIME_MODEL"
+	EnvLiveModel           = "OPENAI_LIVE_MODEL"
 	EnvChatKitWorkflowID   = "OPENAI_CHATKIT_WORKFLOW_ID"
 	EnvChatKitTestThreadID = "OPENAI_CHATKIT_TEST_THREAD_ID"
 	EnvTestSuites          = "TEST_SUITES"
@@ -44,6 +45,10 @@ const (
 	// DefaultRealtimeModel is used when the realtime_client_secrets suite is selected
 	// without an explicit realtime model.
 	DefaultRealtimeModel = "gpt-realtime"
+
+	// DefaultLiveModel is used when the live_sessions suite is selected without
+	// an explicit live model.
+	DefaultLiveModel = "gpt-live-1"
 
 	// DefaultChatKitWorkflowID is used when chatkit_sessions is selected without
 	// an explicit workflow ID.
@@ -84,11 +89,13 @@ var ExtendedSuites = []string{
 	"responses_tools_stream",
 	"responses_json",
 	"responses_get",
+	"responses_get_stream",
 	"responses_delete",
 	"responses_cancel",
 	"responses_input_items",
 	"responses_compact",
 	"responses_input_tokens",
+	"responses_prewarm",
 	"responses_vision",
 	"responses_reasoning",
 	"responses_web_search",
@@ -142,15 +149,18 @@ var FullSuites = []string{
 	"responses_tools_stream",
 	"responses_json",
 	"responses_get",
+	"responses_get_stream",
 	"responses_delete",
 	"responses_cancel",
 	"responses_input_items",
 	"responses_compact",
 	"responses_input_tokens",
+	"responses_prewarm",
 	"responses_vision",
 	"responses_reasoning",
 	"responses_web_search",
 	"responses_file_search",
+	"responses_code_interpreter",
 	"responses_multi_turn",
 	"moderations",
 	"moderations_image",
@@ -178,6 +188,7 @@ var FullSuites = []string{
 	"vector_store_file_batches",
 	"realtime_client_secrets",
 	"realtime_transcription_client_secrets",
+	"live_sessions",
 	"containers",
 	"container_files",
 	"videos",
@@ -188,6 +199,8 @@ var FullSuites = []string{
 	"fine_tuning",
 	"chatkit_sessions",
 	"chatkit_threads",
+	"agents",
+	"agents_sessions",
 	"assistants",
 	"assistants_threads",
 	"error_responses",
@@ -212,6 +225,7 @@ type Config struct {
 	WhisperModel        string
 	TranscriptionModel  string
 	RealtimeModel       string
+	LiveModel           string
 	ChatKitWorkflowID   string
 	ChatKitTestThreadID string
 	Suites              []string
@@ -242,6 +256,7 @@ func Load(args []string) (*Config, error) {
 	whisperModel := fs.String("whisper-model", envOrDefault(EnvWhisperModel, ""), "Model for audio transcription and translation suites")
 	transcriptionModel := fs.String("transcription-model", envOrDefault(EnvTranscriptionModel, ""), "Model for streaming audio transcription suite")
 	realtimeModel := fs.String("realtime-model", envOrDefault(EnvRealtimeModel, ""), "Model for Realtime API suites (defaults to "+DefaultRealtimeModel+" when realtime_client_secrets is selected)")
+	liveModel := fs.String("live-model", envOrDefault(EnvLiveModel, ""), "Model for Live API suites (defaults to "+DefaultLiveModel+" when live_sessions is selected)")
 	chatKitWorkflowID := fs.String("chatkit-workflow-id", envOrDefault(EnvChatKitWorkflowID, ""), "Workflow ID for chatkit_sessions suite (defaults to "+DefaultChatKitWorkflowID+" when chatkit_sessions is selected)")
 	chatKitTestThreadID := fs.String("chatkit-test-thread-id", envOrDefault(EnvChatKitTestThreadID, ""), "Disposable thread ID for chatkit_threads delete test (optional; omit for read-only checks)")
 	allowInsecureHTTP := fs.Bool("allow-insecure-http", envBoolOrDefault(EnvAllowInsecureHTTP, false), "Allow plaintext HTTP to non-loopback hosts")
@@ -278,6 +293,7 @@ func Load(args []string) (*Config, error) {
 		WhisperModel:        strings.TrimSpace(*whisperModel),
 		TranscriptionModel:  strings.TrimSpace(*transcriptionModel),
 		RealtimeModel:       strings.TrimSpace(*realtimeModel),
+		LiveModel:           strings.TrimSpace(*liveModel),
 		ChatKitWorkflowID:   strings.TrimSpace(*chatKitWorkflowID),
 		ChatKitTestThreadID: strings.TrimSpace(*chatKitTestThreadID),
 		RequestTimeout:      *timeout,
@@ -326,6 +342,9 @@ func Load(args []string) (*Config, error) {
 	}
 	if cfg.RealtimeModel == "" && suiteNeedsRealtime(cfg.Suites) {
 		cfg.RealtimeModel = DefaultRealtimeModel
+	}
+	if cfg.LiveModel == "" && suiteNeedsLive(cfg.Suites) {
+		cfg.LiveModel = DefaultLiveModel
 	}
 
 	if !timeoutFlagExplicit(args) {
@@ -405,6 +424,15 @@ func suiteNeedsRealtime(names []string) bool {
 	return false
 }
 
+func suiteNeedsLive(names []string) bool {
+	for _, name := range names {
+		if name == "live_sessions" {
+			return true
+		}
+	}
+	return false
+}
+
 func suiteNeedsChatKitWorkflow(names []string) bool {
 	for _, name := range names {
 		if name == "chatkit_sessions" {
@@ -416,12 +444,12 @@ func suiteNeedsChatKitWorkflow(names []string) bool {
 
 func validateModelsForSuites(cfg *Config) error {
 	var needsChat, needsResponses, needsCompletion, needsEmbedding bool
-	var needsVision, needsReasoning, needsImage, needsVideo, needsTTS, needsWhisper, needsTranscription, needsRealtime, needsChatKitWorkflow bool
+	var needsVision, needsReasoning, needsImage, needsVideo, needsTTS, needsWhisper, needsTranscription, needsRealtime, needsLive, needsChatKitWorkflow bool
 	for _, name := range cfg.Suites {
 		switch name {
-		case "chat_completions", "chat_completions_stream", "chat_completions_stream_usage", "chat_completions_logprobs", "chat_completions_json", "chat_completions_audio", "chat_completions_audio_input", "chat_completions_tools", "chat_completions_tools_stream", "chat_completions_multi_turn", "chat_completions_get", "chat_completions_list", "chat_completions_delete", "chat_completions_messages", "chat_completions_update", "models_get", "batches_create", "batches_get", "batches_cancel", "batches_list", "fine_tuning", "assistants", "assistants_threads":
+		case "chat_completions", "chat_completions_stream", "chat_completions_stream_usage", "chat_completions_logprobs", "chat_completions_json", "chat_completions_audio", "chat_completions_audio_input", "chat_completions_tools", "chat_completions_tools_stream", "chat_completions_multi_turn", "chat_completions_get", "chat_completions_list", "chat_completions_delete", "chat_completions_messages", "chat_completions_update", "models_get", "batches_create", "batches_get", "batches_cancel", "batches_list", "fine_tuning", "assistants", "assistants_threads", "agents", "agents_sessions":
 			needsChat = true
-		case "responses", "responses_stream", "responses_tools", "responses_tools_stream", "responses_json", "responses_get", "responses_delete", "responses_cancel", "responses_input_items", "responses_compact", "responses_input_tokens", "responses_web_search", "responses_file_search", "responses_multi_turn":
+		case "responses", "responses_stream", "responses_tools", "responses_tools_stream", "responses_json", "responses_get", "responses_get_stream", "responses_delete", "responses_cancel", "responses_input_items", "responses_compact", "responses_input_tokens", "responses_prewarm", "responses_web_search", "responses_file_search", "responses_code_interpreter", "responses_multi_turn":
 			needsResponses = true
 		case "completions", "completions_stream":
 			needsCompletion = true
@@ -443,6 +471,8 @@ func validateModelsForSuites(cfg *Config) error {
 			needsTranscription = true
 		case "realtime_client_secrets":
 			needsRealtime = true
+		case "live_sessions":
+			needsLive = true
 		case "chatkit_sessions":
 			needsChatKitWorkflow = true
 		}
@@ -482,6 +512,9 @@ func validateModelsForSuites(cfg *Config) error {
 	}
 	if needsRealtime && cfg.RealtimeModel == "" {
 		return fmt.Errorf("%s or --realtime-model is required for selected suites", EnvRealtimeModel)
+	}
+	if needsLive && cfg.LiveModel == "" {
+		return fmt.Errorf("%s or --live-model is required for selected suites", EnvLiveModel)
 	}
 	if needsChatKitWorkflow && cfg.ChatKitWorkflowID == "" {
 		return fmt.Errorf("%s or --chatkit-workflow-id is required for selected suites", EnvChatKitWorkflowID)

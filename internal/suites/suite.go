@@ -60,15 +60,18 @@ func All() []Suite {
 		ResponsesToolsStream{},
 		ResponsesJSON{},
 		ResponsesGet{},
+		ResponsesGetStream{},
 		ResponsesDelete{},
 		ResponsesCancel{},
 		ResponsesInputItems{},
 		ResponsesCompact{},
 		ResponsesInputTokens{},
+		ResponsesPrewarm{},
 		ResponsesVision{},
 		ResponsesReasoning{},
 		ResponsesWebSearch{},
 		ResponsesFileSearch{},
+		ResponsesCodeInterpreter{},
 		ResponsesMultiTurn{},
 		Moderations{},
 		ModerationsImage{},
@@ -96,6 +99,7 @@ func All() []Suite {
 		VectorStoreFileBatches{},
 		RealtimeClientSecrets{},
 		RealtimeTranscriptionClientSecrets{},
+		LiveSessions{},
 		Containers{},
 		ContainerFiles{},
 		Videos{},
@@ -106,6 +110,8 @@ func All() []Suite {
 		FineTuning{},
 		ChatKitSessions{},
 		ChatKitThreads{},
+		Agents{},
+		AgentsSessions{},
 		Assistants{},
 		AssistantsThreads{},
 		ErrorResponses{},
@@ -133,6 +139,7 @@ type ModelRequirements struct {
 	Whisper       bool
 	Transcription bool
 	Realtime      bool
+	Live          bool
 	Video         bool
 }
 
@@ -141,7 +148,7 @@ func RequiredModels(names []string) ModelRequirements {
 	var req ModelRequirements
 	for _, name := range names {
 		switch name {
-		case "chat_completions", "chat_completions_stream", "chat_completions_stream_usage", "chat_completions_logprobs", "chat_completions_json", "chat_completions_audio", "chat_completions_audio_input", "chat_completions_tools", "chat_completions_tools_stream", "chat_completions_multi_turn", "chat_completions_get", "chat_completions_list", "chat_completions_delete", "chat_completions_messages", "chat_completions_update", "models_get", "responses", "responses_stream", "responses_tools", "responses_tools_stream", "responses_json", "responses_get", "responses_delete", "responses_cancel", "responses_input_items", "responses_compact", "responses_input_tokens", "responses_web_search", "responses_file_search", "responses_multi_turn", "batches_create", "batches_get", "batches_cancel", "batches_list", "fine_tuning", "assistants", "assistants_threads":
+		case "chat_completions", "chat_completions_stream", "chat_completions_stream_usage", "chat_completions_logprobs", "chat_completions_json", "chat_completions_audio", "chat_completions_audio_input", "chat_completions_tools", "chat_completions_tools_stream", "chat_completions_multi_turn", "chat_completions_get", "chat_completions_list", "chat_completions_delete", "chat_completions_messages", "chat_completions_update", "models_get", "responses", "responses_stream", "responses_tools", "responses_tools_stream", "responses_json", "responses_get", "responses_get_stream", "responses_delete", "responses_cancel", "responses_input_items", "responses_compact", "responses_input_tokens", "responses_prewarm", "responses_web_search", "responses_file_search", "responses_code_interpreter", "responses_multi_turn", "batches_create", "batches_get", "batches_cancel", "batches_list", "fine_tuning", "assistants", "assistants_threads", "agents", "agents_sessions":
 			req.Chat = true
 		case "completions", "completions_stream":
 			req.Completion = true
@@ -161,6 +168,8 @@ func RequiredModels(names []string) ModelRequirements {
 			req.Transcription = true
 		case "realtime_client_secrets":
 			req.Realtime = true
+		case "live_sessions":
+			req.Live = true
 		case "videos", "videos_variants":
 			req.Video = true
 		}

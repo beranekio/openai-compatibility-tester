@@ -1,9 +1,11 @@
 package mockserver
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 )
 
 func (s *Server) handleResponses(w http.ResponseWriter, r *http.Request) {
@@ -14,12 +16,15 @@ func (s *Server) handleResponses(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Stream     bool              `json:"stream"`
-		Store      *bool             `json:"store"`
-		Background *bool             `json:"background"`
-		Input      json.RawMessage   `json:"input"`
-		Tools      []json.RawMessage `json:"tools"`
-		Text       *struct {
+		Stream             bool  `json:"stream"`
+		Store              *bool `json:"store"`
+		Background         *bool `json:"background"`
+		PromptCacheOptions *struct {
+			Prewarm *bool `json:"prewarm"`
+		} `json:"prompt_cache_options"`
+		Input json.RawMessage   `json:"input"`
+		Tools []json.RawMessage `json:"tools"`
+		Text  *struct {
 			Format *struct {
 				Type   string `json:"type"`
 				Strict *bool  `json:"strict"`
@@ -41,13 +46,16 @@ func (s *Server) handleResponses(w http.ResponseWriter, r *http.Request) {
 		case "file_search":
 			writeResponsesHostedToolResponse(w, "file_search_call")
 			return
+		case "code_interpreter":
+			writeResponsesHostedToolResponse(w, "code_interpreter_call")
+			return
 		}
 		writeResponsesToolCallResponse(w)
 		return
 	}
 
 	if req.Stream {
-		s.writeResponsesTextStream(w)
+		s.writeResponsesTextStream(w, "resp-mock")
 		return
 	}
 
@@ -68,13 +76,10 @@ func (s *Server) handleResponses(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	payload := map[string]any{
-		"id":         id,
-		"object":     "response",
-		"status":     status,
-		"model":      "gpt-4o-mini",
-		"created_at": 1700000000,
-		"output": []map[string]any{
+	var output []map[string]any
+	prewarm := req.PromptCacheOptions != nil && req.PromptCacheOptions.Prewarm != nil && *req.PromptCacheOptions.Prewarm
+	if !prewarm {
+		output = []map[string]any{
 			{
 				"id":     "msg-mock",
 				"type":   "message",
@@ -87,7 +92,16 @@ func (s *Server) handleResponses(w http.ResponseWriter, r *http.Request) {
 					},
 				},
 			},
-		},
+		}
+	}
+
+	payload := map[string]any{
+		"id":         id,
+		"object":     "response",
+		"status":     status,
+		"model":      "gpt-4o-mini",
+		"created_at": 1700000000,
+		"output":     output,
 	}
 
 	if req.Store != nil && *req.Store {
@@ -97,7 +111,10 @@ func (s *Server) handleResponses(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, payload)
 }
 
-func (s *Server) writeResponsesTextStream(w http.ResponseWriter) {
+func (s *Server) writeResponsesTextStream(w http.ResponseWriter, id string) {
+	if id == "" {
+		id = "resp-mock"
+	}
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.WriteHeader(http.StatusOK)
 	seq := 0
@@ -111,7 +128,7 @@ func (s *Server) writeResponsesTextStream(w http.ResponseWriter) {
 	writeResponseStreamEvent(map[string]any{
 		"type": "response.created",
 		"response": map[string]any{
-			"id":         "resp-mock",
+			"id":         id,
 			"object":     "response",
 			"status":     "in_progress",
 			"model":      "gpt-4o-mini",
@@ -121,7 +138,7 @@ func (s *Server) writeResponsesTextStream(w http.ResponseWriter) {
 	writeResponseStreamEvent(map[string]any{
 		"type": "response.in_progress",
 		"response": map[string]any{
-			"id":         "resp-mock",
+			"id":         id,
 			"object":     "response",
 			"status":     "in_progress",
 			"model":      "gpt-4o-mini",
@@ -163,7 +180,7 @@ func (s *Server) writeResponsesTextStream(w http.ResponseWriter) {
 	writeResponseStreamEvent(map[string]any{
 		"type": "response.completed",
 		"response": map[string]any{
-			"id":         "resp-mock",
+			"id":         id,
 			"object":     "response",
 			"status":     "completed",
 			"model":      "gpt-4o-mini",
@@ -171,6 +188,22 @@ func (s *Server) writeResponsesTextStream(w http.ResponseWriter) {
 		},
 	})
 	_, _ = w.Write([]byte("data: [DONE]\n\n"))
+}
+
+func requestWantsJSONStream(r *http.Request) bool {
+	if v := strings.ToLower(r.URL.Query().Get("stream")); v == "true" || v == "1" {
+		return true
+	}
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return false
+	}
+	r.Body = io.NopCloser(bytes.NewReader(body))
+	var req struct {
+		Stream bool `json:"stream"`
+	}
+	_ = json.Unmarshal(body, &req)
+	return req.Stream
 }
 
 func (s *Server) handleResponseGet(w http.ResponseWriter, r *http.Request) {
@@ -187,6 +220,10 @@ func (s *Server) handleResponseGet(w http.ResponseWriter, r *http.Request) {
 				"code":    "not_found",
 			},
 		})
+		return
+	}
+	if requestWantsJSONStream(r) {
+		s.writeResponsesTextStream(w, id)
 		return
 	}
 	writeJSON(w, payload)
@@ -299,6 +336,17 @@ func writeResponsesHostedToolResponse(w http.ResponseWriter, callType string) {
 			"status":  "completed",
 			"queries": []string{"compatibility test"},
 			"results": []any{},
+		}
+	case "code_interpreter_call":
+		call = map[string]any{
+			"id":           "ci_mock",
+			"type":         "code_interpreter_call",
+			"status":       "completed",
+			"code":         "print(1+1)",
+			"container_id": "cntr_mock",
+			"outputs": []map[string]any{
+				{"type": "logs", "logs": "2"},
+			},
 		}
 	default:
 		writeResponsesToolCallResponse(w)
