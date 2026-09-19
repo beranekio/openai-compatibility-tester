@@ -610,6 +610,34 @@ func TestLoadDefaultsRealtimeModelForRealtimeClientSecretsSuite(t *testing.T) {
 	}
 }
 
+func TestLoadDefaultsLiveModelForLiveSessionsSuite(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvLiveModel, "")
+
+	cfg, err := Load([]string{"--suites", "live_sessions"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.LiveModel != DefaultLiveModel {
+		t.Fatalf("LiveModel = %q, want %q", cfg.LiveModel, DefaultLiveModel)
+	}
+}
+
+func TestLoadUsesLiveModelFromEnv(t *testing.T) {
+	t.Setenv(EnvBaseURL, "https://example.com/v1")
+	t.Setenv(EnvAPIKey, "test-key")
+	t.Setenv(EnvLiveModel, "gpt-live-1")
+
+	cfg, err := Load([]string{"--suites", "live_sessions"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.LiveModel != "gpt-live-1" {
+		t.Fatalf("LiveModel = %q, want gpt-live-1", cfg.LiveModel)
+	}
+}
+
 func TestLoadUsesRealtimeModelFromEnv(t *testing.T) {
 	t.Setenv(EnvBaseURL, "https://example.com/v1")
 	t.Setenv(EnvAPIKey, "test-key")

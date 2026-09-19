@@ -9,6 +9,7 @@ import (
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
+	"github.com/openai/openai-go/v3/packages/ssestream"
 	"github.com/openai/openai-go/v3/responses"
 )
 
@@ -29,12 +30,17 @@ func (ResponsesStream) Run(ctx context.Context, client openai.Client, cfg *confi
 		},
 		Store: openai.Bool(false),
 	}, option.WithResponseInto(&httpResp))
+
+	return consumeResponsesTextStream("responses_stream", stream, httpResp)
+}
+
+func consumeResponsesTextStream(suite string, stream *ssestream.Stream[responses.ResponseStreamEventUnion], httpResp *http.Response) error {
 	defer stream.Close()
 
 	if err := stream.Err(); err != nil {
-		return fmt.Errorf("responses stream failed: %w", err)
+		return fmt.Errorf("%s failed: %w", suite, err)
 	}
-	if err := validateEventStreamContentType("responses_stream", httpResp); err != nil {
+	if err := validateEventStreamContentType(suite, httpResp); err != nil {
 		return err
 	}
 
@@ -45,7 +51,7 @@ func (ResponsesStream) Run(ctx context.Context, client openai.Client, cfg *confi
 	var terminalReached bool
 	for stream.Next() {
 		if terminalReached {
-			return fail("responses_stream", fmt.Sprintf("stream event %q after terminal event", stream.Current().Type))
+			return fail(suite, fmt.Sprintf("stream event %q after terminal event", stream.Current().Type))
 		}
 
 		event := stream.Current()
@@ -54,12 +60,12 @@ func (ResponsesStream) Run(ctx context.Context, client openai.Client, cfg *confi
 			"response.output_item.added", "response.output_item.done",
 			"response.content_part.added", "response.content_part.done",
 			"response.output_text.done", "response.refusal.done":
-			if err := validateOptionalResponsesStreamEvent("responses_stream", event); err != nil {
+			if err := validateOptionalResponsesStreamEvent(suite, event); err != nil {
 				return err
 			}
 		case "response.output_text.delta":
 			delta := event.AsResponseOutputTextDelta()
-			if err := validateResponseTextDelta("responses_stream", delta); err != nil {
+			if err := validateResponseTextDelta(suite, delta); err != nil {
 				return err
 			}
 			if delta.Delta != "" {
@@ -67,7 +73,7 @@ func (ResponsesStream) Run(ctx context.Context, client openai.Client, cfg *confi
 			}
 		case "response.refusal.delta":
 			delta := event.AsResponseRefusalDelta()
-			if err := validateResponseRefusalDelta("responses_stream", delta); err != nil {
+			if err := validateResponseRefusalDelta(suite, delta); err != nil {
 				return err
 			}
 			if delta.Delta != "" {
@@ -76,20 +82,20 @@ func (ResponsesStream) Run(ctx context.Context, client openai.Client, cfg *confi
 		case "response.completed":
 			completedEvent := event.AsResponseCompleted()
 			if !completedEvent.JSON.Response.Valid() {
-				return fail("responses_stream", "response.completed missing response object")
+				return fail(suite, "response.completed missing response object")
 			}
 			if completedEvent.Response.ID == "" {
-				return fail("responses_stream", "response.completed response missing id")
+				return fail(suite, "response.completed response missing id")
 			}
 			if string(completedEvent.Response.Status) != "completed" {
-				return fail("responses_stream", fmt.Sprintf("response.completed status is %q, want completed", completedEvent.Response.Status))
+				return fail(suite, fmt.Sprintf("response.completed status is %q, want completed", completedEvent.Response.Status))
 			}
 			completed = true
 			terminalReached = true
 		case "response.incomplete":
 			incompleteEvent := event.AsResponseIncomplete()
 			if !incompleteEvent.JSON.Response.Valid() {
-				return fail("responses_stream", "response.incomplete missing response object")
+				return fail(suite, "response.incomplete missing response object")
 			}
 			if isContentFilterIncompleteResponse(&incompleteEvent.Response) {
 				contentFilterIncomplete = true
@@ -103,16 +109,16 @@ func (ResponsesStream) Run(ctx context.Context, client openai.Client, cfg *confi
 		}
 	}
 	if err := stream.Err(); err != nil {
-		return fmt.Errorf("responses stream failed: %w", err)
+		return fmt.Errorf("%s failed: %w", suite, err)
 	}
 	if terminalFailure {
-		return fail("responses_stream", "stream ended with a failure event")
+		return fail(suite, "stream ended with a failure event")
 	}
 	if !completed && !contentFilterIncomplete {
-		return fail("responses_stream", "stream missing response.completed event")
+		return fail(suite, "stream missing response.completed event")
 	}
 	if !hasOutput && !contentFilterIncomplete {
-		return fail("responses_stream", "stream produced no output text or refusal")
+		return fail(suite, "stream produced no output text or refusal")
 	}
 	return nil
 }
