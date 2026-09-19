@@ -4,8 +4,7 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: daily
     commit-message:
       prefix: deps
       include: scope
@@ -13,8 +12,7 @@ updates:
   - package-ecosystem: gomod
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: daily
     commit-message:
       prefix: deps
       include: scope
@@ -22,8 +20,7 @@ updates:
   - package-ecosystem: docker
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: daily
     commit-message:
       prefix: deps
       include: scope
