@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/beranekio/openai-compatibility-tester/internal/config"
 
@@ -38,17 +37,9 @@ func (LiveSessions) Description() string {
 	return "Live API session create (POST /v1/live/sessions). WebRTC/SIP media is not exercised."
 }
 
+// Run creates a WebRTC Live session. There is no REST delete for that transport:
+// Sessions.Hangup ends a SIP call (POST /v1/live/sessions/{id}/hangup), not this path.
 func (LiveSessions) Run(ctx context.Context, client openai.Client, cfg *config.Config) error {
-	var sessionID string
-	defer func() {
-		if sessionID == "" {
-			return
-		}
-		cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		_ = client.Live.Sessions.Hangup(cleanupCtx, sessionID)
-	}()
-
 	created, err := client.Live.New(ctx, live.LiveNewParams{
 		Session: live.MediaSessionConfigParam{
 			Model: live.MediaSessionConfigModel(cfg.LiveModel),
@@ -69,7 +60,6 @@ func (LiveSessions) Run(ctx context.Context, client openai.Client, cfg *config.C
 	if strings.TrimSpace(created.Session.ID) == "" {
 		return fail("live_sessions", "session id is empty")
 	}
-	sessionID = created.Session.ID
 	if !created.JSON.Transport.Valid() {
 		return fail("live_sessions", "response missing transport")
 	}
