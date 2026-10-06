@@ -31,11 +31,21 @@ All settings can be passed as environment variables or CLI flags.
 | `OPENAI_MODEL` | `--model` | no | `gpt-4o-mini` | Model for chat completion suites and the model ID fetched by `models_get` |
 | `TEST_SUITES` | `--suites` | no | `all` | Comma-separated suite names, or preset: `all`/`default`, `extended`, `full` |
 | `REQUEST_TIMEOUT` | `--timeout` | no | `2m` | Per-suite request timeout (batch suites may need a longer value against real APIs while jobs finish) |
-| `ALLOW_INSECURE_HTTP` | `--allow-insecure-http` | no | `false` | Allow plaintext `http://` to non-loopback hosts (loopback HTTP is always permitted) |
+| `ALLOW_INSECURE_HTTP` | `--allow-insecure-http` | no | `false` | **Deprecated, no effect.** Still accepted so existing invocations keep working, but prints a warning. See [Plaintext HTTP](#plaintext-http). |
 | `OPENAI_ORG_ID` | `--org-id` | no | — | OpenAI organization ID sent as `OpenAI-Organization` when set |
 | `OPENAI_PROJECT_ID` | `--project-id` | no | — | OpenAI project ID sent as `OpenAI-Project` when set |
 
 Some suites require additional model variables (vision, image, audio, video, etc.). See the [suite-specific configuration](docs/suites.md#suite-specific-model-configuration) for the full list.
+
+### Plaintext HTTP
+
+The official OpenAI Go SDK (v3.70.0 and later) refuses to send credentials over plaintext HTTP to anything other than a loopback endpoint. The tester follows the same rule:
+
+- `https://` base URLs work as before.
+- `http://` is accepted only when the host is `localhost` or a literal loopback IP (`127.0.0.0/8`, `::1`). Those requests go over a direct loopback connection, so HTTP proxy settings and custom transports don't apply to them.
+- `http://` to any other host (including `host.docker.internal`, LAN IPs, and service names) is rejected at startup with a configuration error (exit code `2`). Put the endpoint behind TLS, or make it reachable via `localhost` (see the [mock server Docker example](#mock-server)).
+
+`--allow-insecure-http` / `ALLOW_INSECURE_HTTP` used to let you opt in to plaintext HTTP for remote hosts. It is now deprecated and has no effect: setting it prints a warning, and remote `http://` URLs are still rejected.
 
 ## Selecting suites
 
@@ -74,16 +84,20 @@ For testing gateways and SDK clients without a real backend, a standalone image 
 docker run --rm -p 8080:8080 ghcr.io/beranekio/openai-mockserver:latest
 ```
 
-Point a client (or this tester) at `http://127.0.0.1:8080/v1` on the host. When running the tester in a container that needs to reach the mock server on the host, use `host.docker.internal` with `--add-host` (Docker Desktop provides this automatically; Linux Docker Engine needs the flag) and allow plaintext HTTP to the non-loopback address:
+Point a client (or this tester) at `http://127.0.0.1:8080/v1` on the host.
+
+To run the tester in a container against the mock server, reach it through `localhost`. `host.docker.internal` is not a loopback address, so plaintext HTTP to it is rejected (see [Plaintext HTTP](#plaintext-http)). Run the tester in the mock server container's network namespace, which works with Docker Desktop and Linux Docker Engine:
 
 ```bash
+docker run -d --rm --name openai-mock -p 8080:8080 ghcr.io/beranekio/openai-mockserver:latest
 docker run --rm \
-  --add-host=host.docker.internal:host-gateway \
-  -e OPENAI_BASE_URL=http://host.docker.internal:8080/v1 \
+  --network container:openai-mock \
+  -e OPENAI_BASE_URL=http://localhost:8080/v1 \
   -e OPENAI_API_KEY=anything \
-  -e ALLOW_INSECURE_HTTP=true \
   ghcr.io/beranekio/openai-compatibility-tester:latest
 ```
+
+On Linux, if the mock server (or another local endpoint) listens on the host itself, you can use `--network host` with `OPENAI_BASE_URL=http://localhost:8080/v1` instead.
 
 The listen address can be changed with `MOCK_ADDR` (or the `-addr` flag):
 

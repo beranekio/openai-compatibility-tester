@@ -22,6 +22,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
 		os.Exit(2)
 	}
+	for _, warning := range cfg.Warnings {
+		fmt.Fprintf(os.Stderr, "warning: %s\n", warning)
+	}
 
 	if cfg.ListSuites {
 		printSuites()

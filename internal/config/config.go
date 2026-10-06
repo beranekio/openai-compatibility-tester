@@ -36,7 +36,11 @@ const (
 	EnvChatKitTestThreadID = "OPENAI_CHATKIT_TEST_THREAD_ID"
 	EnvTestSuites          = "TEST_SUITES"
 	EnvRequestTimeout      = "REQUEST_TIMEOUT"
-	EnvAllowInsecureHTTP   = "ALLOW_INSECURE_HTTP"
+	// EnvAllowInsecureHTTP is deprecated: the OpenAI Go SDK (v3.70.0+) refuses
+	// authenticated plaintext HTTP to non-loopback hosts, so the setting no
+	// longer has any effect. It is still parsed so existing invocations keep
+	// working, and a deprecation warning is emitted when it is enabled.
+	EnvAllowInsecureHTTP = "ALLOW_INSECURE_HTTP"
 
 	// DefaultCompletionModel is used when the completions suite is selected without
 	// an explicit completion model. Legacy /v1/completions expects instruct models.
@@ -230,9 +234,19 @@ type Config struct {
 	ChatKitTestThreadID string
 	Suites              []string
 	RequestTimeout      time.Duration
-	AllowInsecureHTTP   bool
-	ListSuites          bool
+	// AllowInsecureHTTP is deprecated and has no effect; see EnvAllowInsecureHTTP.
+	AllowInsecureHTTP bool
+	ListSuites        bool
+	// Warnings collects non-fatal configuration notices (e.g. deprecated
+	// settings) for the caller to print.
+	Warnings []string
 }
+
+// AllowInsecureHTTPDeprecationWarning is emitted when --allow-insecure-http or
+// ALLOW_INSECURE_HTTP is enabled.
+const AllowInsecureHTTPDeprecationWarning = "--allow-insecure-http / " + EnvAllowInsecureHTTP + " is deprecated and has no effect: " +
+	"the OpenAI Go SDK (v3.70.0+) requires HTTPS for authenticated requests to non-loopback hosts. " +
+	"Plaintext HTTP to localhost, 127.0.0.0/8, or ::1 is allowed automatically."
 
 // Load parses configuration from environment variables and command-line flags.
 func Load(args []string) (*Config, error) {
@@ -259,7 +273,7 @@ func Load(args []string) (*Config, error) {
 	liveModel := fs.String("live-model", envOrDefault(EnvLiveModel, ""), "Model for Live API suites (defaults to "+DefaultLiveModel+" when live_sessions is selected)")
 	chatKitWorkflowID := fs.String("chatkit-workflow-id", envOrDefault(EnvChatKitWorkflowID, ""), "Workflow ID for chatkit_sessions suite (defaults to "+DefaultChatKitWorkflowID+" when chatkit_sessions is selected)")
 	chatKitTestThreadID := fs.String("chatkit-test-thread-id", envOrDefault(EnvChatKitTestThreadID, ""), "Disposable thread ID for chatkit_threads delete test (optional; omit for read-only checks)")
-	allowInsecureHTTP := fs.Bool("allow-insecure-http", envBoolOrDefault(EnvAllowInsecureHTTP, false), "Allow plaintext HTTP to non-loopback hosts")
+	allowInsecureHTTP := fs.Bool("allow-insecure-http", envBoolOrDefault(EnvAllowInsecureHTTP, false), "Deprecated, no effect: plaintext HTTP to non-loopback hosts is no longer supported (loopback HTTP is allowed automatically)")
 	suiteList := fs.String("suites", envOrDefault(EnvTestSuites, "all"), "Comma-separated suite names, or preset: all, default, extended, full")
 	timeout := fs.Duration("timeout", 2*time.Minute, "Per-request timeout")
 	listSuites := fs.Bool("list-suites", false, "List available test suites and exit")
@@ -299,6 +313,9 @@ func Load(args []string) (*Config, error) {
 		RequestTimeout:      *timeout,
 		AllowInsecureHTTP:   *allowInsecureHTTP,
 		ListSuites:          *listSuites,
+	}
+	if cfg.AllowInsecureHTTP {
+		cfg.Warnings = append(cfg.Warnings, AllowInsecureHTTPDeprecationWarning)
 	}
 
 	if cfg.ListSuites {
@@ -358,7 +375,7 @@ func Load(args []string) (*Config, error) {
 	if cfg.BaseURL == "" {
 		return nil, fmt.Errorf("%s or --base-url is required", EnvBaseURL)
 	}
-	if err := validateBaseURL(cfg.BaseURL, cfg.AllowInsecureHTTP); err != nil {
+	if err := validateBaseURL(cfg.BaseURL); err != nil {
 		return nil, err
 	}
 	if cfg.APIKey == "" {
@@ -522,7 +539,7 @@ func validateModelsForSuites(cfg *Config) error {
 	return nil
 }
 
-func validateBaseURL(raw string, allowInsecureHTTP bool) error {
+func validateBaseURL(raw string) error {
 	u, err := url.Parse(raw)
 	if err != nil {
 		return fmt.Errorf("%s: invalid URL: %w", EnvBaseURL, err)
@@ -548,12 +565,28 @@ func validateBaseURL(raw string, allowInsecureHTTP bool) error {
 	if strings.Contains(strings.ToLower(raw), "%2f") {
 		return fmt.Errorf("%s: encoded path separators (%%2F) are not supported by the OpenAI Go SDK", EnvBaseURL)
 	}
-	if u.Scheme == "http" && !allowInsecureHTTP && !isLoopbackHost(u.Hostname()) {
-		return fmt.Errorf("%s: plaintext HTTP is only permitted for loopback hosts unless --allow-insecure-http is set", EnvBaseURL)
+	if u.Scheme == "http" && !isLoopbackHost(u.Hostname()) {
+		return fmt.Errorf("%s: plaintext HTTP is only supported for loopback hosts (localhost, 127.0.0.0/8, ::1); "+
+			"the OpenAI Go SDK (v3.70.0+) requires HTTPS for authenticated requests to non-loopback hosts, "+
+			"and --allow-insecure-http / %s no longer overrides this", EnvBaseURL, EnvAllowInsecureHTTP)
 	}
 	return nil
 }
 
+// IsLoopbackHTTPURL reports whether raw is a plaintext http:// URL whose host is
+// localhost or a literal loopback IP. These are the only plaintext targets the
+// OpenAI Go SDK permits for authenticated requests (via option.WithUnsafeAllowHTTP).
+func IsLoopbackHTTPURL(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme != "http" || u.Opaque != "" {
+		return false
+	}
+	return isLoopbackHost(u.Hostname())
+}
+
+// isLoopbackHost mirrors the OpenAI Go SDK's loopback check: the literal name
+// "localhost" (case-insensitive) or a literal loopback IP. Other names that
+// resolve to loopback are not accepted because the SDK does not accept them.
 func isLoopbackHost(host string) bool {
 	if strings.EqualFold(host, "localhost") {
 		return true

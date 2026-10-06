@@ -486,3 +486,58 @@ func TestRunRejectsUnknownSuite(t *testing.T) {
 		t.Fatalf("expected unknown suite error, got %v", err)
 	}
 }
+
+func TestRunPassesAgainstMockServerViaLocalhost(t *testing.T) {
+	server := mockserver.New()
+	t.Cleanup(server.Close)
+
+	baseURL := strings.Replace(server.BaseURL(), "127.0.0.1", "localhost", 1)
+	if !strings.Contains(baseURL, "://localhost:") {
+		t.Fatalf("expected mock server on 127.0.0.1, got %q", server.BaseURL())
+	}
+
+	cfg := &config.Config{
+		BaseURL:        baseURL,
+		APIKey:         "test-key",
+		Model:          "gpt-4o-mini",
+		RequestTimeout: 30 * time.Second,
+		Suites:         []string{"models", "error_responses"},
+	}
+
+	runner := New(cfg)
+	runner.Output = &bytes.Buffer{}
+
+	results, err := runner.Run(context.Background())
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if code := ExitCode(results); code != 0 {
+		t.Fatalf("ExitCode() = %d, want 0; summary:\n%s", code, FormatSummary(results))
+	}
+}
+
+func TestRunDoesNotAllowPlaintextHTTPToRemoteHost(t *testing.T) {
+	// config.Load rejects this URL; the runner must not opt remote hosts into
+	// plaintext HTTP either, so the SDK refuses before any request is sent.
+	cfg := &config.Config{
+		BaseURL:        "http://compat-tester.invalid/v1",
+		APIKey:         "test-key",
+		Model:          "gpt-4o-mini",
+		RequestTimeout: 5 * time.Second,
+		Suites:         []string{"models"},
+	}
+
+	runner := New(cfg)
+	runner.Output = &bytes.Buffer{}
+
+	results, err := runner.Run(context.Background())
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if code := ExitCode(results); code != 1 {
+		t.Fatalf("ExitCode() = %d, want 1; summary:\n%s", code, FormatSummary(results))
+	}
+	if first := FirstError(results); first == nil || !strings.Contains(first.Error(), "require HTTPS") {
+		t.Fatalf("expected SDK HTTPS policy error, got %v", first)
+	}
+}
