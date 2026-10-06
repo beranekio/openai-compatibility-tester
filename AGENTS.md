@@ -101,7 +101,7 @@ Core env vars (`OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `TEST_SUITES
 | `OPENAI_CHATKIT_TEST_THREAD_ID` | Optional disposable thread for `chatkit_threads` delete test |
 | `TEST_SUITES` | Comma-separated names, or preset: `all`/`default`, `extended`, `full` |
 | `REQUEST_TIMEOUT` | Per-suite timeout (default `2m`) |
-| `ALLOW_INSECURE_HTTP` | Deprecated, no effect (warns). openai-go v3.70+ requires HTTPS for non-loopback hosts; loopback `http://` is allowed automatically via `option.WithUnsafeAllowHTTP()` in `runner.New` |
+| `ALLOW_INSECURE_HTTP` | Allow non-loopback `http://` |
 
 Reuse existing model settings when the suite belongs to an established family (`OPENAI_MODEL` for chat, `OPENAI_RESPONSES_MODEL` for Responses, etc.). Add a dedicated env var and `validateModelsForSuites` entry only when the suite needs a genuinely different model category (e.g. vision, image generation, TTS). Presets `extended` and `full` are implemented in `config.ExtendedSuites` / `config.FullSuites`; the full suite-specific model variable list is documented in [`docs/suites.md`](docs/suites.md#suite-specific-model-configuration).
 

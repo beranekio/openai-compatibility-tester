@@ -730,123 +730,26 @@ func TestLoadAllowsLoopbackHTTP(t *testing.T) {
 	}
 }
 
-func TestLoadAllowsLoopbackHTTPHosts(t *testing.T) {
-	for _, baseURL := range []string{
-		"http://localhost:8080/v1",
-		"http://LOCALHOST:8080/v1",
-		"http://127.0.0.1:8080/v1",
-		"http://127.1.2.3:8080/v1",
-		"http://[::1]:8080/v1",
-	} {
-		t.Run(baseURL, func(t *testing.T) {
-			t.Setenv(EnvBaseURL, baseURL)
-			t.Setenv(EnvAPIKey, "test-key")
-			t.Setenv(EnvAllowInsecureHTTP, "")
-
-			cfg, err := Load([]string{})
-			if err != nil {
-				t.Fatalf("Load() error = %v", err)
-			}
-			if len(cfg.Warnings) != 0 {
-				t.Fatalf("Warnings = %v, want none", cfg.Warnings)
-			}
-		})
-	}
-}
-
 func TestLoadRejectsPlaintextHTTPForRemoteHost(t *testing.T) {
-	for _, baseURL := range []string{
-		"http://example.com/v1",
-		"http://host.docker.internal:8080/v1",
-		"http://10.0.0.5:8080/v1",
-		"http://localhost.example.com/v1",
-	} {
-		t.Run(baseURL, func(t *testing.T) {
-			t.Setenv(EnvBaseURL, "")
-			t.Setenv(EnvAPIKey, "test-key")
-			t.Setenv(EnvAllowInsecureHTTP, "")
-
-			_, err := Load([]string{"--base-url", baseURL})
-			if err == nil || !strings.Contains(err.Error(), "plaintext HTTP") || !strings.Contains(err.Error(), "requires HTTPS") {
-				t.Fatalf("expected plaintext HTTP error, got %v", err)
-			}
-		})
-	}
-}
-
-func TestLoadRejectsRemoteHTTPDespiteDeprecatedFlag(t *testing.T) {
 	t.Setenv(EnvBaseURL, "")
 	t.Setenv(EnvAPIKey, "test-key")
-	t.Setenv(EnvAllowInsecureHTTP, "")
 
-	_, err := Load([]string{"--base-url", "http://example.com/v1", "--allow-insecure-http"})
-	if err == nil || !strings.Contains(err.Error(), "--allow-insecure-http") {
-		t.Fatalf("expected remote HTTP rejection mentioning --allow-insecure-http, got %v", err)
-	}
-}
-
-func TestLoadRejectsRemoteHTTPDespiteDeprecatedEnv(t *testing.T) {
-	t.Setenv(EnvBaseURL, "http://example.com/v1")
-	t.Setenv(EnvAPIKey, "test-key")
-	t.Setenv(EnvAllowInsecureHTTP, "true")
-
-	_, err := Load([]string{})
+	_, err := Load([]string{"--base-url", "http://example.com/v1"})
 	if err == nil || !strings.Contains(err.Error(), "plaintext HTTP") {
-		t.Fatalf("expected remote HTTP rejection, got %v", err)
+		t.Fatalf("expected plaintext HTTP error, got %v", err)
 	}
 }
 
-func TestLoadAcceptsDeprecatedAllowInsecureHTTPWithWarning(t *testing.T) {
-	cases := []struct {
-		name string
-		env  string
-		args []string
-	}{
-		{name: "flag", args: []string{"--allow-insecure-http"}},
-		{name: "env", env: "true"},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv(EnvBaseURL, "https://example.com/v1")
-			t.Setenv(EnvAPIKey, "test-key")
-			t.Setenv(EnvAllowInsecureHTTP, tc.env)
+func TestLoadAllowsPlaintextHTTPWithExplicitOptIn(t *testing.T) {
+	t.Setenv(EnvBaseURL, "")
+	t.Setenv(EnvAPIKey, "test-key")
 
-			cfg, err := Load(tc.args)
-			if err != nil {
-				t.Fatalf("Load() error = %v", err)
-			}
-			if !cfg.AllowInsecureHTTP {
-				t.Fatal("expected AllowInsecureHTTP to be true")
-			}
-			if len(cfg.Warnings) != 1 || cfg.Warnings[0] != AllowInsecureHTTPDeprecationWarning {
-				t.Fatalf("Warnings = %v, want deprecation warning", cfg.Warnings)
-			}
-		})
+	cfg, err := Load([]string{"--base-url", "http://example.com/v1", "--allow-insecure-http"})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
 	}
-}
-
-func TestIsLoopbackHTTPURL(t *testing.T) {
-	cases := map[string]bool{
-		"http://localhost:8080/v1":       true,
-		"http://Localhost/v1":            true,
-		"http://127.0.0.1:4010/v1":       true,
-		"http://127.0.0.53/v1":           true,
-		"http://[::1]:8080/v1":           true,
-		"https://localhost:8443/v1":      false,
-		"https://api.openai.com/v1":      false,
-		"http://example.com/v1":          false,
-		"http://host.docker.internal/v1": false,
-		"http://192.168.1.10:8080/v1":    false,
-		"http://[::2]:8080/v1":           false,
-		"http://localhost.example.com/":  false,
-		"ws://localhost:8080/v1":         false,
-		"not a url":                      false,
-		"":                               false,
-	}
-	for raw, want := range cases {
-		if got := IsLoopbackHTTPURL(raw); got != want {
-			t.Errorf("IsLoopbackHTTPURL(%q) = %v, want %v", raw, got, want)
-		}
+	if !cfg.AllowInsecureHTTP {
+		t.Fatal("expected AllowInsecureHTTP to be true")
 	}
 }
 

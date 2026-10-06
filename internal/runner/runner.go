@@ -36,12 +36,6 @@ func New(cfg *config.Config) *Runner {
 		option.WithAPIKey(cfg.APIKey),
 		option.WithMaxRetries(0),
 	}
-	if config.IsLoopbackHTTPURL(cfg.BaseURL) {
-		// openai-go v3.70.0+ rejects authenticated plaintext HTTP unless this is
-		// set, and even then only for direct loopback connections. HTTPS targets
-		// are unaffected; remote http:// is rejected by config validation.
-		opts = append(opts, option.WithUnsafeAllowHTTP())
-	}
 	if cfg.OrgID != "" {
 		opts = append(opts, option.WithOrganization(cfg.OrgID))
 	} else {
