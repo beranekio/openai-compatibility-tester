@@ -2,7 +2,7 @@ module github.com/beranekio/openai-compatibility-tester
 
 go 1.25.0
 
-require github.com/openai/openai-go/v3 v3.66.0
+require github.com/openai/openai-go/v3 v3.71.2
 
 require (
 	github.com/coder/websocket v1.8.15 // indirect
