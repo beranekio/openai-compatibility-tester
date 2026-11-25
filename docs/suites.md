@@ -151,6 +151,8 @@ docker run --rm \
 
 Tool-calling suites (`chat_completions_tools`, `chat_completions_tools_stream`, `responses_tools`, `responses_tools_stream`) and structured JSON output (`chat_completions_json`, `responses_json`) are included in `extended` and `full`, but not in the default set.
 
+`responses_tools_stream` accepts reasoning and message items alongside function calls. It matches each call’s streamed arguments and completed item to its position in the terminal response. An explicit refusal or a response marked incomplete by the content filter also passes.
+
 ```bash
 docker run --rm \
   -e OPENAI_BASE_URL=https://your-endpoint.example/v1 \
