@@ -740,17 +740,18 @@ func writeResponsesToolCallStream(w http.ResponseWriter) {
 		"output_index": 0,
 		"arguments":    `{"location":"San Francisco, CA"}`,
 	})
+	call := map[string]any{
+		"id":        "fc-mock",
+		"type":      "function_call",
+		"status":    "completed",
+		"call_id":   "call_mock_weather",
+		"name":      "get_weather",
+		"arguments": `{"location":"San Francisco, CA"}`,
+	}
 	writeEvent(map[string]any{
 		"type":         "response.output_item.done",
 		"output_index": 0,
-		"item": map[string]any{
-			"id":        "fc-mock",
-			"type":      "function_call",
-			"status":    "completed",
-			"call_id":   "call_mock_weather",
-			"name":      "get_weather",
-			"arguments": `{"location":"San Francisco, CA"}`,
-		},
+		"item":         call,
 	})
 	writeEvent(map[string]any{
 		"type": "response.completed",
@@ -760,6 +761,7 @@ func writeResponsesToolCallStream(w http.ResponseWriter) {
 			"status":     "completed",
 			"model":      "gpt-4o-mini",
 			"created_at": 1700000000,
+			"output":     []map[string]any{call},
 		},
 	})
 	_, _ = w.Write([]byte("data: [DONE]\n\n"))
